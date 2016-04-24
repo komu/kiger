@@ -65,11 +65,11 @@ class Lexer(private val source: String, private val file: String = "<unknown>") 
             readIf(';')     -> Punctuation.Semicolon
             readIf(',')     -> Punctuation.Comma
             readIf('=')     -> if (readIf('=')) Operator.EqualEqual else Punctuation.Equal
-            readIf('!')     -> if (readIf('=')) Operator.NotEqual else Operator.Not
+//            readIf('!')     -> if (readIf('=')) Operator.NotEqual else Operator.Not
             readIf('<')     -> if (readIf('=')) Operator.LessThanOrEqual else Operator.LessThan
             readIf('>')     -> if (readIf('=')) Operator.GreaterThanOrEqual else Operator.GreaterThan
-            readIf('&')     -> if (readIf('&')) Operator.And else fail("got '&', did you mean '&&'?")
-            readIf('|')     -> if (readIf('|')) Operator.Or else fail("got '|', did you mean '||'?")
+//            readIf('&')     -> if (readIf('&')) Operator.And else fail("got '&', did you mean '&&'?")
+//            readIf('|')     -> if (readIf('|')) Operator.Or else fail("got '|', did you mean '||'?")
             else            -> fail("unexpected character '$ch'")
         }
 
@@ -97,8 +97,7 @@ class Lexer(private val source: String, private val file: String = "<unknown>") 
             "else"      -> Keyword.Else
             "let"       -> Keyword.Let
             "while"     -> Keyword.While
-//            "true"      -> Literal(Bool.True)
-//            "false"     -> Literal(Bool.False)
+            "nil"       -> Keyword.Nil
             else        -> Symbol(str)
         }
     }

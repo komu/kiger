@@ -112,15 +112,15 @@ private class Parser(lexer: Lexer) {
     private fun parseExpression1(): Expression {
         var exp = parseExpression2()
 
-        while (lexer.hasMore) {
-            val location = lexer.nextTokenLocation()
-            when {
-                lexer.readNextIf(Operator.Or) ->
-                    exp = Expression.Op(exp, Operator.Or, parseExpression2(), location)
-                else ->
-                    return exp
-            }
-        }
+//        while (lexer.hasMore) {
+//            val location = lexer.nextTokenLocation()
+//            when {
+//                lexer.readNextIf(Operator.Or) ->
+//                    exp = Expression.Op(exp, Operator.Or, parseExpression2(), location)
+//                else ->
+//                    return exp
+//            }
+//        }
 
         return exp
     }
@@ -133,15 +133,15 @@ private class Parser(lexer: Lexer) {
     private fun parseExpression2(): Expression {
         var exp = parseExpression3()
 
-        while (lexer.hasMore) {
-            val location = lexer.nextTokenLocation()
-            when {
-                lexer.readNextIf(Operator.And) ->
-                    exp = Expression.Op(exp, Operator.And, parseExpression3(), location)
-                else ->
-                    return exp
-            }
-        }
+//        while (lexer.hasMore) {
+//            val location = lexer.nextTokenLocation()
+//            when {
+//                lexer.readNextIf(Operator.And) ->
+//                    exp = Expression.Op(exp, Operator.And, parseExpression3(), location)
+//                else ->
+//                    return exp
+//            }
+//        }
 
         return exp
     }
@@ -268,11 +268,17 @@ private class Parser(lexer: Lexer) {
             is Symbol           -> parseIdentifierOrCall()
             is Token.Str        -> parseString()
             is Token.Integer    -> parseInteger()
+            Nil                 -> parseNil()
             LeftParen           -> inParens { parseTopLevelExpression() }
             If                  -> parseIf()
             While               -> parseWhile()
             else                -> fail(location, "unexpected token $token")
         }
+    }
+
+    private fun parseNil(): Expression {
+        lexer.expect(Nil)
+        return Expression.Nil
     }
 
     private fun parseInteger(): Expression {

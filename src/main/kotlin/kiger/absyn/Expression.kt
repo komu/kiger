@@ -8,7 +8,7 @@ sealed class Expression {
     class Var(val variable: Variable) : Expression() {
         override fun toString() = variable.toString()
     }
-    class Nil : Expression()
+    object Nil : Expression()
     class Int(val value: kotlin.Int) : Expression() {
         override fun toString() = value.toString()
     }

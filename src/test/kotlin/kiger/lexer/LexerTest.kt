@@ -22,6 +22,7 @@ class LexerTest {
         assertTokens("function", Keyword.Function)
         assertTokens("let", Keyword.Let)
         assertTokens("while", Keyword.While)
+        assertTokens("nil", Keyword.Nil)
     }
 
     @Test
@@ -38,13 +39,13 @@ class LexerTest {
         assertTokens("/", Operator.Divide)
         assertTokens("==", Operator.EqualEqual)
         assertTokens("!=", Operator.NotEqual)
-        assertTokens("!", Operator.Not)
+//        assertTokens("!", Operator.Not)
         assertTokens("<", Operator.LessThan)
         assertTokens(">", Operator.GreaterThan)
         assertTokens("<=", Operator.LessThanOrEqual)
         assertTokens(">=", Operator.GreaterThanOrEqual)
-        assertTokens("&&", Operator.And)
-        assertTokens("||", Operator.Or)
+//        assertTokens("&&", Operator.And)
+//        assertTokens("||", Operator.Or)
     }
 
     @Test

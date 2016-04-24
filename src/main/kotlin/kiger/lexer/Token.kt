@@ -51,6 +51,7 @@ sealed class Token {
         object Else : Keyword("else")
         object Var : Keyword("var")
         object Let : Keyword("let")
+        object Nil : Keyword("nil")
         object While : Keyword("while")
     }
 
@@ -67,13 +68,10 @@ sealed class Token {
         object Divide : Operator("/")
         object EqualEqual : Operator("==")
         object NotEqual : Operator("!=")
-        object Not : Operator("!")
         object LessThan : Operator("<")
         object GreaterThan : Operator(">")
         object LessThanOrEqual : Operator("<=")
         object GreaterThanOrEqual : Operator(">=")
-        object And : Operator("&&")
-        object Or : Operator("||")
     }
 
     /**
