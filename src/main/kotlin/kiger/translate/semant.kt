@@ -51,18 +51,18 @@ class Translator {
 
     val diagnostics = Diagnostics()
 
-    private val errorResult = TranslationResult(TrExp.errorExp, Type.Nil)
+    private val errorResult = TranslationResult(Translate.errorExp, Type.Nil)
 
     fun transExp(venv: VarEnv, tenv: TypeEnv, level: Level, `break`: Any, e: Expression): TranslationResult {
         fun trexp(exp: Expression): TranslationResult = when (exp) {
             is Expression.Nil ->
-                TranslationResult(TrExp.nilExp, Type.Nil)
+                TranslationResult(Translate.nilExp, Type.Nil)
 
             is Expression.Int ->
-                TranslationResult(TrExp.intLiteral(exp.value), Type.Int)
+                TranslationResult(Translate.intLiteral(exp.value), Type.Int)
 
             is Expression.String ->
-                TranslationResult(TrExp.stringLiteral(exp.value), Type.String)
+                TranslationResult(Translate.stringLiteral(exp.value), Type.String)
 
             is Expression.Op -> {
                 val (le, lt) = trexp(exp.left)
@@ -90,15 +90,15 @@ class Translator {
                     Kind.ARITH -> {
                         checkInt(lt, exp.pos)
                         checkInt(rt, exp.pos)
-                        TranslationResult(TrExp.binop(exp.op, le, re), Type.Int)
+                        TranslationResult(Translate.binop(exp.op, le, re), Type.Int)
                     }
                     Kind.COMP -> {
                         checkComparable()
-                        TranslationResult(TrExp.relop(exp.op, le, re), Type.Int)
+                        TranslationResult(Translate.relop(exp.op, le, re), Type.Int)
                     }
                     Kind.EQ -> {
                         checkEquality()
-                        TranslationResult(TrExp.relop(exp.op, le, re), Type.Int)
+                        TranslationResult(Translate.relop(exp.op, le, re), Type.Int)
                     }
                 }
             }
@@ -128,7 +128,7 @@ class Translator {
                 val entry = venv[variable.name]
                 when (entry) {
                     is EnvEntry.Var ->
-                        TranslationResult(TrExp.simpleVar(entry.access, level), entry.type.actualType(variable.pos, diagnostics))
+                        TranslationResult(Translate.simpleVar(entry.access, level), entry.type.actualType(variable.pos, diagnostics))
                     is EnvEntry.Function -> {
                         diagnostics.error("expected variable, but function found", variable.pos)
                         errorResult
@@ -138,60 +138,48 @@ class Translator {
                         errorResult
                     }
                 }
-                TODO()
             }
             is Variable.Field -> {
-                TODO()
+                val (exp, ty) = transVar(variable.variable, venv, level)
+                when (ty) {
+                    is Type.Record -> {
+                        val index = ty.fields.indexOfFirst { variable.name == it.first }
+                        if (index != -1) {
+                            val fieldType = ty.fields[index].second.actualType(variable.pos, diagnostics)
+                            TranslationResult(Translate.fieldVar(exp, index), fieldType)
+
+                        } else {
+                            diagnostics.error("could not find field ${variable.name} for $ty", variable.pos)
+                            errorResult
+                        }
+                    }
+                    else -> {
+                        diagnostics.error("expected record type, but $ty found", variable.pos)
+                        errorResult
+                    }
+                }
             }
             is Variable.Subscript -> {
                 TODO()
+                /*
+                | trvar (A.SubscriptVar(v,e,pos)) =
+                let val {exp,ty} = trvar v in
+                  case actual_ty(ty,pos) of
+                    T.ARRAY(t,_) =>
+                    let val {exp=exp1,ty=ty1} = trexp e in
+                      case ty1 of
+                        T.INT => {exp=R.subscriptVar(exp,exp1),ty=t}
+                      | t =>
+                        (err pos ("array subscript should be int, but "
+                                  ^ type2str(t) ^ " found"); err_result)
+                    end
+                  | t => type_mismatch("array", type2str(t), pos)
+                end
+
+                */
             }
         }
-        /*
-            and trvar (A.SimpleVar(id,pos)) =
-            (case S.look(venv,id)
-             of SOME(E.VarEntry{access,ty}) =>
-                {exp=R.simpleVar(access,level),ty=actual_ty(ty,pos)}
-              | SOME(_) =>
-                (err pos ("expected variable, but function found"); err_result)
-              | NONE =>
-                (err pos ("undefined variable: " ^ S.name id); err_result))
-
-          | trvar (A.FieldVar(v,id,pos)) =
-            let val {exp,ty} = trvar v in
-              case ty of
-                T.RECORD(flist,_) =>
-                (case List.find (fn x => (#1x) = id) flist of
-                  NONE =>
-                  (err pos ("id: " ^ S.name id ^ " not found");
-                   {exp=R.errexp,ty=T.NIL})
-                | SOME(rv) =>
-                    {exp=R.fieldVar(exp,id,map #1 flist),
-                     ty=actual_ty(#2rv,pos)})
-              | t =>
-                (err pos ("expected record type, but "
-                          ^ type2str(t) ^ " found"); err_result)
-            end
-
-          | trvar (A.SubscriptVar(v,e,pos)) =
-            let val {exp,ty} = trvar v in
-              case actual_ty(ty,pos) of
-                T.ARRAY(t,_) =>
-                let val {exp=exp1,ty=ty1} = trexp e in
-                  case ty1 of
-                    T.INT => {exp=R.subscriptVar(exp,exp1),ty=t}
-                  | t =>
-                    (err pos ("array subscript should be int, but "
-                              ^ type2str(t) ^ " found"); err_result)
-                end
-              | t => type_mismatch("array", type2str(t), pos)
-            end
-
-         */
-        TODO()
     }
-
-
 }
 
 data class TranslationResult(val exp: TrExp, val type: Type)

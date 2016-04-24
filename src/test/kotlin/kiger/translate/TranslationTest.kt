@@ -9,8 +9,8 @@ class TranslationTest {
 
     @Test
     fun translateLiterals() {
-        assertTranslation("nil", Type.Nil, TrExp.intLiteral(0))
-        assertTranslation("42", Type.Int, TrExp.intLiteral(42))
+        assertTranslation("nil", Type.Nil, Translate.intLiteral(0))
+        assertTranslation("42", Type.Int, Translate.intLiteral(42))
         assertType("\"foo\"", Type.String)
     }
 
