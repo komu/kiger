@@ -34,8 +34,8 @@ sealed class Expression {
     class While(val test: Expression, val body: Expression, val pos: SourceLocation) : Expression() {
         override fun toString() = "while ($test) $body"
     }
-    class For(val variable: Symbol, var escape: Boolean, val lo: Expression, val hi: Expression, val bod: Expression, val pos: SourceLocation) : Expression()
-    class Break(val pos: Expression) : Expression()
+    class For(val variable: Symbol, var escape: Boolean, val lo: Expression, val hi: Expression, val body: Expression, val pos: SourceLocation) : Expression()
+    class Break(val pos: SourceLocation) : Expression()
     class Let(val declarations: List<Declaration>, val body: Expression, val pos: SourceLocation) : Expression()
     class Array(val typ: Symbol, val size: Expression, val init: Expression, val pos: SourceLocation) : Expression()
 }

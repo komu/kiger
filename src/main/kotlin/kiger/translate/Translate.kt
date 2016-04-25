@@ -2,7 +2,6 @@ package kiger.translate
 
 import kiger.frame.Fragment
 import kiger.frame.Frame
-import kiger.lexer.SourceLocation
 import kiger.lexer.Token
 import kiger.temp.Label
 import kiger.temp.Temp
@@ -89,22 +88,138 @@ object Translate {
         TrExp.Ex(memPlus(base.unEx(),
             TreeExp.BinOp(BinaryOp.MUL, offset.unEx(), TreeExp.Const(Frame.wordSize))))
 
-    fun record(fes: List<Pair<TrExp, SourceLocation>>): TrExp {
+    fun record(fields: List<TrExp>): TrExp {
         val r = Temp()
-        val init = TreeStm.Move(TreeExp.Temporary(r), TODO("externalCall to allocRecord")) // F.externalCall("allocRecord", [T.CONST(length(fields)*F.wordSize)]))
+        val init = TreeStm.Move(TreeExp.Temporary(r), Frame.externalCall("allocRecord", listOf(TreeExp.Const(fields.size * Frame.wordSize))))
 
-//        fun loop (fields,index) =
-//                case fields of
-//        nil => nil
-//        | e :: rest =>
-//        T.MOVE(
-//                memplus(T.TEMP r, T.CONST(index*F.wordSize)),
-//                unEx(e)) :: loop(rest,index+1)
-//        in Ex(T.ESEQ(seq(init::loop(fields,0)),T.TEMP r))
-//        end
-//
+        val inits = fields.mapIndexed { i, e ->
+            TreeStm.Move(memPlus(TreeExp.Temporary(r), TreeExp.Const(i * Frame.wordSize)), e.unEx())
+        }
 
-        TODO()
+        return TrExp.Ex(TreeExp.ESeq(seq(listOf(init) + inits), TreeExp.Temporary(r)))
+    }
+
+    /**
+     * Evaluate all expressions in sequence and return the value of the last.
+     * If the last expression is a statement, then the whole sequence will be
+     * a statement.
+     */
+    fun sequence(exps: List<TrExp>): TrExp = when (exps.size) {
+        0 -> TrExp.Nx(TreeStm.Exp(TreeExp.Const(0)))
+        1 -> exps.first()
+        else -> {
+            val first = seq(exps.subList(0, exps.size-1).map { it.unNx() })
+            val last = exps.last()
+            when (last) {
+                is TrExp.Nx -> TrExp.Nx(TreeStm.Seq(first, last.stm))
+                else        -> TrExp.Ex(TreeExp.ESeq(first, last.unEx()))
+            }
+        }
+    }
+
+    fun assign(left: TrExp, right: TrExp): TrExp =
+        TrExp.Nx(TreeStm.Move(left.unEx(), right.unEx()))
+
+    fun ifElse(testExp: TrExp, thenExp: TrExp, elseExp: TrExp?): TrExp {
+        val r = Temp()
+        val t = Label()
+        val f = Label()
+        val finish = Label()
+        val testFun = testExp.unCx()
+        return when (thenExp) {
+            is TrExp.Ex -> {
+                elseExp!! // if there's no else, this is Nx
+
+                TrExp.Ex(TreeExp.ESeq(seq(
+                        testFun(t, f),
+                        TreeStm.Labeled(t),
+                        TreeStm.Move(TreeExp.Temporary(r), thenExp.exp),
+                        TreeStm.Jump(TreeExp.Name(finish), listOf(finish)),
+                        TreeStm.Labeled(f),
+                        TreeStm.Move(TreeExp.Temporary(r), elseExp.unEx()),
+                        TreeStm.Labeled(finish)),
+                    TreeExp.Temporary(r))
+                )
+            }
+            is TrExp.Nx -> {
+                if (elseExp == null) {
+                    TrExp.Nx(seq(
+                            testFun(t, f),
+                            TreeStm.Labeled(t),
+                            thenExp.stm,
+                            TreeStm.Labeled(f)))
+                } else {
+                    TrExp.Nx(seq(
+                            testFun(t, f),
+                            TreeStm.Labeled(t),
+                            TreeStm.Jump(TreeExp.Name(finish), listOf(finish)),
+                            thenExp.stm,
+                            TreeStm.Labeled(f),
+                            elseExp.unNx(),
+                            TreeStm.Labeled(finish)))
+                }
+            }
+            is TrExp.Cx -> { // TODO fix this
+                elseExp!! // if there's no else, this is Nx
+
+                TrExp.Cx { tt, ff ->
+                    seq(testFun(t, f),
+                        TreeStm.Labeled(t),
+                        thenExp.generateStatement(tt, ff),
+                        TreeStm.Labeled(f),
+                        elseExp.unCx()(tt, ff))
+                }
+            }
+        }
+    }
+
+    fun loop(test: TrExp, body: TrExp, doneLabel: Label): TrExp {
+        val testLabel = Label()
+        val bodyLabel = Label()
+
+        return TrExp.Nx(seq(
+                        TreeStm.Labeled(testLabel),
+                        TreeStm.CJump(RelOp.EQ, test.unEx(), TreeExp.Const(0), doneLabel, bodyLabel),
+                        TreeStm.Labeled(bodyLabel),
+                        body.unNx(),
+                        TreeStm.Jump(TreeExp.Name(testLabel), listOf(testLabel)),
+                        TreeStm.Labeled(doneLabel)))
+    }
+
+    fun doBreak(label: Label): TrExp =
+        TrExp.Nx(TreeStm.Jump(TreeExp.Name(label), listOf(label)))
+
+    fun letExp(decs: List<TrExp>, body: TrExp): TrExp = when (decs.size) {
+        0    -> body
+        1    -> TrExp.Ex(TreeExp.ESeq(decs.first().unNx(), body.unEx()))
+        else -> TrExp.Ex(TreeExp.ESeq(seq(decs.map { it.unNx() }), body.unEx()))
+    }
+
+    fun array(size: TrExp, init: TrExp): TrExp =
+        TrExp.Ex(Frame.externalCall("initArray", listOf(size.unEx(), init.unEx())))
+
+    fun call(uselevel: Level, deflevel: Level, label: Label, args: List<TrExp>, isProcedure: Boolean): TrExp {
+        val argExps = args.map { it.unEx() }
+        val call = if (deflevel.parent == Level.Top) {
+            Frame.externalCall(label.name, argExps)
+
+        } else {
+            val diff = uselevel.depth - deflevel.depth + 1
+            fun iter(d: Int, curlevel: Level): TreeExp =
+                if (d == 0) {
+                    TreeExp.Temporary(Frame.FP)
+                } else {
+                    curlevel as Level.Lev
+                    Frame.exp(curlevel.frame.formals.first(), iter(d - 1, curlevel.parent))
+                }
+
+            TreeExp.Call(TreeExp.Name(label), listOf(iter(diff, uselevel)) + argExps)
+        }
+
+        return if (isProcedure)
+            TrExp.Nx(TreeStm.Exp(call))
+        else
+            TrExp.Ex(call)
     }
 }
 

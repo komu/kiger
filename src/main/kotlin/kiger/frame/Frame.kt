@@ -12,6 +12,10 @@ class Frame {
         fun exp(access: FrameAccess, exp: TreeExp): TreeExp {
             TODO()
         }
+
+        fun externalCall(name: String, args: List<TreeExp>): TreeExp {
+            TODO()
+        }
     }
 
     val formals: List<FrameAccess>

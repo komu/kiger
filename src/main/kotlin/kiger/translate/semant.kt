@@ -1,5 +1,6 @@
 package kiger.translate
 
+import kiger.absyn.Declaration
 import kiger.absyn.Expression
 import kiger.absyn.Variable
 import kiger.diag.Diagnostics
@@ -7,7 +8,9 @@ import kiger.env.EnvEntry
 import kiger.env.SymbolTable
 import kiger.lexer.SourceLocation
 import kiger.lexer.Token
+import kiger.lexer.Token.Operator
 import kiger.lexer.Token.Symbol
+import kiger.temp.Label
 import kiger.types.Type
 
 class VarEnv {
@@ -27,16 +30,16 @@ private enum class Kind {
 }
 
 private fun Token.Operator.classify(): Kind = when (this) {
-    Token.Operator.Plus -> Kind.ARITH
-    Token.Operator.Minus -> Kind.ARITH
-    Token.Operator.Multiply-> Kind.ARITH
-    Token.Operator.Divide -> Kind.ARITH
-    Token.Operator.LessThan -> Kind.COMP
-    Token.Operator.GreaterThan -> Kind.COMP
-    Token.Operator.LessThanOrEqual -> Kind.COMP
-    Token.Operator.GreaterThanOrEqual -> Kind.COMP
-    Token.Operator.EqualEqual -> Kind.EQ
-    Token.Operator.NotEqual -> Kind.EQ
+    Operator.Plus -> Kind.ARITH
+    Operator.Minus -> Kind.ARITH
+    Operator.Multiply-> Kind.ARITH
+    Operator.Divide -> Kind.ARITH
+    Operator.LessThan -> Kind.COMP
+    Operator.GreaterThan -> Kind.COMP
+    Operator.LessThanOrEqual -> Kind.COMP
+    Operator.GreaterThanOrEqual -> Kind.COMP
+    Operator.EqualEqual -> Kind.EQ
+    Operator.NotEqual -> Kind.EQ
 }
 
 data class TranslationResult(val exp: TrExp, val type: Type)
@@ -47,7 +50,7 @@ class Translator {
 
     private val errorResult = TranslationResult(Translate.errorExp, Type.Nil)
 
-    fun transExp(e: Expression, venv: VarEnv, tenv: TypeEnv, level: Level, aBreak: Any): TranslationResult {
+    fun transExp(e: Expression, venv: VarEnv, tenv: TypeEnv, level: Level, breakLabel: Label?): TranslationResult {
         fun trexp(exp: Expression): TranslationResult = when (exp) {
             is Expression.Nil ->
                 TranslationResult(Translate.nilExp, Type.Nil)
@@ -98,7 +101,7 @@ class Translator {
             }
 
             is Expression.Var ->
-                transVar(exp.variable, tenv, venv, level, aBreak)
+                transVar(exp.variable, tenv, venv, level, breakLabel)
 
             is Expression.Record -> {
                 val t = tenv[exp.typ]
@@ -112,7 +115,7 @@ class Translator {
                         val locations = exp.fields.map { it.pos }
 
                         val fts = exps.map { it.type }.zip(locations)
-                        val fes = exps.map { it.exp }.zip(locations)
+                        val fes = exps.map { it.exp }
 
                         checkRecord(ty.fields, fts, exp.pos)
 
@@ -124,22 +127,150 @@ class Translator {
                 }
             }
 
-            is Expression.Seq -> TODO()
-            is Expression.Assign -> TODO()
-            is Expression.If -> TODO()
-            is Expression.While -> TODO()
-            is Expression.Break -> TODO()
-            is Expression.Let -> TODO()
-            is Expression.Array -> TODO()
-            is Expression.For -> TODO()
-            is Expression.Call -> TODO()
+            is Expression.Seq -> {
+                val exps = exp.exps.map { trexp(it.first) }
+                val type = if (exps.isEmpty()) Type.Unit else exps.last().type
+
+                TranslationResult(Translate.sequence(exps.map { it.exp }), type)
+            }
+
+            is Expression.Assign -> {
+                val (vexp, vty) = transVar(exp.variable, tenv, venv, level, breakLabel)
+                val (eexp, ety) = trexp(exp.exp)
+
+                checkType(vty, ety, exp.pos)
+
+                TranslationResult(Translate.assign(vexp, eexp), Type.Unit)
+            }
+
+            is Expression.If -> {
+                val (thenExp, thenTy) = trexp(exp.then)
+                val (testExp, testTy) = trexp(exp.test)
+
+                checkType(Type.Int, testTy, exp.pos)
+
+                val elseExp = if (exp.alt != null) {
+                    val (elseExp, elseTy) = trexp(exp.alt)
+                    checkType(thenTy, elseTy, exp.pos)
+                    elseExp
+
+                } else {
+                    checkType(Type.Unit, thenTy, exp.pos)
+                    null
+                }
+
+                TranslationResult(Translate.ifElse(testExp, thenExp, elseExp), thenTy)
+            }
+
+            is Expression.While -> {
+                val doneLabel = Label()
+                val (testExp, testTy) = trexp(exp.test)
+                val (bodyExp, bodyTy) = transExp(exp.body, venv, tenv, level, doneLabel)
+
+                checkType(Type.Int, testTy, exp.pos);
+                checkType(Type.Unit, bodyTy, exp.pos);
+
+                TranslationResult(Translate.loop(testExp, bodyExp, doneLabel), Type.Unit)
+            }
+
+            is Expression.Break -> {
+                if (breakLabel != null) {
+                    TranslationResult(Translate.doBreak(breakLabel), Type.Unit)
+                } else {
+                    diagnostics.error("invalid break outside loop", exp.pos)
+                    errorResult
+                }
+            }
+
+            is Expression.Let -> {
+                var venv2 = venv
+                var tenv2 = tenv
+                val dexps = mutableListOf<TrExp>()
+
+                for (dec in exp.declarations) {
+                    val (venv1, tenv1, exps1) = transDec(dec, venv2, tenv2, level, breakLabel)
+                    venv2 = venv1
+                    tenv2 = tenv1
+                    dexps += exps1
+                }
+
+                val (bodyExp, bodyTy) = transExp(exp.body, venv2, tenv2, level, breakLabel)
+                TranslationResult(Translate.letExp(dexps, bodyExp), bodyTy)
+            }
+
+            is Expression.Array -> {
+                val t = tenv[exp.typ]
+                if (t == null) {
+                    diagnostics.error("type ${exp.typ} not found", exp.pos)
+                    errorResult
+                } else {
+                    val at = t.actualType(exp.pos)
+                    if (at is Type.Array) {
+                        val (sizeExp, sizeTy) = trexp(exp.size)
+                        val (initExp, initTy) = trexp(exp.init)
+                        checkType(Type.Int, sizeTy, exp.pos)
+                        checkType(at.elementType, initTy, exp.pos)
+                        TranslationResult(Translate.array(sizeExp, initExp), at)
+
+                    } else {
+                        typeMismatch("array", at, exp.pos)
+                    }
+                }
+            }
+
+            is Expression.For -> {
+                // rewrite for to while and translate the while
+
+                val limit = Symbol("limit") // TODO: fresh symbol?
+                val ivar = Variable.Simple(exp.variable, exp.pos)
+                val limitVar = Variable.Simple(limit, exp.pos)
+                val letDecs = listOf(
+                        Declaration.Var(exp.variable, exp.escape, null, exp.lo, exp.pos),
+                        Declaration.Var(limit, false, null, exp.hi, exp.pos))
+
+                val loop = Expression.While(
+                        test = Expression.Op(Expression.Var(ivar), Operator.LessThanOrEqual, Expression.Var(limitVar), exp.pos),
+                        body = Expression.Seq(listOf(
+                                exp.body to exp.pos,
+                                Expression.Assign(ivar, Expression.Op(Expression.Var(ivar), Operator.Plus, Expression.Int(1), exp.pos), exp.pos) to exp.pos)),
+                        pos = exp.pos
+                )
+
+                trexp(Expression.Let(letDecs, loop, exp.pos))
+            }
+
+            is Expression.Call -> {
+                val func = venv[exp.func]
+                when (func) {
+                    null -> {
+                        diagnostics.error("function ${exp.func} is not defined", exp.pos)
+                        errorResult
+                    }
+                    is EnvEntry.Var -> {
+                        diagnostics.error("function expected, but variable of type ${func.type} found", exp.pos)
+                        errorResult
+                    }
+                    is EnvEntry.Function -> {
+                        val argExps = exp.args.map { trexp(it) }
+                        checkFormals(func.formals, argExps, exp.pos)
+
+                        TranslationResult(Translate.call(level, func.level, func.label, argExps.map { it.exp }, func.result == Type.Unit), func.result)
+                    }
+                }
+//                let
+//                val argexps = map trexp args in
+//                        checkformals(formals,argexps,pos);
+//                {exp=R.call(level,funlevel,label,map #exp argexps,result=T.UNIT),
+//                    ty=actual_ty(result,pos)}
+//                end
+            }
         }
 
 
         return trexp(e)
     }
 
-    private fun transVar(v: Variable, tenv: TypeEnv, venv: VarEnv, level: Level, aBreak: Any): TranslationResult {
+    private fun transVar(v: Variable, tenv: TypeEnv, venv: VarEnv, level: Level, breakLabel: Label?): TranslationResult {
         return when (v) {
             is Variable.Simple -> {
                 val entry = venv[v.name]
@@ -157,7 +288,7 @@ class Translator {
                 }
             }
             is Variable.Field -> {
-                val (exp, ty) = transVar(v.variable, tenv, venv, level, aBreak)
+                val (exp, ty) = transVar(v.variable, tenv, venv, level, breakLabel)
                 when (ty) {
                     is Type.Record -> {
                         val index = ty.fields.indexOfFirst { v.name == it.first }
@@ -177,11 +308,11 @@ class Translator {
                 }
             }
             is Variable.Subscript -> {
-                val (exp, ty) = transVar(v.variable, tenv, venv, level, aBreak)
+                val (exp, ty) = transVar(v.variable, tenv, venv, level, breakLabel)
                 val actualType = ty.actualType(v.pos)
 
                 if (actualType is Type.Array) {
-                    val (exp1, ty1) = transExp(v.exp, venv, tenv, level, aBreak)
+                    val (exp1, ty1) = transExp(v.exp, venv, tenv, level, breakLabel)
                     if (ty1 == Type.Int) {
                         TranslationResult(Translate.subscriptVar(exp, exp1), actualType.elementType)
 
@@ -195,6 +326,10 @@ class Translator {
                 }
             }
         }
+    }
+
+    fun transDec(dec: Declaration, venv2: VarEnv, tenv2: TypeEnv, level: Level, breakLabel: Label?): Triple<VarEnv, TypeEnv, List<TrExp>> {
+        TODO()
     }
 
     private fun typeMismatch(expected: String, actual: Type, pos: SourceLocation): TranslationResult {
@@ -213,6 +348,16 @@ class Translator {
         } else {
             for ((t1, t2) in ts.zip(fs))
                 checkType(t1.second, t2.first, t2.second)
+        }
+    }
+
+    private fun checkFormals(ts: List<Pair<Symbol, Type>>, es: List<TranslationResult>, pos: SourceLocation) {
+        if (es.size != ts.size) {
+            diagnostics.error("${ts.size} args needed, but got ${es.size}", pos)
+        } else {
+            for ((t, e) in ts.zip(es)) {
+                checkType(t.second, e.type, pos)
+            }
         }
     }
 
