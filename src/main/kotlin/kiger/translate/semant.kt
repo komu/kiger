@@ -39,17 +39,11 @@ private fun Token.Operator.classify(): Kind = when (this) {
     Token.Operator.NotEqual -> Kind.EQ
 }
 
-private fun checkInt(type: Type, pos: SourceLocation) {
-    TODO()
-}
-
-private fun checkType(expected: Type, type: Type, pos: SourceLocation) {
-    TODO()
-}
+data class TranslationResult(val exp: TrExp, val type: Type)
 
 class Translator {
 
-    val diagnostics = Diagnostics()
+    private val diagnostics = Diagnostics()
 
     private val errorResult = TranslationResult(Translate.errorExp, Type.Nil)
 
@@ -88,8 +82,8 @@ class Translator {
 
                 when (exp.op.classify()) {
                     Kind.ARITH -> {
-                        checkInt(lt, exp.pos)
-                        checkInt(rt, exp.pos)
+                        checkType(Type.Int, lt, exp.pos)
+                        checkType(Type.Int, rt, exp.pos)
                         TranslationResult(Translate.binop(exp.op, le, re), Type.Int)
                     }
                     Kind.COMP -> {
@@ -106,7 +100,30 @@ class Translator {
             is Expression.Var ->
                 transVar(exp.variable, tenv, venv, level, aBreak)
 
-            is Expression.Record -> TODO()
+            is Expression.Record -> {
+                val t = tenv[exp.typ]
+                if (t == null) {
+                    diagnostics.error("record type ${exp.typ} not found", exp.pos)
+                    errorResult
+                } else {
+                    val ty = t.actualType(exp.pos)
+                    if (ty is Type.Record) {
+                        val exps = exp.fields.map { trexp(it.exp) }
+                        val locations = exp.fields.map { it.pos }
+
+                        val fts = exps.map { it.type }.zip(locations)
+                        val fes = exps.map { it.exp }.zip(locations)
+
+                        checkRecord(ty.fields, fts, exp.pos)
+
+                        TranslationResult(Translate.record(fes), ty)
+
+                    } else {
+                        typeMismatch("record", ty, exp.pos)
+                    }
+                }
+            }
+
             is Expression.Seq -> TODO()
             is Expression.Assign -> TODO()
             is Expression.If -> TODO()
@@ -185,8 +202,19 @@ class Translator {
         return errorResult
     }
 
-    private fun Type.actualType(pos: SourceLocation) =
-        actualType(pos, diagnostics)
-}
+    private fun checkType(expected: Type, type: Type, pos: SourceLocation) {
+        if (type != expected)
+            typeMismatch(expected.toString(), type, pos)
+    }
 
-data class TranslationResult(val exp: TrExp, val type: Type)
+    private fun checkRecord(ts: List<Pair<Symbol, Type>>, fs: List<Pair<Type, SourceLocation>>, pos: SourceLocation) {
+        if (ts.size != fs.size) {
+            diagnostics.error("${ts.size} fields needed, but got ${fs.size}", pos)
+        } else {
+            for ((t1, t2) in ts.zip(fs))
+                checkType(t1.second, t2.first, t2.second)
+        }
+    }
+
+    private fun Type.actualType(pos: SourceLocation) = actualType(pos, diagnostics)
+}

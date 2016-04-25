@@ -2,8 +2,10 @@ package kiger.translate
 
 import kiger.frame.Fragment
 import kiger.frame.Frame
+import kiger.lexer.SourceLocation
 import kiger.lexer.Token
 import kiger.temp.Label
+import kiger.temp.Temp
 import kiger.tree.BinaryOp
 import kiger.tree.RelOp
 import kiger.tree.TreeExp
@@ -86,6 +88,24 @@ object Translate {
     fun subscriptVar(base: TrExp, offset: TrExp): TrExp =
         TrExp.Ex(memPlus(base.unEx(),
             TreeExp.BinOp(BinaryOp.MUL, offset.unEx(), TreeExp.Const(Frame.wordSize))))
+
+    fun record(fes: List<Pair<TrExp, SourceLocation>>): TrExp {
+        val r = Temp()
+        val init = TreeStm.Move(TreeExp.Temporary(r), TODO("externalCall to allocRecord")) // F.externalCall("allocRecord", [T.CONST(length(fields)*F.wordSize)]))
+
+//        fun loop (fields,index) =
+//                case fields of
+//        nil => nil
+//        | e :: rest =>
+//        T.MOVE(
+//                memplus(T.TEMP r, T.CONST(index*F.wordSize)),
+//                unEx(e)) :: loop(rest,index+1)
+//        in Ex(T.ESEQ(seq(init::loop(fields,0)),T.TEMP r))
+//        end
+//
+
+        TODO()
+    }
 }
 
 fun seq(vararg statements: TreeStm): TreeStm = seq(statements.asList())
