@@ -53,7 +53,7 @@ class Translator {
 
     private val errorResult = TranslationResult(Translate.errorExp, Type.Nil)
 
-    fun transExp(venv: VarEnv, tenv: TypeEnv, level: Level, `break`: Any, e: Expression): TranslationResult {
+    fun transExp(e: Expression, venv: VarEnv, tenv: TypeEnv, level: Level, aBreak: Any): TranslationResult {
         fun trexp(exp: Expression): TranslationResult = when (exp) {
             is Expression.Nil ->
                 TranslationResult(Translate.nilExp, Type.Nil)
@@ -104,7 +104,7 @@ class Translator {
             }
 
             is Expression.Var ->
-                transVar(exp.variable, venv, level)
+                transVar(exp.variable, tenv, venv, level, aBreak)
 
             is Expression.Record -> TODO()
             is Expression.Seq -> TODO()
@@ -122,64 +122,71 @@ class Translator {
         return trexp(e)
     }
 
-    private fun transVar(variable: Variable, venv: VarEnv, level: Level): TranslationResult {
-        return when (variable) {
+    private fun transVar(v: Variable, tenv: TypeEnv, venv: VarEnv, level: Level, aBreak: Any): TranslationResult {
+        return when (v) {
             is Variable.Simple -> {
-                val entry = venv[variable.name]
+                val entry = venv[v.name]
                 when (entry) {
                     is EnvEntry.Var ->
-                        TranslationResult(Translate.simpleVar(entry.access, level), entry.type.actualType(variable.pos, diagnostics))
+                        TranslationResult(Translate.simpleVar(entry.access, level), entry.type.actualType(v.pos))
                     is EnvEntry.Function -> {
-                        diagnostics.error("expected variable, but function found", variable.pos)
+                        diagnostics.error("expected variable, but function found", v.pos)
                         errorResult
                     }
                     null -> {
-                        diagnostics.error("undefined variable: ${variable.name}", variable.pos)
+                        diagnostics.error("undefined variable: ${v.name}", v.pos)
                         errorResult
                     }
                 }
             }
             is Variable.Field -> {
-                val (exp, ty) = transVar(variable.variable, venv, level)
+                val (exp, ty) = transVar(v.variable, tenv, venv, level, aBreak)
                 when (ty) {
                     is Type.Record -> {
-                        val index = ty.fields.indexOfFirst { variable.name == it.first }
+                        val index = ty.fields.indexOfFirst { v.name == it.first }
                         if (index != -1) {
-                            val fieldType = ty.fields[index].second.actualType(variable.pos, diagnostics)
+                            val fieldType = ty.fields[index].second.actualType(v.pos)
                             TranslationResult(Translate.fieldVar(exp, index), fieldType)
 
                         } else {
-                            diagnostics.error("could not find field ${variable.name} for $ty", variable.pos)
+                            diagnostics.error("could not find field ${v.name} for $ty", v.pos)
                             errorResult
                         }
                     }
                     else -> {
-                        diagnostics.error("expected record type, but $ty found", variable.pos)
+                        diagnostics.error("expected record type, but $ty found", v.pos)
                         errorResult
                     }
                 }
             }
             is Variable.Subscript -> {
-                TODO()
-                /*
-                | trvar (A.SubscriptVar(v,e,pos)) =
-                let val {exp,ty} = trvar v in
-                  case actual_ty(ty,pos) of
-                    T.ARRAY(t,_) =>
-                    let val {exp=exp1,ty=ty1} = trexp e in
-                      case ty1 of
-                        T.INT => {exp=R.subscriptVar(exp,exp1),ty=t}
-                      | t =>
-                        (err pos ("array subscript should be int, but "
-                                  ^ type2str(t) ^ " found"); err_result)
-                    end
-                  | t => type_mismatch("array", type2str(t), pos)
-                end
+                val (exp, ty) = transVar(v.variable, tenv, venv, level, aBreak)
+                val actualType = ty.actualType(v.pos)
 
-                */
+                if (actualType is Type.Array) {
+                    val (exp1, ty1) = transExp(v.exp, venv, tenv, level, aBreak)
+                    if (ty1 == Type.Int) {
+                        TranslationResult(Translate.subscriptVar(exp, exp1), actualType.elementType)
+
+                    } else {
+                        diagnostics.error("array subscript should be int, but was $ty1}", v.pos)
+                        errorResult
+                    }
+
+                } else {
+                    typeMismatch("array", actualType, v.pos)
+                }
             }
         }
     }
+
+    private fun typeMismatch(expected: String, actual: Type, pos: SourceLocation): TranslationResult {
+        diagnostics.error("expected $expected, but got $actual", pos)
+        return errorResult
+    }
+
+    private fun Type.actualType(pos: SourceLocation) =
+        actualType(pos, diagnostics)
 }
 
 data class TranslationResult(val exp: TrExp, val type: Type)

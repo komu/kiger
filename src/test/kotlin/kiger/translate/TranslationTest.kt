@@ -29,7 +29,7 @@ class TranslationTest {
         val venv = VarEnv()
         val tenv = TypeEnv()
         val exp = parseExpression(code)
-        val result = Translator().transExp(venv, tenv, Level.Top, 0, exp)
+        val result = Translator().transExp(exp, venv, tenv, Level.Top, 0)
         return result
     }
 }
