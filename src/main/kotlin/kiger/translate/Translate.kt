@@ -75,6 +75,17 @@ object Translate {
 
         return TrExp.Ex(iter(level, TreeExp.Temporary(Frame.FP)))
     }
+
+    fun fieldVar(base: TrExp, index: Int): TrExp =
+        TrExp.Ex(memPlus(base.unEx(),
+            TreeExp.BinOp(BinaryOp.MUL, TreeExp.Const(index), TreeExp.Const(Frame.wordSize))))
+
+    fun memPlus(e1: TreeExp, e2: TreeExp): TreeExp =
+        TreeExp.Mem(TreeExp.BinOp(BinaryOp.PLUS, e1, e2))
+
+    fun subscriptVar(base: TrExp, offset: TrExp): TrExp =
+        TrExp.Ex(memPlus(base.unEx(),
+            TreeExp.BinOp(BinaryOp.MUL, offset.unEx(), TreeExp.Const(Frame.wordSize))))
 }
 
 fun seq(vararg statements: TreeStm): TreeStm = seq(statements.asList())
