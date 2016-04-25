@@ -221,6 +221,10 @@ object Translate {
         else
             TrExp.Ex(call)
     }
+
+    fun allocLocal(level: Level, escape: Boolean): Access {
+        TODO()
+    }
 }
 
 fun seq(vararg statements: TreeStm): TreeStm = seq(statements.asList())

@@ -17,6 +17,10 @@ class VarEnv {
     val table = SymbolTable<EnvEntry>()
 
     operator fun get(symbol: Symbol): EnvEntry? = table[symbol]
+
+    fun enter(name: Symbol, entry: EnvEntry): VarEnv {
+        TODO()
+    }
 }
 
 class TypeEnv {
@@ -328,9 +332,42 @@ class Translator {
         }
     }
 
-    fun transDec(dec: Declaration, venv2: VarEnv, tenv2: TypeEnv, level: Level, breakLabel: Label?): Triple<VarEnv, TypeEnv, List<TrExp>> {
-        TODO()
+    private fun transDec(dec: Declaration, venv: VarEnv, tenv: TypeEnv, level: Level, breakLabel: Label?): Triple<VarEnv, TypeEnv, List<TrExp>> =
+        when (dec) {
+            is Declaration.Functions -> transDec(dec, venv, tenv, level, breakLabel)
+            is Declaration.Var       -> transDec(dec, venv, tenv, level, breakLabel)
+            is Declaration.TypeDec   -> transDec(dec, venv, tenv, level, breakLabel)
+        }
+
+    private fun transDec(dec: Declaration.Var, venv: VarEnv, tenv: TypeEnv, level: Level, breakLabel: Label?): Triple<VarEnv, TypeEnv, List<TrExp>> {
+        val (exp, ty) = transExp(dec.init, venv, tenv, level, breakLabel)
+        val type = if (dec.type == null) {
+            if (ty == Type.Nil)
+                diagnostics.error("can't use nil", dec.pos)
+
+            ty
+        } else {
+            val type = tenv[dec.type.first]
+            if (type == null) {
+                diagnostics.error("type ${dec.type.first} not found", dec.type.second)
+                ty
+            } else {
+                val at = type.actualType(dec.type.second)
+                checkType(at, ty, dec.pos)
+                at
+            }
+        }
+
+        val acc = Translate.allocLocal(level, !dec.escape)
+        val varexp = Translate.simpleVar(acc, level)
+        return Triple(venv.enter(dec.name, EnvEntry.Var(acc, type)), tenv, listOf(Translate.assign(varexp, exp)))
     }
+
+    private fun transDec(dec: Declaration.Functions, venv: VarEnv, tenv: TypeEnv, level: Level, breakLabel: Label?): Triple<VarEnv, TypeEnv, List<TrExp>> =
+        TODO()
+
+    private fun transDec(dec: Declaration.TypeDec, venv: VarEnv, tenv: TypeEnv, level: Level, breakLabel: Label?): Triple<VarEnv, TypeEnv, List<TrExp>> =
+        TODO()
 
     private fun typeMismatch(expected: String, actual: Type, pos: SourceLocation): TranslationResult {
         diagnostics.error("expected $expected, but got $actual", pos)
