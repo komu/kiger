@@ -3,6 +3,7 @@
   <component name="JavaProjectCodeInsightSettings">
     <excluded-names>
       <name>com.oracle</name>
+      <name>com.sun</name>
       <name>java.awt</name>
       <name>java.beans</name>
       <name>java.lang.ProcessBuilder.Redirect.Type</name>
@@ -12,6 +13,7 @@
       <name>javafx</name>
       <name>javax.sound</name>
       <name>javax.swing</name>
+      <name>jdk</name>
       <name>oracle.jrockit</name>
       <name>sun</name>
       <name>sun.awt</name>

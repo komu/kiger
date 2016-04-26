@@ -13,9 +13,14 @@ import kiger.tree.TreeStm
 object Translate {
     val fragments = mutableListOf<Fragment>()
 
+    val outermost = Level.Top
+
     val nilExp: TrExp = TrExp.Ex(TreeExp.Const(0))
 
     val errorExp: TrExp = TrExp.Ex(TreeExp.Const(0))
+
+    fun newLevel(parent: Level, name: Label, formalEscapes: List<Boolean>) =
+        Level.Lev(parent, Frame(name, listOf(true) + formalEscapes))
 
     fun intLiteral(value: Int): TrExp = TrExp.Ex(TreeExp.Const(value))
 
@@ -224,6 +229,12 @@ object Translate {
 
     fun allocLocal(level: Level, escape: Boolean): Access =
         (level as Level.Lev).frame.allocLocal(escape)
+
+    fun procEntryExit(level: Level.Lev, body: TrExp) {
+        val body2 = level.frame.procEntryExit1(TreeStm.Move(TreeExp.Temporary(Frame.RV), body.unEx()))
+
+        fragments += Fragment.Proc(body2, level.frame)
+    }
 }
 
 fun seq(vararg statements: TreeStm): TreeStm = seq(statements.asList())

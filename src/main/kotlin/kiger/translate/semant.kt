@@ -7,6 +7,7 @@ import kiger.absyn.Variable
 import kiger.diag.Diagnostics
 import kiger.env.EnvEntry
 import kiger.env.SymbolTable
+import kiger.frame.Fragment
 import kiger.lexer.SourceLocation
 import kiger.lexer.Token
 import kiger.lexer.Token.Operator
@@ -42,6 +43,20 @@ class Translator {
     private val diagnostics = Diagnostics()
 
     private val errorResult = TranslationResult(Translate.errorExp, Type.Nil)
+
+    private val baseVenv = SymbolTable<EnvEntry>()
+    private val baseTenv = SymbolTable<Type>()
+
+    fun transProg(ex: Expression): List<Fragment> {
+        Translate.fragments.clear() // TODO: remove global state
+
+        val mainLevel = Translate.newLevel(Translate.outermost, Label("main"), emptyList())
+
+        val (exp, ty) = transExp(ex, baseVenv, baseTenv, mainLevel, null)
+
+        Translate.procEntryExit(mainLevel, exp)
+        return Translate.fragments
+    }
 
     fun transExp(e: Expression, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): TranslationResult {
         fun trexp(exp: Expression): TranslationResult = when (exp) {
@@ -372,8 +387,22 @@ class Translator {
     private fun transDec(dec: Declaration.Functions, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): DeclTranslationResult =
         TODO()
 
-    private fun transTy(type: TypeRef, tenv: SymbolTable<Type>): Type {
-        TODO()
+    private fun SymbolTable<Type>.lookupType(name: Symbol, pos: SourceLocation): Type =
+        this[name] ?: run {
+            diagnostics.error("could not find type $name", pos)
+            Type.Unit
+        }
+
+    /**
+     * Translate type-references in source code to Types.
+     */
+    private fun transTy(type: TypeRef, tenv: SymbolTable<Type>): Type = when (type) {
+        is TypeRef.Name   -> tenv.lookupType(type.name, type.pos)
+        is TypeRef.Record -> {
+            checkDuplicates(type.fields.map { Pair(it.name, it.pos) })
+            Type.Record(type.fields.map { Pair(it.name, tenv.lookupType(it.typ, it.pos)) })
+        }
+        is TypeRef.Array  -> Type.Array(tenv.lookupType(type.elementType, type.pos))
     }
 
     // Check that mutually recursive types include an array or record
