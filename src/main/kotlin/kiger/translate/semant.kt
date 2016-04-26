@@ -42,32 +42,35 @@ class Translator {
 
     private val diagnostics = Diagnostics()
 
-    private val errorResult = TranslationResult(Translate.errorExp, Type.Nil)
+    private val translate = Translate()
+    private val errorResult = TranslationResult(translate.errorExp, Type.Nil)
 
     private val baseVenv = SymbolTable<EnvEntry>()
     private val baseTenv = SymbolTable<Type>()
 
-    fun transProg(ex: Expression): List<Fragment> {
-        Translate.fragments.clear() // TODO: remove global state
+    companion object {
+        fun transProg(ex: Expression): List<Fragment> {
+            val translator = Translator()
+            val translate = translator.translate
+            val mainLevel = translate.newLevel(translate.outermost, Label("main"), emptyList())
 
-        val mainLevel = Translate.newLevel(Translate.outermost, Label("main"), emptyList())
+            val exp = translator.transExp(ex, translator.baseVenv, translator.baseTenv, mainLevel, null).exp
 
-        val (exp, ty) = transExp(ex, baseVenv, baseTenv, mainLevel, null)
-
-        Translate.procEntryExit(mainLevel, exp)
-        return Translate.fragments
+            translate.procEntryExit(mainLevel, exp)
+            return translate.fragments
+        }
     }
 
     fun transExp(e: Expression, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): TranslationResult {
         fun trexp(exp: Expression): TranslationResult = when (exp) {
             is Expression.Nil ->
-                TranslationResult(Translate.nilExp, Type.Nil)
+                TranslationResult(translate.nilExp, Type.Nil)
 
             is Expression.Int ->
-                TranslationResult(Translate.intLiteral(exp.value), Type.Int)
+                TranslationResult(translate.intLiteral(exp.value), Type.Int)
 
             is Expression.String ->
-                TranslationResult(Translate.stringLiteral(exp.value), Type.String)
+                TranslationResult(translate.stringLiteral(exp.value), Type.String)
 
             is Expression.Op -> {
                 val (le, lt) = trexp(exp.left)
@@ -95,15 +98,15 @@ class Translator {
                     Kind.ARITH -> {
                         checkType(Type.Int, lt, exp.pos)
                         checkType(Type.Int, rt, exp.pos)
-                        TranslationResult(Translate.binop(exp.op, le, re), Type.Int)
+                        TranslationResult(translate.binop(exp.op, le, re), Type.Int)
                     }
                     Kind.COMP -> {
                         checkComparable()
-                        TranslationResult(Translate.relop(exp.op, le, re), Type.Int)
+                        TranslationResult(translate.relop(exp.op, le, re), Type.Int)
                     }
                     Kind.EQ -> {
                         checkEquality()
-                        TranslationResult(Translate.relop(exp.op, le, re), Type.Int)
+                        TranslationResult(translate.relop(exp.op, le, re), Type.Int)
                     }
                 }
             }
@@ -127,7 +130,7 @@ class Translator {
 
                         checkRecord(ty.fields, fts, exp.pos)
 
-                        TranslationResult(Translate.record(fes), ty)
+                        TranslationResult(translate.record(fes), ty)
 
                     } else {
                         typeMismatch("record", ty, exp.pos)
@@ -139,7 +142,7 @@ class Translator {
                 val exps = exp.exps.map { trexp(it.first) }
                 val type = if (exps.isEmpty()) Type.Unit else exps.last().type
 
-                TranslationResult(Translate.sequence(exps.map { it.exp }), type)
+                TranslationResult(translate.sequence(exps.map { it.exp }), type)
             }
 
             is Expression.Assign -> {
@@ -148,7 +151,7 @@ class Translator {
 
                 checkType(vty, ety, exp.pos)
 
-                TranslationResult(Translate.assign(vexp, eexp), Type.Unit)
+                TranslationResult(translate.assign(vexp, eexp), Type.Unit)
             }
 
             is Expression.If -> {
@@ -167,7 +170,7 @@ class Translator {
                     null
                 }
 
-                TranslationResult(Translate.ifElse(testExp, thenExp, elseExp), thenTy)
+                TranslationResult(translate.ifElse(testExp, thenExp, elseExp), thenTy)
             }
 
             is Expression.While -> {
@@ -178,12 +181,12 @@ class Translator {
                 checkType(Type.Int, testTy, exp.pos);
                 checkType(Type.Unit, bodyTy, exp.pos);
 
-                TranslationResult(Translate.loop(testExp, bodyExp, doneLabel), Type.Unit)
+                TranslationResult(translate.loop(testExp, bodyExp, doneLabel), Type.Unit)
             }
 
             is Expression.Break -> {
                 if (breakLabel != null) {
-                    TranslationResult(Translate.doBreak(breakLabel), Type.Unit)
+                    TranslationResult(translate.doBreak(breakLabel), Type.Unit)
                 } else {
                     diagnostics.error("invalid break outside loop", exp.pos)
                     errorResult
@@ -203,7 +206,7 @@ class Translator {
                 }
 
                 val (bodyExp, bodyTy) = transExp(exp.body, venv2, tenv2, level, breakLabel)
-                TranslationResult(Translate.letExp(dexps, bodyExp), bodyTy)
+                TranslationResult(translate.letExp(dexps, bodyExp), bodyTy)
             }
 
             is Expression.Array -> {
@@ -218,7 +221,7 @@ class Translator {
                         val (initExp, initTy) = trexp(exp.init)
                         checkType(Type.Int, sizeTy, exp.pos)
                         checkType(at.elementType, initTy, exp.pos)
-                        TranslationResult(Translate.array(sizeExp, initExp), at)
+                        TranslationResult(translate.array(sizeExp, initExp), at)
 
                     } else {
                         typeMismatch("array", at, exp.pos)
@@ -262,7 +265,7 @@ class Translator {
                         val argExps = exp.args.map { trexp(it) }
                         checkFormals(func.formals, argExps, exp.pos)
 
-                        TranslationResult(Translate.call(level, func.level, func.label, argExps.map { it.exp }, func.result == Type.Unit), func.result)
+                        TranslationResult(translate.call(level, func.level, func.label, argExps.map { it.exp }, func.result == Type.Unit), func.result)
                     }
                 }
             }
@@ -278,7 +281,7 @@ class Translator {
                 val entry = venv[v.name]
                 when (entry) {
                     is EnvEntry.Var ->
-                        TranslationResult(Translate.simpleVar(entry.access, level), entry.type.actualType(v.pos))
+                        TranslationResult(translate.simpleVar(entry.access, level), entry.type.actualType(v.pos))
                     is EnvEntry.Function -> {
                         diagnostics.error("expected variable, but function found", v.pos)
                         errorResult
@@ -296,7 +299,7 @@ class Translator {
                         val index = ty.fields.indexOfFirst { v.name == it.first }
                         if (index != -1) {
                             val fieldType = ty.fields[index].second.actualType(v.pos)
-                            TranslationResult(Translate.fieldVar(exp, index), fieldType)
+                            TranslationResult(translate.fieldVar(exp, index), fieldType)
 
                         } else {
                             diagnostics.error("could not find field ${v.name} for $ty", v.pos)
@@ -316,7 +319,7 @@ class Translator {
                 if (actualType is Type.Array) {
                     val (exp1, ty1) = transExp(v.exp, venv, tenv, level, breakLabel)
                     if (ty1 == Type.Int) {
-                        TranslationResult(Translate.subscriptVar(exp, exp1), actualType.elementType)
+                        TranslationResult(translate.subscriptVar(exp, exp1), actualType.elementType)
 
                     } else {
                         diagnostics.error("array subscript should be int, but was $ty1}", v.pos)
@@ -356,11 +359,11 @@ class Translator {
             }
         }
 
-        val acc = Translate.allocLocal(level, !dec.escape)
-        val varExp = Translate.simpleVar(acc, level)
+        val acc = translate.allocLocal(level, !dec.escape)
+        val varExp = translate.simpleVar(acc, level)
         val venv2 = venv.enter(dec.name, EnvEntry.Var(acc, type))
 
-        return DeclTranslationResult(venv2, tenv, Translate.assign(varExp, exp))
+        return DeclTranslationResult(venv2, tenv, translate.assign(varExp, exp))
     }
 
     private fun transDec(dec: Declaration.Types, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): DeclTranslationResult {

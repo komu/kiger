@@ -1,7 +1,8 @@
 package kiger.translate
 
 import kiger.frame.Fragment
-import kiger.frame.Frame
+import kiger.frame.FrameType
+import kiger.frame.JouletteFrame
 import kiger.lexer.Token
 import kiger.temp.Label
 import kiger.temp.Temp
@@ -10,7 +11,7 @@ import kiger.tree.RelOp
 import kiger.tree.TreeExp
 import kiger.tree.TreeStm
 
-object Translate {
+class Translate {
     val fragments = mutableListOf<Fragment>()
 
     val outermost = Level.Top
@@ -19,8 +20,10 @@ object Translate {
 
     val errorExp: TrExp = TrExp.Ex(TreeExp.Const(0))
 
+    val frameType: FrameType = JouletteFrame
+
     fun newLevel(parent: Level, name: Label, formalEscapes: List<Boolean>) =
-        Level.Lev(parent, Frame(name, listOf(true) + formalEscapes))
+        Level.Lev(parent, frameType.newFrame(name, listOf(true) + formalEscapes))
 
     fun intLiteral(value: Int): TrExp = TrExp.Ex(TreeExp.Const(value))
 
@@ -73,32 +76,32 @@ object Translate {
     fun simpleVar(access: Access, level: Level): TrExp {
         fun iter(currentLevel: Level, acc: TreeExp): TreeExp =
             if (access.level === currentLevel) {
-                Frame.exp(access.frameAccess, acc)
+                frameType.exp(access.frameAccess, acc)
             } else {
                 currentLevel as Level.Lev
-                iter(currentLevel.parent, Frame.exp(currentLevel.frame.formals.first(), acc))
+                iter(currentLevel.parent, frameType.exp(currentLevel.frame.formals.first(), acc))
             }
 
-        return TrExp.Ex(iter(level, TreeExp.Temporary(Frame.FP)))
+        return TrExp.Ex(iter(level, TreeExp.Temporary(frameType.FP)))
     }
 
     fun fieldVar(base: TrExp, index: Int): TrExp =
         TrExp.Ex(memPlus(base.unEx(),
-            TreeExp.BinOp(BinaryOp.MUL, TreeExp.Const(index), TreeExp.Const(Frame.wordSize))))
+            TreeExp.BinOp(BinaryOp.MUL, TreeExp.Const(index), TreeExp.Const(frameType.wordSize))))
 
     fun memPlus(e1: TreeExp, e2: TreeExp): TreeExp =
         TreeExp.Mem(TreeExp.BinOp(BinaryOp.PLUS, e1, e2))
 
     fun subscriptVar(base: TrExp, offset: TrExp): TrExp =
         TrExp.Ex(memPlus(base.unEx(),
-            TreeExp.BinOp(BinaryOp.MUL, offset.unEx(), TreeExp.Const(Frame.wordSize))))
+            TreeExp.BinOp(BinaryOp.MUL, offset.unEx(), TreeExp.Const(frameType.wordSize))))
 
     fun record(fields: List<TrExp>): TrExp {
         val r = Temp()
-        val init = TreeStm.Move(TreeExp.Temporary(r), Frame.externalCall("allocRecord", listOf(TreeExp.Const(fields.size * Frame.wordSize))))
+        val init = TreeStm.Move(TreeExp.Temporary(r), frameType.externalCall("allocRecord", listOf(TreeExp.Const(fields.size * frameType.wordSize))))
 
         val inits = fields.mapIndexed { i, e ->
-            TreeStm.Move(memPlus(TreeExp.Temporary(r), TreeExp.Const(i * Frame.wordSize)), e.unEx())
+            TreeStm.Move(memPlus(TreeExp.Temporary(r), TreeExp.Const(i * frameType.wordSize)), e.unEx())
         }
 
         return TrExp.Ex(TreeExp.ESeq(seq(listOf(init) + inits), TreeExp.Temporary(r)))
@@ -201,21 +204,21 @@ object Translate {
     }
 
     fun array(size: TrExp, init: TrExp): TrExp =
-        TrExp.Ex(Frame.externalCall("initArray", listOf(size.unEx(), init.unEx())))
+        TrExp.Ex(frameType.externalCall("initArray", listOf(size.unEx(), init.unEx())))
 
     fun call(uselevel: Level, deflevel: Level, label: Label, args: List<TrExp>, isProcedure: Boolean): TrExp {
         val argExps = args.map { it.unEx() }
         val call = if (deflevel.parent == Level.Top) {
-            Frame.externalCall(label.name, argExps)
+            frameType.externalCall(label.name, argExps)
 
         } else {
             val diff = uselevel.depth - deflevel.depth + 1
             fun iter(d: Int, curlevel: Level): TreeExp =
                 if (d == 0) {
-                    TreeExp.Temporary(Frame.FP)
+                    TreeExp.Temporary(frameType.FP)
                 } else {
                     curlevel as Level.Lev
-                    Frame.exp(curlevel.frame.formals.first(), iter(d - 1, curlevel.parent))
+                    frameType.exp(curlevel.frame.formals.first(), iter(d - 1, curlevel.parent))
                 }
 
             TreeExp.Call(TreeExp.Name(label), listOf(iter(diff, uselevel)) + argExps)
@@ -231,7 +234,7 @@ object Translate {
         (level as Level.Lev).frame.allocLocal(escape)
 
     fun procEntryExit(level: Level.Lev, body: TrExp) {
-        val body2 = level.frame.procEntryExit1(TreeStm.Move(TreeExp.Temporary(Frame.RV), body.unEx()))
+        val body2 = level.frame.procEntryExit1(TreeStm.Move(TreeExp.Temporary(frameType.RV), body.unEx()))
 
         fragments += Fragment.Proc(body2, level.frame)
     }

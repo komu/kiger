@@ -13,10 +13,12 @@ import kotlin.test.assertEquals
 
 class TranslationTest {
 
+    val translator = Translator()
+
     @Test
     fun translateLiterals() {
-        assertTranslation("nil", Type.Nil, Translate.intLiteral(0))
-        assertTranslation("42", Type.Int, Translate.intLiteral(42))
+        assertTranslation("nil", Type.Nil, TrExp.Ex(TreeExp.Const(0)))
+        assertTranslation("42", Type.Int, TrExp.Ex(TreeExp.Const(42)))
         assertTranslation("\"foo\"", Type.String, TrExp.Ex(TreeExp.Name(Label("l1"))))
     }
 
@@ -46,7 +48,7 @@ class TranslationTest {
         val exp = parseExpression(code)
         resetTempSequence()
         resetLabelSequence()
-        val result = Translator().transExp(exp, venv, tenv, Level.Top, null)
+        val result = translator.transExp(exp, venv, tenv, Level.Top, null)
         return result
     }
 }
