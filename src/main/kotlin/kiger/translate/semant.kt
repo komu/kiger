@@ -42,8 +42,8 @@ class Translator {
     private val translate = Translate()
     private val errorResult = TranslationResult(translate.errorExp, Type.Nil)
 
-    private var baseVenv = SymbolTable<EnvEntry>()
-    private var baseTenv = run {
+    var baseVenv = SymbolTable<EnvEntry>()
+    var baseTenv = run {
         var env = SymbolTable<Type>()
         env = env.enter(Symbol("int"), Type.Int)
         env = env.enter(Symbol("string"), Type.String)
@@ -435,7 +435,7 @@ class Translator {
 
     private fun SymbolTable<Type>.lookupType(name: Symbol, pos: SourceLocation): Type =
         this[name] ?: run {
-            diagnostics.error("could not find type '$name'", pos)
+            diagnostics.error("could not find type $name", pos)
             Type.Unit
         }
 

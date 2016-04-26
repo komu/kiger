@@ -18,7 +18,7 @@ class Translate {
 
     val nilExp: TrExp = TrExp.Ex(TreeExp.Const(0))
 
-    val errorExp: TrExp = TrExp.Ex(TreeExp.Const(0))
+    val errorExp: TrExp = TrExp.Ex(TreeExp.Const(999))
 
     val frameType: FrameType = JouletteFrame
 
@@ -231,7 +231,7 @@ class Translate {
     }
 
     fun allocLocal(level: Level, escape: Boolean): Access =
-        (level as Level.Lev).frame.allocLocal(escape)
+        Access(level, (level as Level.Lev).frame.allocLocal(escape))
 
     fun procEntryExit(level: Level.Lev, body: TrExp) {
         val body2 = level.frame.procEntryExit1(TreeStm.Move(TreeExp.Temporary(frameType.RV), body.unEx()))

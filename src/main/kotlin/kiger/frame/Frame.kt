@@ -2,7 +2,7 @@ package kiger.frame
 
 import kiger.temp.Label
 import kiger.temp.Temp
-import kiger.translate.Access
+import kiger.translate.seq
 import kiger.tree.BinaryOp
 import kiger.tree.TreeExp
 import kiger.tree.TreeStm
@@ -11,15 +11,17 @@ abstract class Frame(val name: Label) {
 
     abstract val formals: List<FrameAccess>
 
-    fun allocLocal(escape: Boolean): Access = TODO()
+    abstract fun allocLocal(escape: Boolean): FrameAccess
 
-    fun procEntryExit1(body: TreeStm): TreeStm {
-        // TODO: dummy impl
-        return TreeStm.Exp(TreeExp.Const(0))
-    }
+    /**
+     * Move each incoming register parameter to its correct place in the function.
+     */
+    abstract fun procEntryExit1(body: TreeStm): TreeStm
 }
 
 class JouletteFrame private constructor(name: Label, formalEscapes: List<Boolean>) : Frame(name) {
+
+    var locals = 0
 
     override val formals: List<FrameAccess> = formalEscapes.mapIndexed { index, escape ->
         if (escape)
@@ -35,6 +37,20 @@ class JouletteFrame private constructor(name: Label, formalEscapes: List<Boolean
             error("passed ${formals.size} arguments, but only ${argumentRegisters.size} arguments are supported")
 
         formals.mapIndexed { i, access -> viewShift(access, argumentRegisters[i]) }
+    }
+
+    override fun allocLocal(escape: Boolean): FrameAccess =
+        if (escape)
+            FrameAccess.InFrame(locals++ * wordSize + firstLocalOffset)
+        else
+            FrameAccess.InReg(Temp())
+
+    override fun procEntryExit1(body: TreeStm): TreeStm {
+        val pairs = calleeSaves.map { Pair(allocLocal(false), it) }
+        val saves = pairs.map { TreeStm.Move(exp(it.first, TreeExp.Temporary(FP)), TreeExp.Temporary(it.second)) }
+        val restores = pairs.asReversed().map { TreeStm.Move(TreeExp.Temporary(it.second), exp(it.first, TreeExp.Temporary(FP))) }
+
+        return seq(shiftInstructions + saves + body + restores)
     }
 
     companion object : FrameType {
@@ -90,7 +106,8 @@ class JouletteFrame private constructor(name: Label, formalEscapes: List<Boolean
         override val calleeSaves: List<Temp> = listOf(s0, s1, s2, s3, s4, s5, s6, s7)
         override val callerSaves: List<Temp> = listOf(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9)
 
-        private val firstFormalOffset = wordSize // fp is stored at 0, params start at fp + wordSize
+        private val firstLocalOffset = wordSize // fp is stored at 0, locals/params start at fp + wordSize
+        private val firstFormalOffset = firstLocalOffset
     }
 }
 

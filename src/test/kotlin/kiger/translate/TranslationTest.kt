@@ -1,7 +1,5 @@
 package kiger.translate
 
-import kiger.env.EnvEntry
-import kiger.env.SymbolTable
 import kiger.parser.parseExpression
 import kiger.temp.Label
 import kiger.temp.resetLabelSequence
@@ -30,12 +28,7 @@ class TranslationTest {
 
     @Test
     fun simpleDefinition() {
-        dump("let function square(x: Int): Int = x * x in square(4)")
-    }
-
-    private fun dump(code: String) {
-        val result = translate(code)
-        println("exp: ${result.exp}")
+        dump("let function square(x: int): int = x * x in square(4)")
     }
 
     private fun assertTranslation(code: String, expectedType: Type, expectedExp: TrExp) {
@@ -53,12 +46,16 @@ class TranslationTest {
     }
 
     private fun translate(code: String): TranslationResult {
-        val venv = SymbolTable<EnvEntry>()
-        val tenv = SymbolTable<Type>()
         val exp = parseExpression(code)
         resetTempSequence()
         resetLabelSequence()
-        val result = translator.transExp(exp, venv, tenv, Level.Top, null)
-        return result
+        return translator.transExp(exp, translator.baseVenv, translator.baseTenv, Level.Top, null)
+    }
+
+    private fun dump(code: String) {
+        val exp = parseExpression(code)
+        resetTempSequence()
+        resetLabelSequence()
+        println(Translator.transProg(exp).joinToString("\n"))
     }
 }
