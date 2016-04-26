@@ -51,10 +51,12 @@ class Translator {
     }
 
     companion object {
+        val mainLabel = Label("main")
+
         fun transProg(ex: Expression): List<Fragment> {
             val translator = Translator()
             val translate = translator.translate
-            val mainLevel = translate.newLevel(translate.outermost, Label("main"), emptyList())
+            val mainLevel = translate.newLevel(translate.outermost, mainLabel, emptyList())
 
             val exp = translator.transExp(ex, translator.baseVenv, translator.baseTenv, mainLevel, null).exp
 
