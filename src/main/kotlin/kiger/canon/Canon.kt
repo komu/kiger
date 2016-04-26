@@ -206,49 +206,79 @@ private class BasicBlockBuilder {
  * as possible are eliminated by falling through into T.LABEL(lab).
  */
 fun BasicBlockGraph.traceSchedule(): List<TreeStm> {
-    return blocks.flatMap { it.statements } // TODO
+
+    val blockMap = mutableMapOf<Label, BasicBlock>()
+    for (b in blocks) {
+        val label = b.label
+        if (label != null)
+            blockMap[label] = b
+    }
+
+    val scheduled = getNext(blockMap, blocks)
+
+    return scheduled + TreeStm.Labeled(exitLabel)
 }
 
-/*
-  fun enterblock(b as (T.LABEL s :: _), table) = Symbol.enter(table,s,b)
-    | enterblock(_, table) = table
-
-  fun splitlast([x]) = (nil,x)
-    | splitlast(h::t) = let val (t',last) = splitlast t in (h::t', last) end
-
-  fun trace(table,b as (T.LABEL lab :: _),rest) =
-   let val table = Symbol.enter(table, lab, nil)
-    in case splitlast b
-     of (most,T.JUMP(T.NAME lab, _)) =>
-	  (case Symbol.look(table, lab)
-            of SOME(b' as _::_) => most @ trace(table, b', rest)
-	     | _ => b @ getnext(table,rest))
-      | (most,T.CJUMP(opr,x,y,t,f)) =>
-          (case (Symbol.look(table,t), Symbol.look(table,f))
-            of (_, SOME(b' as _::_)) => b @ trace(table, b', rest)
-             | (SOME(b' as _::_), _) =>
-		           most @ [T.CJUMP(T.notRel opr,x,y,f,t)]
-		                @ trace(table, b', rest)
-             | _ => let val f' = Temp.newlabel()
-		     in most @ [T.CJUMP(opr,x,y,t,f'),
-				T.LABEL f', T.JUMP(T.NAME f,[f])]
-			     @ getnext(table,rest)
-                        end)
-      | (most, T.JUMP _) => b @ getnext(table,rest)
-     end
-
-  and getnext(table,(b as (T.LABEL lab::_))::rest) =
-           (case Symbol.look(table, lab)
-             of SOME(_::_) => trace(table,b,rest)
-              | _ => getnext(table,rest))
-    | getnext(table,nil) = nil
-
-  fun traceSchedule(blocks,done) =
-       getnext(foldr enterblock Symbol.empty blocks, blocks)
-         @ [T.LABEL done]
+private fun <T> List<T>.splitLast(): Pair<List<T>, T> =
+    Pair(this.subList(0, size - 1), this.last())
 
 
- */
-data class BasicBlock(val statements: List<TreeStm>)
+private fun trace(table: MutableMap<Label, BasicBlock>, block: BasicBlock, rest: List<BasicBlock>): List<TreeStm> {
+    table[block.label!!] = BasicBlock(emptyList())
+    val (most, last) = block.statements.splitLast()
+    return when (last) {
+        is TreeStm.Jump -> {
+            if (last.exp is TreeExp.Name) {
+                val b2 = table[last.exp.label]
+                if (b2 != null && b2.statements.size > 0) {
+                    most + trace(table, b2, rest)
+                } else {
+                    block.statements + getNext(table, rest)
+                }
+
+            } else {
+                block.statements + getNext(table, rest)
+            }
+        }
+        is TreeStm.CJump -> {
+            val trueBlock = table[last.trueLabel]
+            val falseBlock = table[last.trueLabel]
+
+            if (falseBlock != null && !falseBlock.isEmpty()) {
+                block.statements + trace(table, falseBlock, rest)
+            } else if (trueBlock != null && !trueBlock.isEmpty()) {
+                most + TreeStm.CJump(last.relop.not(), last.lhs, last.rhs, last.falseLabel, last.trueLabel) + trace(table, trueBlock, rest)
+            } else {
+                val f = Label()
+                most + TreeStm.CJump(last.relop, last.lhs, last.rhs, last.trueLabel, f) +
+                        TreeStm.Labeled(f) + TreeStm.Jump(TreeExp.Name(f), listOf(f)) +
+                        getNext(table, rest)
+            }
+        }
+        else ->
+            error("invalid last node of basic block: $last")
+    }
+}
+
+private fun getNext(table: MutableMap<Label, BasicBlock>, rest: List<BasicBlock>): List<TreeStm> {
+    if (rest.isEmpty()) return emptyList()
+
+    val head = rest.first()
+    val tail = rest.subList(1, rest.size)
+
+    val block = table[head.label!!]
+    return if (block != null && block.statements.size > 0) {
+        trace(table, block, tail)
+    } else {
+        getNext(table, tail)
+    }
+}
+
+data class BasicBlock(val statements: List<TreeStm>) {
+    val label: Label?
+        get() = (statements.firstOrNull() as? TreeStm.Labeled)?.label
+
+    fun isEmpty() = statements.isEmpty()
+}
 data class BasicBlockGraph(val blocks: List<BasicBlock>, val exitLabel: Label)
 
