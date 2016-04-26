@@ -1,9 +1,6 @@
 package kiger.translate
 
-import kiger.absyn.Declaration
-import kiger.absyn.Expression
-import kiger.absyn.TypeRef
-import kiger.absyn.Variable
+import kiger.absyn.*
 import kiger.diag.Diagnostics
 import kiger.env.EnvEntry
 import kiger.env.SymbolTable
@@ -387,8 +384,49 @@ class Translator {
         return DeclTranslationResult(venv, tenv2)
     }
 
-    private fun transDec(dec: Declaration.Functions, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): DeclTranslationResult =
-        TODO()
+    private fun transDec(dec: Declaration.Functions, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): DeclTranslationResult {
+        // First pass: check formal types and store header info into venv
+        fun transFun(f: FunctionDeclaration, env: SymbolTable<EnvEntry>): SymbolTable<EnvEntry> {
+            val returnType = f.result?.let { tenv.lookupType(it.first, it.second) } ?: Type.Unit
+            val formals = f.params.map { Pair(it.name, tenv.lookupType(it.typ, it.pos)) }
+            val escapes = f.params.map { it.escape }
+            val label = Label(f.name.name)
+
+            checkDuplicates(f.params.map { Pair(it.name, it.pos) })
+
+            return env.enter(f.name, EnvEntry.Function(translate.newLevel(level, label, escapes), label, formals, returnType))
+        }
+
+        val venv2 = dec.declarations.fold(venv) { env, d -> transFun(d, env) }
+
+        // second pass: do type checking, put VarEntry on venv and check body
+        fun transBody(f: FunctionDeclaration) {
+            val func = venv2[f.name] as EnvEntry.Function
+            val newLevel = func.level as Level.Lev
+
+            fun transParam(param: Field, access: Access): Triple<Symbol, Type, Access> =
+                Triple(param.name, tenv.lookupType(param.typ, param.pos), access)
+
+            val params2 = f.params.zip(translate.formals(newLevel)).map { transParam(it.first, it.second) }
+
+            val venv3 = params2.fold(venv2) { env, p ->
+                venv2.enter(p.first, EnvEntry.Var(p.third, p.second))
+            }
+
+            val (exp, ty) = transExp(f.body, venv3, tenv, newLevel, null)
+
+            checkType(func.result, ty, f.pos)
+
+            translate.procEntryExit(newLevel, exp)
+        }
+
+        checkDuplicates(dec.declarations.map { Pair(it.name, it.pos) })
+
+        for (d in dec.declarations)
+            transBody(d)
+
+        return DeclTranslationResult(venv2, tenv)
+    }
 
     private fun SymbolTable<Type>.lookupType(name: Symbol, pos: SourceLocation): Type =
         this[name] ?: run {

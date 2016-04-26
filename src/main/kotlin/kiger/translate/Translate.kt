@@ -206,22 +206,22 @@ class Translate {
     fun array(size: TrExp, init: TrExp): TrExp =
         TrExp.Ex(frameType.externalCall("initArray", listOf(size.unEx(), init.unEx())))
 
-    fun call(uselevel: Level, deflevel: Level, label: Label, args: List<TrExp>, isProcedure: Boolean): TrExp {
+    fun call(useLevel: Level, defLevel: Level, label: Label, args: List<TrExp>, isProcedure: Boolean): TrExp {
         val argExps = args.map { it.unEx() }
-        val call = if (deflevel.parent == Level.Top) {
+        val call = if (defLevel.parent == Level.Top) {
             frameType.externalCall(label.name, argExps)
 
         } else {
-            val diff = uselevel.depth - deflevel.depth + 1
-            fun iter(d: Int, curlevel: Level): TreeExp =
+            val diff = useLevel.depth - defLevel.depth + 1
+            fun iter(d: Int, curLevel: Level): TreeExp =
                 if (d == 0) {
                     TreeExp.Temporary(frameType.FP)
                 } else {
-                    curlevel as Level.Lev
-                    frameType.exp(curlevel.frame.formals.first(), iter(d - 1, curlevel.parent))
+                    curLevel as Level.Lev
+                    frameType.exp(curLevel.frame.formals.first(), iter(d - 1, curLevel.parent))
                 }
 
-            TreeExp.Call(TreeExp.Name(label), listOf(iter(diff, uselevel)) + argExps)
+            TreeExp.Call(TreeExp.Name(label), listOf(iter(diff, useLevel)) + argExps)
         }
 
         return if (isProcedure)
@@ -237,6 +237,15 @@ class Translate {
         val body2 = level.frame.procEntryExit1(TreeStm.Move(TreeExp.Temporary(frameType.RV), body.unEx()))
 
         fragments += Fragment.Proc(body2, level.frame)
+    }
+
+    /**
+     * Return formals associated with the frame in this level,
+     * excluding the static link (first element of the list
+     */
+    fun formals(level: Level.Lev): List<Access> {
+        val fs = level.frame.formals
+        return fs.subList(1, fs.size).map { Access(level, it) }
     }
 }
 

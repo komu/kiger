@@ -16,7 +16,7 @@ abstract class Frame(val name: Label, private val formalEscapes: List<Boolean>) 
     fun procEntryExit1(body: TreeStm): TreeStm = TODO()
 }
 
-class JouletteFrame(name: Label, formalEscapes: List<Boolean>) : Frame(name, formalEscapes) {
+class JouletteFrame private constructor(name: Label, formalEscapes: List<Boolean>) : Frame(name, formalEscapes) {
 
     companion object : FrameType {
         override val FP = Temp("fp")
