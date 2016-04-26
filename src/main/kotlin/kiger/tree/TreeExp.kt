@@ -20,7 +20,7 @@ sealed class TreeExp {
     class Temporary(val temp: Temp) : TreeExp() {
         override fun equals(other: Any?) = other is Temporary && temp == other.temp
         override fun hashCode() = temp.hashCode()
-        override fun toString() = "Temporary[$temp]"
+        override fun toString() = temp.toString()
     }
 
     class ESeq(val stm: TreeStm, val exp: TreeExp) : TreeExp() {

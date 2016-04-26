@@ -8,7 +8,7 @@ sealed class TreeStm {
     class Seq(val lhs: TreeStm, val rhs: TreeStm) : TreeStm() {
         override fun equals(other: Any?) = other is Seq && lhs == other.lhs && rhs == other.rhs
         override fun hashCode() = Objects.hash(lhs, rhs)
-        override fun toString() = "Seq[$lhs, $rhs]"
+        override fun toString() = "$lhs\n$rhs"
     }
 
     class Labeled(val label: Label) : TreeStm() {
@@ -32,7 +32,7 @@ sealed class TreeStm {
     class Move(val target: TreeExp, val source: TreeExp) : TreeStm() {
         override fun equals(other: Any?) = other is Move && target == other.target && source == other.source
         override fun hashCode() = Objects.hash(target, source)
-        override fun toString() = "Move[$target, $source]"
+        override fun toString() = "MOVE $target, $source"
     }
 
     class Exp(val exp: TreeExp) : TreeStm() {

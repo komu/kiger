@@ -56,43 +56,43 @@ class JouletteFrame private constructor(name: Label, formalEscapes: List<Boolean
     companion object : FrameType {
 
         // expression evaluation and results of a functioin
-        val v0 = Temp()
-        val v1 = Temp()
+        val v0 = Temp("v0")
+        val v1 = Temp("v1")
 
         // arguments
-        val a0 = Temp()
-        val a1 = Temp()
-        val a2 = Temp()
-        val a3 = Temp()
+        val a0 = Temp("a0")
+        val a1 = Temp("a1")
+        val a2 = Temp("a2")
+        val a3 = Temp("a3")
 
         // temporary - not preserved across call
-        val t0 = Temp()
-        val t1 = Temp()
-        val t2 = Temp()
-        val t3 = Temp()
-        val t4 = Temp()
-        val t5 = Temp()
-        val t6 = Temp()
-        val t7 = Temp()
-        val t8 = Temp()
-        val t9 = Temp()
+        val t0 = Temp("t0")
+        val t1 = Temp("t1")
+        val t2 = Temp("t2")
+        val t3 = Temp("t3")
+        val t4 = Temp("t4")
+        val t5 = Temp("t5")
+        val t6 = Temp("t6")
+        val t7 = Temp("t7")
+        val t8 = Temp("t8")
+        val t9 = Temp("t9")
 
         // saved temporary - preserved across call
-        val s0 = Temp()
-        val s1 = Temp()
-        val s2 = Temp()
-        val s3 = Temp()
-        val s4 = Temp()
-        val s5 = Temp()
-        val s6 = Temp()
-        val s7 = Temp()
+        val s0 = Temp("s0")
+        val s1 = Temp("s1")
+        val s2 = Temp("s2")
+        val s3 = Temp("s3")
+        val s4 = Temp("s4")
+        val s5 = Temp("s5")
+        val s6 = Temp("s6")
+        val s7 = Temp("s7")
 
-        val ZERO = Temp() // constant 0
-        val GP = Temp() // pointer for global area
-        override val FP = Temp() // frame pointer
-        override val SP = Temp() // stack pointer
-        override val RA = Temp() // return address
-        override val RV = Temp() // return value
+        val ZERO = Temp("zero") // constant 0
+        val GP = Temp("gp") // pointer for global area
+        override val FP = Temp("fp") // frame pointer
+        override val SP = Temp("sp") // stack pointer
+        override val RA = Temp("ra") // return address
+        override val RV = Temp("rv") // return value
         override val wordSize = 4
         override fun newFrame(name: Label, formalEscapes: List<Boolean>) = JouletteFrame(name, formalEscapes)
         override fun exp(access: FrameAccess, exp: TreeExp) = when (access) {
