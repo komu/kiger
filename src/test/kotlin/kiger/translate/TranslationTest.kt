@@ -1,5 +1,7 @@
 package kiger.translate
 
+import kiger.env.EnvEntry
+import kiger.env.SymbolTable
 import kiger.parser.parseExpression
 import kiger.temp.Label
 import kiger.temp.resetLabelSequence
@@ -39,8 +41,8 @@ class TranslationTest {
     }
 
     private fun translate(code: String): TranslationResult {
-        val venv = VarEnv()
-        val tenv = TypeEnv()
+        val venv = SymbolTable<EnvEntry>()
+        val tenv = SymbolTable<Type>()
         val exp = parseExpression(code)
         resetTempSequence()
         resetLabelSequence()

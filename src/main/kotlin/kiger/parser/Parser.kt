@@ -69,7 +69,7 @@ private class Parser(lexer: Lexer) {
         lexer.expect(Equal)
         val body = parseTopLevelExpression()
 
-        val func = FunctionDeclatation(name, params, returnType, body, pos)
+        val func = FunctionDeclaration(name, params, returnType, body, pos)
         return Declaration.Functions(listOf(func))
     }
 

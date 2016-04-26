@@ -2,6 +2,7 @@ package kiger.translate
 
 import kiger.absyn.Declaration
 import kiger.absyn.Expression
+import kiger.absyn.TypeRef
 import kiger.absyn.Variable
 import kiger.diag.Diagnostics
 import kiger.env.EnvEntry
@@ -12,22 +13,6 @@ import kiger.lexer.Token.Operator
 import kiger.lexer.Token.Symbol
 import kiger.temp.Label
 import kiger.types.Type
-
-class VarEnv {
-    val table = SymbolTable<EnvEntry>()
-
-    operator fun get(symbol: Symbol): EnvEntry? = table[symbol]
-
-    fun enter(name: Symbol, entry: EnvEntry): VarEnv {
-        TODO()
-    }
-}
-
-class TypeEnv {
-    val table = SymbolTable<Type>()
-
-    operator fun get(symbol: Symbol): Type? = table[symbol]
-}
 
 private enum class Kind {
     ARITH, COMP, EQ
@@ -48,13 +33,17 @@ private fun Token.Operator.classify(): Kind = when (this) {
 
 data class TranslationResult(val exp: TrExp, val type: Type)
 
+data class DeclTranslationResult(val venv: SymbolTable<EnvEntry>, val tenv: SymbolTable<Type>, val exps: List<TrExp>) {
+    constructor(venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, vararg exps: TrExp): this(venv, tenv, exps.asList())
+}
+
 class Translator {
 
     private val diagnostics = Diagnostics()
 
     private val errorResult = TranslationResult(Translate.errorExp, Type.Nil)
 
-    fun transExp(e: Expression, venv: VarEnv, tenv: TypeEnv, level: Level, breakLabel: Label?): TranslationResult {
+    fun transExp(e: Expression, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): TranslationResult {
         fun trexp(exp: Expression): TranslationResult = when (exp) {
             is Expression.Nil ->
                 TranslationResult(Translate.nilExp, Type.Nil)
@@ -261,12 +250,6 @@ class Translator {
                         TranslationResult(Translate.call(level, func.level, func.label, argExps.map { it.exp }, func.result == Type.Unit), func.result)
                     }
                 }
-//                let
-//                val argexps = map trexp args in
-//                        checkformals(formals,argexps,pos);
-//                {exp=R.call(level,funlevel,label,map #exp argexps,result=T.UNIT),
-//                    ty=actual_ty(result,pos)}
-//                end
             }
         }
 
@@ -274,7 +257,7 @@ class Translator {
         return trexp(e)
     }
 
-    private fun transVar(v: Variable, tenv: TypeEnv, venv: VarEnv, level: Level, breakLabel: Label?): TranslationResult {
+    private fun transVar(v: Variable, tenv: SymbolTable<Type>, venv: SymbolTable<EnvEntry>, level: Level, breakLabel: Label?): TranslationResult {
         return when (v) {
             is Variable.Simple -> {
                 val entry = venv[v.name]
@@ -332,14 +315,14 @@ class Translator {
         }
     }
 
-    private fun transDec(dec: Declaration, venv: VarEnv, tenv: TypeEnv, level: Level, breakLabel: Label?): Triple<VarEnv, TypeEnv, List<TrExp>> =
+    private fun transDec(dec: Declaration, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): DeclTranslationResult =
         when (dec) {
             is Declaration.Functions -> transDec(dec, venv, tenv, level, breakLabel)
             is Declaration.Var       -> transDec(dec, venv, tenv, level, breakLabel)
-            is Declaration.TypeDec   -> transDec(dec, venv, tenv, level, breakLabel)
+            is Declaration.Types     -> transDec(dec, venv, tenv, level, breakLabel)
         }
 
-    private fun transDec(dec: Declaration.Var, venv: VarEnv, tenv: TypeEnv, level: Level, breakLabel: Label?): Triple<VarEnv, TypeEnv, List<TrExp>> {
+    private fun transDec(dec: Declaration.Var, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): DeclTranslationResult {
         val (exp, ty) = transExp(dec.init, venv, tenv, level, breakLabel)
         val type = if (dec.type == null) {
             if (ty == Type.Nil)
@@ -359,19 +342,71 @@ class Translator {
         }
 
         val acc = Translate.allocLocal(level, !dec.escape)
-        val varexp = Translate.simpleVar(acc, level)
-        return Triple(venv.enter(dec.name, EnvEntry.Var(acc, type)), tenv, listOf(Translate.assign(varexp, exp)))
+        val varExp = Translate.simpleVar(acc, level)
+        val venv2 = venv.enter(dec.name, EnvEntry.Var(acc, type))
+
+        return DeclTranslationResult(venv2, tenv, Translate.assign(varExp, exp))
     }
 
-    private fun transDec(dec: Declaration.Functions, venv: VarEnv, tenv: TypeEnv, level: Level, breakLabel: Label?): Triple<VarEnv, TypeEnv, List<TrExp>> =
+    private fun transDec(dec: Declaration.Types, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): DeclTranslationResult {
+        // Type declarations may be recursive (or mutually recursive). Therefore we'll perform the translation
+        // in two steps: first we'll fill tenv with empty headers, then translate the types.
+
+        val tenv2 = dec.declarations.fold(tenv) { env, d -> env.enter(d.name, Type.Name(d.name)) }
+
+        for (d in dec.declarations) {
+            val type = tenv2[d.name] as Type.Name
+            type.type = transTy(d.type, tenv2)
+        }
+
+        // Now that all the types have been initialized, check for cycles
+        for (d in dec.declarations) {
+            checkCycle(tenv2[d.name] as Type.Name, d.pos)
+        }
+
+        checkDuplicates(dec.declarations.map { Pair(it.name, it.pos) })
+
+        return DeclTranslationResult(venv, tenv2)
+    }
+
+    private fun transDec(dec: Declaration.Functions, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): DeclTranslationResult =
         TODO()
 
-    private fun transDec(dec: Declaration.TypeDec, venv: VarEnv, tenv: TypeEnv, level: Level, breakLabel: Label?): Triple<VarEnv, TypeEnv, List<TrExp>> =
+    private fun transTy(type: TypeRef, tenv: SymbolTable<Type>): Type {
         TODO()
+    }
+
+    // Check that mutually recursive types include an array or record
+    private fun checkCycle(from: Type.Name, pos: SourceLocation) {
+        val seen = mutableSetOf<Symbol>()
+        var type: Type? = from
+
+        while (type is Type.Name) {
+            if (!seen.add(type.name)) {
+                diagnostics.error("type ${from.name} is involved in cyclic definition", pos)
+                break
+            }
+
+            type = type.type
+        }
+    }
 
     private fun typeMismatch(expected: String, actual: Type, pos: SourceLocation): TranslationResult {
         diagnostics.error("expected $expected, but got $actual", pos)
         return errorResult
+    }
+
+    private fun checkDuplicates(items: List<Pair<Symbol, SourceLocation>>) {
+        checkDuplicates(items.map { it.first }, items.map { it.second })
+    }
+
+    private fun checkDuplicates(names: List<Symbol>, positions: List<SourceLocation>) {
+        require(names.size == positions.size)
+
+        names.forEachIndexed { i, name ->
+            if (name in names.subList(i + 1, names.size))
+                diagnostics.error("duplicated definition: $name", positions[i])
+        }
     }
 
     private fun checkType(expected: Type, type: Type, pos: SourceLocation) {
@@ -400,3 +435,4 @@ class Translator {
 
     private fun Type.actualType(pos: SourceLocation) = actualType(pos, diagnostics)
 }
+

@@ -1,6 +1,7 @@
 package kiger.frame
 
 import kiger.temp.Temp
+import kiger.translate.Access
 import kiger.tree.TreeExp
 
 class Frame {
@@ -20,5 +21,8 @@ class Frame {
 
     val formals: List<FrameAccess>
         get() = TODO()
+
+    fun allocLocal(escape: Boolean): Access =
+        TODO()
 }
 

@@ -222,9 +222,8 @@ object Translate {
             TrExp.Ex(call)
     }
 
-    fun allocLocal(level: Level, escape: Boolean): Access {
-        TODO()
-    }
+    fun allocLocal(level: Level, escape: Boolean): Access =
+        (level as Level.Lev).frame.allocLocal(escape)
 }
 
 fun seq(vararg statements: TreeStm): TreeStm = seq(statements.asList())
