@@ -11,8 +11,8 @@ import kiger.tree.TreeStm
  * 1. No SEQ's or ESEQ's
  * 2. The parent of every CALL is an EXP(..) or a MOVE(TEMP t,..)
  **/
-fun linearize(stm0: TreeStm): List<TreeStm> =
-    Linearizer.doStm(stm0).linearize().toList()
+fun TreeStm.linearize(): List<TreeStm> =
+    Linearizer.doStm(this).linearizeTopLevel().toList()
 
 private object Linearizer {
     val nop = TreeStm.Exp(TreeExp.Const(0))
@@ -72,23 +72,16 @@ private object Linearizer {
         is TreeStm.Labeled -> reorderStm(emptyList()) { stm }
     }
 
-    fun doExp(exp: TreeExp): Pair<TreeStm, TreeExp> {
-        /*
-        do_exp(T.BINOP(p,a,b)) =
-                reorder_exp([a,b], fn[a,b]=>T.BINOP(p,a,b))
-        | do_exp(T.MEM(a)) =
-            reorder_exp([a], fn[a]=>T.MEM(a))
-        | do_exp(T.ESEQ(s,e)) =
-            let val stms = do_stm s
-            val (stms',e) = do_exp e
-        in (stms%stms',e)
-        end
-        | do_exp(T.CALL(e,el)) =
-            reorder_exp(e::el, fn e::el => T.CALL(e,el))
-        | do_exp e = reorder_exp([],fn[]=>e)
-        */
-
-        TODO()
+    fun doExp(exp: TreeExp): Pair<TreeStm, TreeExp> = when (exp) {
+        is TreeExp.BinOp    -> reorderExp(listOf(exp.lhs, exp.rhs)) { val (a, b) = it; TreeExp.BinOp(exp.binop, a, b) }
+        is TreeExp.Mem      -> reorderExp(listOf(exp.exp)) { TreeExp.Mem(it[0]) }
+        is TreeExp.ESeq     -> {
+            val stms = doStm(exp.stm)
+            val (stms2, e) = doExp(exp.exp)
+            Pair(stms % stms2, e)
+        }
+        is TreeExp.Call     -> reorderExp(listOf(exp.func) + exp.args) { TreeExp.Call(it[0], it.subList(0, it.size)) }
+        else                -> reorderExp(emptyList()) { exp }
     }
 }
 
@@ -114,9 +107,9 @@ private fun TreeStm.commute(rhs: TreeExp): Boolean = when {
 /**
  * Get rid of the top-level SEQ's
  */
-private fun TreeStm.linearize(): Sequence<TreeStm> =
+private fun TreeStm.linearizeTopLevel(): Sequence<TreeStm> =
     if (this is TreeStm.Seq) {
-        lhs.linearize() + lhs.linearize()
+        lhs.linearizeTopLevel() + rhs.linearizeTopLevel()
     } else {
         sequenceOf(this)
     }
