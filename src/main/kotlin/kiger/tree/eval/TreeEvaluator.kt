@@ -1,6 +1,8 @@
 package kiger.tree.eval
 
+import kiger.canon.basicBlocks
 import kiger.canon.linearize
+import kiger.canon.traceSchedule
 import kiger.frame.Fragment
 import kiger.frame.FrameType
 import kiger.frame.JouletteFrame
@@ -109,12 +111,7 @@ class TreeEvaluator(fragments: List<Fragment>) {
 
     @Suppress("unused")
     private fun dumpCode() {
-        println(code.joinToString("\n") {
-            if (it is TreeStm.Labeled)
-                "${it.label}:"
-            else
-                "    $it"
-        })
+        println(code.basicBlocks().traceSchedule().joinToString("\n"))
     }
 
     companion object {

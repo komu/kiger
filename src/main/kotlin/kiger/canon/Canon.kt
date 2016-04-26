@@ -4,6 +4,7 @@ import kiger.temp.Label
 import kiger.temp.Temp
 import kiger.tree.TreeExp
 import kiger.tree.TreeStm
+import java.util.*
 
 /**
  * From an arbitrary Tree statement, produce a list of cleaned trees satisfying the following properties:
@@ -125,9 +126,74 @@ private fun TreeStm.linearizeTopLevel(): Sequence<TreeStm> =
  * 5. Any JUMP or CJUMP is the last stm in a block;
  * 6. Every block ends with a JUMP or CJUMP;
  *
- * Also produce the "label" to which control will be passed upon exit.
+ * Also produce the label to which control will be passed upon exit.
  */
-fun basicBlocks(stmts: List<TreeStm>): BasicBlockGraph = TODO()
+fun List<TreeStm>.basicBlocks(): BasicBlockGraph {
+
+    val blockBuilder = BasicBlockBuilder()
+
+    for (stm in this) {
+        // First make sure that each basic-block starts with a label
+        if (blockBuilder.isCurrentEmpty() && stm !is TreeStm.Labeled)
+            blockBuilder += TreeStm.Labeled(Label())
+
+        when (stm) {
+            is TreeStm.Jump,
+            is TreeStm.CJump -> {
+                blockBuilder += stm
+                blockBuilder.finishBlock()
+            }
+            is TreeStm.Labeled -> {
+                // Labels start a new block unless we are already at the beginning of a block
+                if (!blockBuilder.isCurrentEmpty()) {
+                    blockBuilder.addJumpTo(stm.label)
+                    blockBuilder.finishBlock()
+                }
+
+                blockBuilder += stm
+            }
+            else -> {
+                blockBuilder += stm
+            }
+        }
+    }
+
+    return blockBuilder.build()
+}
+
+private class BasicBlockBuilder {
+
+    val exitLabel = Label()
+    private val blocks = mutableListOf<BasicBlock>()
+    private val currentBlock = mutableListOf<TreeStm>()
+
+    operator fun plusAssign(stm: TreeStm) {
+        currentBlock += stm
+    }
+
+    fun finishBlock() {
+        blocks += BasicBlock(ArrayList(currentBlock))
+        currentBlock.clear()
+    }
+
+    fun isCurrentEmpty(): Boolean = currentBlock.isEmpty()
+
+    fun build(): BasicBlockGraph {
+        if (!currentBlock.isEmpty()) {
+            val last = currentBlock.last()
+            if (last !is TreeStm.Jump && last !is TreeStm.CJump)
+                addJumpTo(exitLabel)
+
+            finishBlock()
+        }
+
+        return BasicBlockGraph(blocks, exitLabel)
+    }
+
+    fun addJumpTo(label: Label) {
+        currentBlock += TreeStm.Jump(TreeExp.Name(label), listOf(label))
+    }
+}
 
 /**
  * From a list of basic blocks satisfying properties 1-6, along with an "exit" label,
@@ -139,8 +205,50 @@ fun basicBlocks(stmts: List<TreeStm>): BasicBlockGraph = TODO()
  * The blocks are reordered to satisfy property 7; also in this reordering as many JUMP(T.NAME(lab)) statements
  * as possible are eliminated by falling through into T.LABEL(lab).
  */
-fun traceSchedule(blocks: BasicBlockGraph): List<TreeStm> = TODO()
+fun BasicBlockGraph.traceSchedule(): List<TreeStm> {
+    return blocks.flatMap { it.statements } // TODO
+}
 
+/*
+  fun enterblock(b as (T.LABEL s :: _), table) = Symbol.enter(table,s,b)
+    | enterblock(_, table) = table
+
+  fun splitlast([x]) = (nil,x)
+    | splitlast(h::t) = let val (t',last) = splitlast t in (h::t', last) end
+
+  fun trace(table,b as (T.LABEL lab :: _),rest) =
+   let val table = Symbol.enter(table, lab, nil)
+    in case splitlast b
+     of (most,T.JUMP(T.NAME lab, _)) =>
+	  (case Symbol.look(table, lab)
+            of SOME(b' as _::_) => most @ trace(table, b', rest)
+	     | _ => b @ getnext(table,rest))
+      | (most,T.CJUMP(opr,x,y,t,f)) =>
+          (case (Symbol.look(table,t), Symbol.look(table,f))
+            of (_, SOME(b' as _::_)) => b @ trace(table, b', rest)
+             | (SOME(b' as _::_), _) =>
+		           most @ [T.CJUMP(T.notRel opr,x,y,f,t)]
+		                @ trace(table, b', rest)
+             | _ => let val f' = Temp.newlabel()
+		     in most @ [T.CJUMP(opr,x,y,t,f'),
+				T.LABEL f', T.JUMP(T.NAME f,[f])]
+			     @ getnext(table,rest)
+                        end)
+      | (most, T.JUMP _) => b @ getnext(table,rest)
+     end
+
+  and getnext(table,(b as (T.LABEL lab::_))::rest) =
+           (case Symbol.look(table, lab)
+             of SOME(_::_) => trace(table,b,rest)
+              | _ => getnext(table,rest))
+    | getnext(table,nil) = nil
+
+  fun traceSchedule(blocks,done) =
+       getnext(foldr enterblock Symbol.empty blocks, blocks)
+         @ [T.LABEL done]
+
+
+ */
 data class BasicBlock(val statements: List<TreeStm>)
 data class BasicBlockGraph(val blocks: List<BasicBlock>, val exitLabel: Label)
 
