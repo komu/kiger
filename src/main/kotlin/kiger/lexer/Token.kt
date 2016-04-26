@@ -53,6 +53,7 @@ sealed class Token {
         object Let : Keyword("let")
         object Nil : Keyword("nil")
         object While : Keyword("while")
+        object In : Keyword("in")
     }
 
     /**

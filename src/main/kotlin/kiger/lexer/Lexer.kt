@@ -93,6 +93,7 @@ class Lexer(private val source: String, private val file: String = "<unknown>") 
             "of"        -> Keyword.Of
             "function"  -> Keyword.Function
             "if"        -> Keyword.If
+            "in"        -> Keyword.In
             "then"      -> Keyword.Then
             "else"      -> Keyword.Else
             "let"       -> Keyword.Let

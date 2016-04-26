@@ -28,6 +28,16 @@ class TranslationTest {
                 "Ex[ESeq[Seq[CJump[LT, Const[1], Const[2], l1, l2], Seq[Labeled[l1], Seq[Move[Temporary[t1], Const[3]], Seq[Jump[Name[l3], [l3]], Seq[Labeled[l2], Seq[Move[Temporary[t1], Const[4]], Labeled[l3]]]]]]], Temporary[t1]]]")
     }
 
+    @Test
+    fun simpleDefinition() {
+        dump("let function square(x: Int): Int = x * x in square(4)")
+    }
+
+    private fun dump(code: String) {
+        val result = translate(code)
+        println("exp: ${result.exp}")
+    }
+
     private fun assertTranslation(code: String, expectedType: Type, expectedExp: TrExp) {
         val (ex, type) = translate(code)
 

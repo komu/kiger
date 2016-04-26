@@ -27,7 +27,7 @@ fun parseDeclaration(code: String): Declaration =
  * Parses a function definition.
  */
 fun parseDeclarations(code: String, file: String): List<Declaration> =
-    parseComplete(Lexer(code, file)) { it.parseFunctionDefinitions() }
+    parseComplete(Lexer(code, file)) { it.parseDeclarations() }
 
 /**
  * Executes parser on code and verifies that it consumes all input.
@@ -48,10 +48,10 @@ private class Parser(lexer: Lexer) {
 
     private val lexer = LookaheadLexer(lexer)
 
-    fun parseFunctionDefinitions(): List<Declaration> {
+    fun parseDeclarations(): List<Declaration> {
         val result = ArrayList<Declaration>()
 
-        while (lexer.hasMore)
+        while (lexer.hasMore && !lexer.nextTokenIs(In))
             result += parseDeclaration()
 
         return result
@@ -272,6 +272,7 @@ private class Parser(lexer: Lexer) {
             LeftParen           -> inParens { parseTopLevelExpression() }
             If                  -> parseIf()
             While               -> parseWhile()
+            Let                 -> parseLet()
             else                -> fail(location, "unexpected token $token")
         }
     }
@@ -306,6 +307,15 @@ private class Parser(lexer: Lexer) {
         val alternative = if (lexer.readNextIf(Else)) parseTopLevelExpression() else null
 
         return Expression.If(condition, consequent, alternative, location)
+    }
+
+    private fun parseLet(): Expression {
+        val location = lexer.expect(Let)
+        val decls = parseDeclarations()
+        lexer.expect(In)
+        val body = parseTopLevelExpression()
+
+        return Expression.Let(decls, body, location)
     }
 
     private fun parseWhile(): Expression {
