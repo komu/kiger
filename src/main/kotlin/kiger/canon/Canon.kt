@@ -226,7 +226,7 @@ private class TraceScheduler(blocks: List<BasicBlock>) {
         val (head, tail) = rest.splitFirst()
 
         val block = unprocessedBlocks[head.label]
-        return if (block != null && block.statements.size > 0) {
+        return if (block != null) {
             trace(block, tail)
         } else {
             getNext(tail)
@@ -241,7 +241,7 @@ private class TraceScheduler(blocks: List<BasicBlock>) {
             is TreeStm.Jump -> {
                 if (last.exp is TreeExp.Name) {
                     val b2 = unprocessedBlocks[last.exp.label]
-                    if (b2 != null && b2.statements.size > 0) {
+                    if (b2 != null) {
                         most + trace(b2, rest)
                     } else {
                         block.statements + getNext(rest)
