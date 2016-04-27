@@ -2,7 +2,7 @@ package kiger.canon
 
 import kiger.absyn.Symbol
 import kiger.env.EnvEntry
-import kiger.frame.JouletteFrame
+import kiger.frame.MipsFrame
 import kiger.parser.parseExpression
 import kiger.temp.Label
 import kiger.temp.resetLabelSequence
@@ -34,7 +34,7 @@ class LinearizerTest {
 
     private fun linearize(code: String): List<TreeStm> {
         val translator = Translator()
-        translator.baseVenv = translator.baseVenv.enter(Symbol("f"), EnvEntry.Function(Level.Lev(Level.Top, JouletteFrame.newFrame(Label("f"), listOf(false, false))), Label("f"), listOf(Symbol("x") to Type.Int, Symbol("y") to Type.Int), Type.Int))
+        translator.baseVenv = translator.baseVenv.enter(Symbol("f"), EnvEntry.Function(Level.Lev(Level.Top, MipsFrame.newFrame(Label("f"), listOf(false, false))), Label("f"), listOf(Symbol("x") to Type.Int, Symbol("y") to Type.Int), Type.Int))
 
         resetLabelSequence()
         resetTempSequence()

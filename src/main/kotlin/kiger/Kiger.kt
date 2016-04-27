@@ -1,18 +1,14 @@
-package kiger.codegen
+package kiger
 
+import kiger.codegen.MipsGen
 import kiger.frame.Fragment
 import kiger.parser.parseExpression
 import kiger.translate.Translator
-import org.junit.Test
+import java.io.File
+import java.io.Writer
 
-class CodeGenTest {
-
-    @Test
-    fun simpleGe() {
-        dumpCode("let function fib(n: int): int = if n < 2 then n else fib(n-1) + fib(n-2) in fib(3)")
-    }
-
-    private fun dumpCode(code: String) {
+class Kiger(val writer: Writer) {
+    fun dumpCode(code: String) {
         val exp = parseExpression(code)
         val fragments = Translator.transProg(exp)
 
@@ -28,11 +24,17 @@ class CodeGenTest {
 
         val instructions = MipsGen.codeGen(fragment.frame, fragment.body)
         for (instr in instructions) {
-            println(instr)
+            writer.write("$instr\n")
         }
     }
 
     private fun dumpStr(fragment: Fragment.Str) {
-        println("${fragment.label}: \"${fragment.value.replace("\"", "\\\"")}\"")
+        writer.write("${fragment.label}: \"${fragment.value.replace("\"", "\\\"")}\"\n")
+    }
+}
+
+fun main(args: Array<String>) {
+    File("output.s").writer().use { w ->
+        Kiger(w).dumpCode("let function square(n: int): int = n * n in square(4)")
     }
 }

@@ -5,7 +5,7 @@ import kiger.canon.linearize
 import kiger.canon.traceSchedule
 import kiger.frame.Fragment
 import kiger.frame.FrameType
-import kiger.frame.JouletteFrame
+import kiger.frame.MipsFrame
 import kiger.parser.parseExpression
 import kiger.temp.Label
 import kiger.temp.Temp
@@ -20,7 +20,7 @@ import kiger.tree.TreeStm
  */
 class TreeEvaluator(fragments: List<Fragment>) {
 
-    private val frameType: FrameType = JouletteFrame
+    private val frameType: FrameType = MipsFrame
 
     /** strings by their label */
     private val strings = fragments.asSequence().filterIsInstance<Fragment.Str>().map { Pair(it.label, it.value) }.toMap()

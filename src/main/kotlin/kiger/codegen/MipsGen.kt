@@ -6,11 +6,10 @@ import kiger.canon.basicBlocks
 import kiger.canon.linearize
 import kiger.canon.traceSchedule
 import kiger.frame.Frame
-import kiger.frame.JouletteFrame
+import kiger.frame.MipsFrame
 import kiger.temp.Label
 import kiger.temp.Temp
-import kiger.tree.BinaryOp.MINUS
-import kiger.tree.BinaryOp.PLUS
+import kiger.tree.BinaryOp.*
 import kiger.tree.RelOp
 import kiger.tree.RelOp.LT
 import kiger.tree.TreeExp
@@ -22,11 +21,11 @@ import kiger.tree.TreeStm.Move
 import kiger.utils.cons
 import kiger.utils.splitFirst
 
-object JouletteGen : CodeGen {
-    override val frameType = JouletteFrame
+object MipsGen : CodeGen {
+    override val frameType = MipsFrame
 
     override fun codeGen(frame: Frame, stm: TreeStm): List<Instr> {
-        val generator = JouletteCodeGenerator(frame as JouletteFrame)
+        val generator = MipsCodeGenerator(frame as MipsFrame)
 
         val trace = stm.linearize().basicBlocks().traceSchedule()
         for (st in trace)
@@ -36,9 +35,9 @@ object JouletteGen : CodeGen {
     }
 }
 
-private class JouletteCodeGenerator(val frame: JouletteFrame) {
+private class MipsCodeGenerator(val frame: MipsFrame) {
 
-    val frameType = JouletteGen.frameType
+    val frameType = MipsGen.frameType
     val instructions = mutableListOf<Instr>()
 
     /**
@@ -47,10 +46,22 @@ private class JouletteCodeGenerator(val frame: JouletteFrame) {
      *  - callersaves: they may be redefined inside the call;
      *  - RV: it will be overwritten for function return.
      */
-    val calldefs = listOf(JouletteFrame.RV, JouletteFrame.RA) + JouletteFrame.argumentRegisters
+    val callDefs = listOf(MipsFrame.RV, MipsFrame.RA) + MipsFrame.argumentRegisters
 
     private fun emit(instr: Instr) {
         instructions += instr
+    }
+
+    private inline fun emitResult(gen: (Temp) -> Instr): Temp {
+        val t = Temp()
+        emit(gen(t))
+        return t
+    }
+
+    private inline fun result(gen: (Temp) -> Unit): Temp {
+        val t = Temp()
+        gen(t)
+        return t
     }
 
     fun munchStm(stm: TreeStm): Unit {
@@ -92,10 +103,27 @@ private class JouletteCodeGenerator(val frame: JouletteFrame) {
 
         emit(Oper("jalr `s0",
             src = cons(munchExp(exp.func), munchArgs(0, exp.args)),
-            dst = calldefs))
+            dst = callDefs))
 
         for ((a, r) in pairs.asReversed())
             munchStm(fetch(a, r))
+    }
+
+    private fun munchExpCall(exp: TreeExp.Call): Temp {
+        val pairs = frameType.calleeSaves.map { r -> Pair(Temp(), r) }
+
+        fun fetch(a: Temp, r: Temp) = Move(Temporary(r), Temporary(a))
+        fun store(a: Temp, r: Temp) = Move(Temporary(a), Temporary(r))
+
+        for ((a, r) in pairs)
+            munchStm(store(a, r))
+
+        emitResult { r -> Oper("jalr `s0", src = cons(munchExp(exp.func), munchArgs(0, exp.args)), dst = callDefs) }
+
+        for ((a, r) in pairs.asReversed())
+            munchStm(fetch(a, r))
+
+        return frameType.RV
     }
 
     /**
@@ -122,40 +150,45 @@ private class JouletteCodeGenerator(val frame: JouletteFrame) {
     }
 
     private fun munchExp(exp: TreeExp): Temp {
-        return when {
-            exp is Temporary ->
-                exp.temp
-            exp is Mem && exp.exp is BinOp && exp.exp.binop == PLUS && exp.exp.rhs is Const ->
-                result { r -> emit(Oper("LOAD `d0 <- M[`s0+${exp.exp.rhs.value}]", src = listOf(munchExp(exp.exp.lhs)), dst = listOf(r))) }
-            exp is Mem && exp.exp is BinOp && exp.exp.binop == PLUS && exp.exp.lhs is Const ->
-                result { r -> emit(Oper("LOAD `d0 <- M[`s0+${exp.exp.lhs.value}]", src = listOf(munchExp(exp.exp.rhs)), dst = listOf(r))) }
-            exp is Mem && exp.exp is Const ->
-                result { r -> emit(Oper("LOAD `d0 <- M[r0+${exp.exp.value}]", dst = listOf(r))) }
-            exp is Mem ->
-                result { r -> emit(Oper("LOAD `d0 <- M[`s0+0]", src = listOf(munchExp(exp.exp)), dst = listOf(r))) }
-            exp is Const ->
-                result { r -> emit(Oper("ADDI `d0 <- r0+${exp.value}", dst = listOf(r))) }
-            exp is BinOp && exp.binop == PLUS && exp.rhs is Const ->
-                result { r -> emit(Oper("ADDI `d0 <- `s0+${exp.rhs.value}", dst = listOf(r), src = listOf(munchExp(exp.lhs)))) }
-            exp is BinOp && exp.binop == PLUS && exp.lhs is Const ->
-                result { r -> emit(Oper("ADDI `d0 <- `s0+${exp.lhs.value}", dst = listOf(r), src = listOf(munchExp(exp.rhs)))) }
-            exp is Name ->
-                result { r -> emit(Oper("la `d0, ${exp.label}", dst = listOf(r))) }
-
-            // add/sub immediate
-            exp is BinOp && exp.binop == MINUS && exp.rhs is Const ->
-                result { r -> emit(Oper("SUBI `d0 <- `s0 - ${exp.rhs.value}", dst = listOf(r), src = listOf(munchExp(exp.lhs)))) }
-            else ->
-                TODO("$exp")
+        when (exp) {
+            is Temporary    -> return exp.temp
+            is Const        -> return result { r -> emit(Oper("li `d0, ${exp.value}", dst = listOf(r))) }
+            is Name         -> return result { r -> emit(Oper("la `d0, ${exp.label}", dst = listOf(r))) }
+            is Call         -> return munchExpCall(exp)
         }
+
+        if (exp is Mem) {
+            return when {
+                exp.exp is BinOp && exp.exp.binop == PLUS && exp.exp.rhs is Const ->
+                    emitResult { r -> Oper("lw `d0, ${exp.exp.rhs.value}(`s0)", src = listOf(munchExp(exp.exp.lhs)), dst = listOf(r)) }
+                exp.exp is BinOp && exp.exp.binop == PLUS && exp.exp.lhs is Const ->
+                    emitResult { r -> Oper("lw `d0, ${exp.exp.lhs.value}(`so)", src = listOf(munchExp(exp.exp.rhs)), dst = listOf(r)) }
+                exp.exp is Const ->
+                    emitResult { r -> Oper("lw `d0, ${exp.exp.value}(\$zero)", dst = listOf(r)) }
+                else ->
+                    emitResult { r -> Oper("lw `d0, `s0(\$zero)", src = listOf(munchExp(exp.exp)), dst = listOf(r)) }
+            }
+        }
+
+        if (exp is BinOp) {
+            return when {
+                exp.binop == PLUS && exp.rhs is Const ->
+                    emitResult { r -> Oper("addi `d0, `s0, ${exp.rhs.value}", dst = listOf(r), src = listOf(munchExp(exp.lhs))) }
+                exp.binop == PLUS && exp.lhs is Const ->
+                    emitResult { r -> Oper("addi `d0, `s0, ${exp.lhs.value}", dst = listOf(r), src = listOf(munchExp(exp.rhs))) }
+                exp.binop == MINUS && exp.rhs is Const ->
+                    emitResult { r -> Oper("SUBI `d0 <- `s0 - ${exp.rhs.value}", dst = listOf(r), src = listOf(munchExp(exp.lhs))) }
+                exp.binop == MUL ->
+                    emitResult{ r -> Oper("mul `d0, `s0, `s1", src = listOf(munchExp(exp.lhs), munchExp(exp.rhs)), dst = listOf(r)) }
+                else ->
+                    TODO("$exp")
+            }
+        }
+
+        TODO("$exp")
 
         /*
         (* memory ops *)
-
-        and munchExp (T.MEM(T.CONST i)) =
-            result(fn r => emit(A.OPER{
-                                assem="lw `d0, " ^ int2str i ^ "($zero)",
-                                src=[],dst=[r],jump=NONE}))
 
           | munchExp (T.MEM(T.BINOP(T.PLUS, e1, T.CONST i))) =
             result(fn r => emit(A.OPER{
@@ -329,23 +362,6 @@ private class JouletteCodeGenerator(val frame: JouletteFrame) {
                                 dst=[r],
                                 jump=NONE}))
 
-          | munchExp (T.CALL(e,args)) =
-            (let
-              val pairs = map (fn r => (Temp.newtemp (), r)) Frame.callersaves
-              val srcs = map #1 pairs
-              fun fetch a r = T.MOVE(T.TEMP r, T.TEMP a)
-              fun store a r = T.MOVE(T.TEMP a, T.TEMP r)
-            in
-              map (fn (a,r) => munchStm(store a r)) pairs;
-              result(fn r => emit(A.OPER{
-                                  assem="jalr `s0",
-                                  src=munchExp(e) :: munchArgs(0,args),
-                                  dst=calldefs,
-                                  jump=NONE}));
-              map (fn (a,r) => munchStm(fetch a r)) (List.rev pairs);
-              Frame.RV
-            end)
-
         (* generate code to move all arguments to their correct positions.
          * In SPIM MIPS, we use a0-a3 to store first four parameters, and
          * others go to frame. The result of this function is a list of
@@ -368,15 +384,15 @@ private class JouletteCodeGenerator(val frame: JouletteFrame) {
     private fun munchMove(dst: TreeExp, src: TreeExp) {
         when {
             dst is Mem && dst.exp is BinOp && dst.exp.binop == PLUS && dst.exp.rhs is Const ->
-                emit(Oper("STORE M[`s0+${dst.exp.rhs.value}] <- `s1", src = listOf(munchExp(dst.exp.lhs), munchExp(src))))
+                emit(Oper("sw `s1, ${dst.exp.rhs.value}(`s0)", src = listOf(munchExp(dst.exp.lhs), munchExp(src))))
             dst is Mem && dst.exp is BinOp && dst.exp.binop == PLUS && dst.exp.lhs is Const ->
-                emit(Oper("STORE M[`s0+${dst.exp.lhs.value}] <- `s1", src = listOf(munchExp(dst.exp.rhs), munchExp(src))))
+                emit(Oper("sw `s1, ${dst.exp.lhs.value}(`s0)", src = listOf(munchExp(dst.exp.rhs), munchExp(src))))
             dst is Mem && src is Mem ->
                 emit(Oper("MOVE M[`s0] <- M[`s1]", src = listOf(munchExp(dst.exp), munchExp(src.exp))))
             dst is Mem && dst.exp is Const ->
                 emit(Oper("STORE M[${dst.exp.value}] <- `s0", src = listOf(munchExp(src))))
             dst is Temporary ->
-                emit(Oper("MOVE `d0 <- `s0", src = listOf(munchExp(src)), dst = listOf(dst.temp)))
+                emit(Oper("move `d0, `s0", src = listOf(munchExp(src)), dst = listOf(dst.temp)))
             else ->
                 TODO("move: $dst $src")
         }
@@ -452,9 +468,9 @@ private class JouletteCodeGenerator(val frame: JouletteFrame) {
 
     private fun munchJump(target: TreeExp, labels: List<Label>) {
         if (target is Name) {
-            emit(Oper("JMP `j0", jump=listOf(target.label)))
+            emit(Oper("j `j0", jump=listOf(target.label)))
         } else {
-            emit(Oper("JUMP `s0", src=listOf(munchExp(target)), jump = labels))
+            emit(Oper("jr `s0", src=listOf(munchExp(target)), jump = labels))
         }
     }
 
@@ -525,9 +541,3 @@ private class JouletteCodeGenerator(val frame: JouletteFrame) {
 }
 
 class TooManyArgsException(message: String): RuntimeException(message)
-
-private inline fun result(gen: (Temp) -> Unit): Temp {
-    val t = Temp()
-    gen(t)
-    return t
-}

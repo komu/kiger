@@ -2,7 +2,7 @@ package kiger.translate
 
 import kiger.frame.Fragment
 import kiger.frame.FrameType
-import kiger.frame.JouletteFrame
+import kiger.frame.MipsFrame
 import kiger.lexer.Token
 import kiger.temp.Label
 import kiger.temp.Temp
@@ -23,7 +23,7 @@ class Translate {
 
     val errorExp: TrExp = TrExp.Ex(TreeExp.Const(999))
 
-    val frameType: FrameType = JouletteFrame
+    val frameType: FrameType = MipsFrame
 
     fun newLevel(parent: Level, name: Label, formalEscapes: List<Boolean>) =
         Level.Lev(parent, frameType.newFrame(name, cons(true, formalEscapes)))
