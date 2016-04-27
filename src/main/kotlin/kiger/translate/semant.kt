@@ -11,6 +11,7 @@ import kiger.lexer.Token.Operator
 import kiger.lexer.Token.Symbol
 import kiger.temp.Label
 import kiger.types.Type
+import kiger.utils.tailFrom
 
 private enum class Kind {
     ARITH, COMP, EQ
@@ -481,7 +482,7 @@ class Translator {
         require(names.size == positions.size)
 
         names.forEachIndexed { i, name ->
-            if (name in names.subList(i + 1, names.size))
+            if (name in names.tailFrom(i + 1))
                 diagnostics.error("duplicated definition: $name", positions[i])
         }
     }

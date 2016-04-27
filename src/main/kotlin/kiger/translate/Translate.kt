@@ -10,6 +10,8 @@ import kiger.tree.BinaryOp
 import kiger.tree.RelOp
 import kiger.tree.TreeExp
 import kiger.tree.TreeStm
+import kiger.utils.splitLast
+import kiger.utils.tail
 
 class Translate {
     val fragments = mutableListOf<Fragment>()
@@ -116,11 +118,11 @@ class Translate {
         0 -> TrExp.Nx(TreeStm.Exp(TreeExp.Const(0)))
         1 -> exps.first()
         else -> {
-            val first = seq(exps.subList(0, exps.size-1).map { it.unNx() })
-            val last = exps.last()
+            val (first, last) = exps.splitLast()
+            val firstStm = seq(first.map { it.unNx() })
             when (last) {
-                is TrExp.Nx -> TrExp.Nx(TreeStm.Seq(first, last.stm))
-                else        -> TrExp.Ex(TreeExp.ESeq(first, last.unEx()))
+                is TrExp.Nx -> TrExp.Nx(TreeStm.Seq(firstStm, last.stm))
+                else        -> TrExp.Ex(TreeExp.ESeq(firstStm, last.unEx()))
             }
         }
     }
@@ -241,12 +243,10 @@ class Translate {
 
     /**
      * Return formals associated with the frame in this level,
-     * excluding the static link (first element of the list
+     * excluding the static link (first element of the list).
      */
-    fun formals(level: Level.Lev): List<Access> {
-        val fs = level.frame.formals
-        return fs.subList(1, fs.size).map { Access(level, it) }
-    }
+    fun formals(level: Level.Lev): List<Access> =
+        level.frame.formals.tail().map { Access(level, it) }
 }
 
 fun seq(vararg statements: TreeStm): TreeStm = seq(statements.asList())
@@ -256,5 +256,5 @@ fun seq(statements: List<TreeStm>): TreeStm =
         0    -> error("no statements")
         1    -> statements[0]
         2    -> TreeStm.Seq(statements[0], statements[1])
-        else -> TreeStm.Seq(statements[0], seq(statements.subList(1, statements.size)))
+        else -> TreeStm.Seq(statements[0], seq(statements.tail()))
     }
