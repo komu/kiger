@@ -220,7 +220,7 @@ private class TraceScheduler(blocks: List<BasicBlock>) {
             this[b.label] = b
     }
 
-    fun getNext(rest: List<BasicBlock>): List<TreeStm> {
+    tailrec fun getNext(rest: List<BasicBlock>): List<TreeStm> {
         if (rest.isEmpty()) return emptyList()
 
         val (head, tail) = rest.splitFirst()
