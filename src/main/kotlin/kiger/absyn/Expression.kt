@@ -2,13 +2,14 @@ package kiger.absyn
 
 import kiger.lexer.SourceLocation
 import kiger.lexer.Token.Operator
-import kiger.lexer.Token.Symbol
 
 sealed class Expression {
+    object Nil : Expression()
+
     class Var(val variable: Variable) : Expression() {
         override fun toString() = variable.toString()
     }
-    object Nil : Expression()
+
     class Int(val value: kotlin.Int) : Expression() {
         override fun toString() = value.toString()
     }
@@ -21,7 +22,7 @@ sealed class Expression {
     class Op(val left: Expression, val op: Operator, val right: Expression, val pos: SourceLocation) : Expression() {
         override fun toString() = "($left $op $right)"
     }
-    class Record(val fields: List<FieldDef>, val typ: Symbol, val pos: SourceLocation) : Expression()
+    class Record(val fields: List<FieldDef>, val type: Symbol, val pos: SourceLocation) : Expression()
     class Seq(val exps: List<Pair<Expression, SourceLocation>>) : Expression() {
         override fun toString() = exps.joinToString("; ") { it.first.toString() }
     }

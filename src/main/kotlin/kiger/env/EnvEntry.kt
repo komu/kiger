@@ -1,6 +1,6 @@
 package kiger.env
 
-import kiger.lexer.Token.Symbol
+import kiger.absyn.Symbol
 import kiger.temp.Label
 import kiger.translate.Access
 import kiger.translate.Level

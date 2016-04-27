@@ -1,8 +1,8 @@
 package kiger.types
 
+import kiger.absyn.Symbol
 import kiger.diag.Diagnostics
 import kiger.lexer.SourceLocation
-import kiger.lexer.Token.Symbol
 
 sealed class Type {
 

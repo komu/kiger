@@ -1,5 +1,6 @@
 package kiger.lexer
 
+import kiger.absyn.Symbol
 import kiger.lexer.Token.*
 
 /**
@@ -100,7 +101,7 @@ class Lexer(private val source: String, private val file: String = "<unknown>") 
             "while"     -> Keyword.While
             "nil"       -> Keyword.Nil
             "var"       -> Keyword.Var
-            else        -> Symbol(str)
+            else        -> Token.Sym(Symbol(str))
         }
     }
 

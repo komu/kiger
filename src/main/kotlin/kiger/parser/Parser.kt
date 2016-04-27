@@ -7,7 +7,7 @@ import kiger.lexer.Token.Keyword.Array
 import kiger.lexer.Token.Keyword.Function
 import kiger.lexer.Token.Operator
 import kiger.lexer.Token.Punctuation.*
-import kiger.lexer.Token.Symbol
+import kiger.lexer.Token.Sym
 import java.util.*
 
 /**
@@ -110,7 +110,7 @@ private class Parser(lexer: Lexer) {
 
 
     fun parseExpression0() = when (lexer.peekToken().token) {
-        is Token.Symbol -> {
+        is Token.Sym -> {
             val exp = parseExpression1();
             if (exp is Expression.Var && lexer.nextTokenIs(Equal))
                 parseAssignTo(exp.variable)
@@ -282,7 +282,7 @@ private class Parser(lexer: Lexer) {
         val (token, location) = lexer.peekToken()
 
         return when (token) {
-            is Symbol           -> parseIdentifierOrCall()
+            is Sym              -> parseIdentifierOrCall()
             is Token.Str        -> parseString()
             is Token.Integer    -> parseInteger()
             Nil                 -> parseNil()
@@ -383,22 +383,22 @@ private class Parser(lexer: Lexer) {
         }
 
     private fun parseName(): Pair<Symbol, SourceLocation> {
-        val (token, location) = lexer.readExpected<Symbol>()
+        val (token, location) = lexer.readExpected<Sym>()
 
-        return Pair(token, location)
+        return Pair(token.name, location)
     }
 
     private fun parseType(): TypeRef {
         if (lexer.nextTokenIs(Array)) {
             lexer.expect(Of)
 
-            val (token, location) = lexer.readExpected<Symbol>()
-            return TypeRef.Array(token, location)
+            val (token, location) = lexer.readExpected<Sym>()
+            return TypeRef.Array(token.name, location)
         } else if (lexer.nextTokenIs(LeftBrace)) {
             return TypeRef.Record(inBraces { parseFields() })
         } else {
-            val (token, location) = lexer.readExpected<Symbol>()
-            return TypeRef.Name(token, location)
+            val (token, location) = lexer.readExpected<Sym>()
+            return TypeRef.Name(token.name, location)
         }
     }
 

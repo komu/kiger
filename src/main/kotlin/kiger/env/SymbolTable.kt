@@ -1,6 +1,6 @@
 package kiger.env
 
-import kiger.lexer.Token.Symbol
+import kiger.absyn.Symbol
 
 open class SymbolTable<T> {
 

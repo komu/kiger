@@ -1,5 +1,7 @@
 package kiger.lexer
 
+import kiger.absyn.Symbol
+
 /**
  * Tokens are the indivisible building blocks of source code.
  *
@@ -17,9 +19,10 @@ sealed class Token {
     /**
      * Identifier such as variable, method or class name.
      */
-    class Symbol(val name: String): Token() {
-        override fun toString() = name
-        override fun equals(other: Any?) = other is Symbol && name == other.name
+    class Sym(val name: Symbol): Token() {
+        constructor(name: String): this(Symbol(name))
+        override fun toString() = name.toString()
+        override fun equals(other: Any?) = other is Sym && name == other.name
         override fun hashCode(): Int = name.hashCode()
     }
 

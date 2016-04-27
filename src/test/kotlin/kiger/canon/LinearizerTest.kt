@@ -1,8 +1,8 @@
 package kiger.canon
 
+import kiger.absyn.Symbol
 import kiger.env.EnvEntry
 import kiger.frame.JouletteFrame
-import kiger.lexer.Token.Symbol
 import kiger.parser.parseExpression
 import kiger.temp.Label
 import kiger.temp.resetLabelSequence

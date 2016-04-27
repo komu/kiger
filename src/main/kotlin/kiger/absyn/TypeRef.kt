@@ -1,7 +1,6 @@
 package kiger.absyn
 
 import kiger.lexer.SourceLocation
-import kiger.lexer.Token.Symbol
 
 sealed class TypeRef {
     class Name(val name: Symbol, val pos: SourceLocation) : TypeRef()

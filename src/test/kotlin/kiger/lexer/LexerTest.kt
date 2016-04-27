@@ -29,8 +29,8 @@ class LexerTest {
 
     @Test
     fun identifiers() {
-        assertTokens("foo", Symbol("foo"))
-        assertTokens("bar", Symbol("bar"))
+        assertTokens("foo", Sym("foo"))
+        assertTokens("bar", Sym("bar"))
     }
 
     @Test

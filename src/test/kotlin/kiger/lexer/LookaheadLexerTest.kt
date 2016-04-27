@@ -14,20 +14,20 @@ class LookaheadLexerTest {
         val lexer = LookaheadLexer("foo 123 bar")
 
         assertTrue(lexer.hasMore)
-        assertEquals(Symbol("foo"), lexer.peekToken().token)
+        assertEquals(Sym("foo"), lexer.peekToken().token)
 
         assertTrue(lexer.hasMore)
-        assertEquals(Symbol("foo"), lexer.readToken().token)
+        assertEquals(Sym("foo"), lexer.readToken().token)
 
         assertTrue(lexer.hasMore)
         assertEquals(Token.Integer(123), lexer.readToken().token)
 
         assertTrue(lexer.hasMore)
-        assertEquals(Symbol("bar"), lexer.peekToken().token)
-        assertEquals(Symbol("bar"), lexer.peekToken().token)
+        assertEquals(Sym("bar"), lexer.peekToken().token)
+        assertEquals(Sym("bar"), lexer.peekToken().token)
 
         assertTrue(lexer.hasMore)
-        assertEquals(Symbol("bar"), lexer.readToken().token)
+        assertEquals(Sym("bar"), lexer.readToken().token)
 
         assertFalse(lexer.hasMore)
     }
@@ -36,9 +36,9 @@ class LookaheadLexerTest {
     fun conditionalReading() {
         val lexer = LookaheadLexer("foo function ()")
 
-        assertFalse(lexer.readNextIf(Symbol("bar")))
+        assertFalse(lexer.readNextIf(Sym("bar")))
         assertFalse(lexer.readNextIf(Keyword.If))
-        assertTrue(lexer.readNextIf(Symbol("foo")))
+        assertTrue(lexer.readNextIf(Sym("foo")))
 
         assertFalse(lexer.readNextIf(Punctuation.LeftParen))
         assertTrue(lexer.readNextIf(Keyword.Function))

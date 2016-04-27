@@ -1,7 +1,6 @@
 package kiger.absyn
 
 import kiger.lexer.SourceLocation
-import kiger.lexer.Token.Symbol
 
 sealed class Declaration {
 

@@ -8,7 +8,6 @@ import kiger.frame.Fragment
 import kiger.lexer.SourceLocation
 import kiger.lexer.Token
 import kiger.lexer.Token.Operator
-import kiger.lexer.Token.Symbol
 import kiger.temp.Label
 import kiger.types.Type
 import kiger.utils.tailFrom
@@ -125,9 +124,9 @@ class Translator {
                 transVar(exp.variable, tenv, venv, level, breakLabel)
 
             is Expression.Record -> {
-                val t = tenv[exp.typ]
+                val t = tenv[exp.type]
                 if (t == null) {
-                    diagnostics.error("record type ${exp.typ} not found", exp.pos)
+                    diagnostics.error("record type ${exp.type} not found", exp.pos)
                     errorResult
                 } else {
                     val ty = t.actualType(exp.pos)
@@ -401,7 +400,7 @@ class Translator {
         // First pass: check formal types and store header info into venv
         fun transFun(f: FunctionDeclaration, env: SymbolTable<EnvEntry>): SymbolTable<EnvEntry> {
             val returnType = f.result?.let { tenv.lookupType(it.first, it.second) } ?: Type.Unit
-            val formals = f.params.map { Pair(it.name, tenv.lookupType(it.typ, it.pos)) }
+            val formals = f.params.map { Pair(it.name, tenv.lookupType(it.type, it.pos)) }
             val escapes = f.params.map { it.escape }
             val label = Label(f.name.name)
 
@@ -418,7 +417,7 @@ class Translator {
             val newLevel = func.level as Level.Lev
 
             fun transParam(param: Field, access: Access): Triple<Symbol, Type, Access> =
-                Triple(param.name, tenv.lookupType(param.typ, param.pos), access)
+                Triple(param.name, tenv.lookupType(param.type, param.pos), access)
 
             val params2 = f.params.zip(translate.formals(newLevel)).map { transParam(it.first, it.second) }
 
@@ -454,7 +453,7 @@ class Translator {
         is TypeRef.Name   -> tenv.lookupType(type.name, type.pos)
         is TypeRef.Record -> {
             checkDuplicates(type.fields.map { Pair(it.name, it.pos) })
-            Type.Record(type.fields.map { Pair(it.name, tenv.lookupType(it.typ, it.pos)) })
+            Type.Record(type.fields.map { Pair(it.name, tenv.lookupType(it.type, it.pos)) })
         }
         is TypeRef.Array  -> Type.Array(tenv.lookupType(type.elementType, type.pos))
     }
