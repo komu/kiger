@@ -3,10 +3,30 @@ package kiger.assem
 import kiger.temp.Label
 import kiger.temp.Temp
 
+private val registerRegex = Regex("`([sdj])(\\d+)")
+
 sealed class Instr {
-    class Lbl(val assem: String, val label: Label) : Instr()
-    class Oper(val assem: String, val dst: List<Temp>, val src: List<Temp>, val jump: List<Label>?) : Instr()
-    class Move(val assem: String, val dst: Temp, val src: Temp) : Instr()
+    class Lbl(val assem: String, val label: Label) : Instr() {
+        override fun toString() = assem
+    }
+
+    class Oper(val assem: String, val dst: List<Temp> = emptyList(), val src: List<Temp> = emptyList(), val jump: List<Label>? = null) : Instr() {
+        override fun toString(): String =
+            "    " + registerRegex.replace(assem) { m ->
+                val type = m.groupValues[1]
+                val index = m.groupValues[2].toInt()
+                when (type) {
+                    "s" -> src[index].name
+                    "d" -> dst[index].name
+                    "j" -> jump!![index].name
+                    else -> error("invalid type '$type'")
+                }
+            }
+    }
+
+    class Move(val assem: String, val dst: Temp, val src: Temp) : Instr() {
+        override fun toString() = assem
+    }
 }
 
 /*

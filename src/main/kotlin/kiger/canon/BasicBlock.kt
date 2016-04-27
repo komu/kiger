@@ -103,5 +103,5 @@ private class BasicBlockBuilder(private val label: Label) {
     }
 
     fun finish(branch: TreeStm.Branch) = BasicBlock(label, stms, branch)
-    fun finishWithJump(label: Label) = BasicBlock(label, stms, TreeStm.Branch.Jump(label))
+    fun finishWithJump(target: Label) = BasicBlock(label, stms, TreeStm.Branch.Jump(target))
 }
