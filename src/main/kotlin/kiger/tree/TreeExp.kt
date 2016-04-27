@@ -38,7 +38,7 @@ sealed class TreeExp {
     class Const(val value: Int) : TreeExp() {
         override fun equals(other: Any?) = other is Const && value == other.value
         override fun hashCode() = value
-        override fun toString() = "Const[$value]"
+        override fun toString() = value.toString()
     }
 
     class Call(val func: TreeExp, val args: List<TreeExp>) : TreeExp() {
