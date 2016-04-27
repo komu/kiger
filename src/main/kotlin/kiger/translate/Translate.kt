@@ -10,6 +10,7 @@ import kiger.tree.BinaryOp
 import kiger.tree.RelOp
 import kiger.tree.TreeExp
 import kiger.tree.TreeStm
+import kiger.utils.cons
 import kiger.utils.splitLast
 import kiger.utils.tail
 
@@ -25,7 +26,7 @@ class Translate {
     val frameType: FrameType = JouletteFrame
 
     fun newLevel(parent: Level, name: Label, formalEscapes: List<Boolean>) =
-        Level.Lev(parent, frameType.newFrame(name, listOf(true) + formalEscapes))
+        Level.Lev(parent, frameType.newFrame(name, cons(true, formalEscapes)))
 
     fun intLiteral(value: Int): TrExp = TrExp.Ex(TreeExp.Const(value))
 
@@ -106,7 +107,7 @@ class Translate {
             TreeStm.Move(memPlus(TreeExp.Temporary(r), TreeExp.Const(i * frameType.wordSize)), e.unEx())
         }
 
-        return TrExp.Ex(TreeExp.ESeq(seq(listOf(init) + inits), TreeExp.Temporary(r)))
+        return TrExp.Ex(TreeExp.ESeq(seq(cons(init, inits)), TreeExp.Temporary(r)))
     }
 
     /**
@@ -223,7 +224,7 @@ class Translate {
                     frameType.exp(curLevel.frame.formals.first(), iter(d - 1, curLevel.parent))
                 }
 
-            TreeExp.Call(TreeExp.Name(label), listOf(iter(diff, useLevel)) + argExps)
+            TreeExp.Call(TreeExp.Name(label), cons(iter(diff, useLevel), argExps))
         }
 
         return if (isProcedure)

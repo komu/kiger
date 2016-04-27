@@ -4,6 +4,8 @@ import kiger.temp.Label
 import kiger.temp.Temp
 import kiger.tree.TreeExp
 import kiger.tree.TreeStm
+import kiger.utils.cons
+import kiger.utils.splitFirst
 import kiger.utils.splitLast
 import kiger.utils.tail
 import java.util.*
@@ -27,18 +29,19 @@ private object Linearizer {
         exps[0] is TreeExp.Call -> {
             val t = Temp()
             val rest = exps.tail()
-            reorder(listOf(TreeExp.ESeq(TreeStm.Move(TreeExp.Temporary(t), exps[0]), TreeExp.Temporary(t))) + rest)
+            reorder(cons(TreeExp.ESeq(TreeStm.Move(TreeExp.Temporary(t), exps[0]), TreeExp.Temporary(t)), rest))
         }
 
         else -> {
-            val (stms, e) = doExp(exps[0])
-            val (stms2, el) = reorder(exps.tail())
+            val (head, tail) = exps.splitFirst()
+            val (stms, e) = doExp(head)
+            val (stms2, el) = reorder(tail)
 
             if (stms2.commute(e)) {
-                Pair(stms % stms2, listOf(e) + el)
+                Pair(stms % stms2, cons(e, el))
             } else {
                 val t = Temp()
-                Pair(stms % TreeStm.Move(TreeExp.Temporary(t), e) % stms2, listOf(TreeExp.Temporary(t)) + el)
+                Pair(stms % TreeStm.Move(TreeExp.Temporary(t), e) % stms2, cons(TreeExp.Temporary(t), el))
             }
         }
     }
@@ -55,35 +58,35 @@ private object Linearizer {
 
     fun doStm(stm: TreeStm): TreeStm = when (stm) {
         is TreeStm.Seq     -> doStm(stm.lhs) % doStm(stm.rhs)
-        is TreeStm.Jump    -> reorderStm(listOf(stm.exp)) { TreeStm.Jump(it[0], stm.labels) }
-        is TreeStm.CJump   -> reorderStm(listOf(stm.lhs, stm.rhs)) { TreeStm.CJump(stm.relop, it[0], it[1], stm.trueLabel, stm.falseLabel) }
+        is TreeStm.Jump    -> reorderStm(listOf(stm.exp)) { TreeStm.Jump(it.single(), stm.labels) }
+        is TreeStm.CJump   -> reorderStm(listOf(stm.lhs, stm.rhs)) { val (l, r) = it; TreeStm.CJump(stm.relop, l, r, stm.trueLabel, stm.falseLabel) }
         is TreeStm.Move    -> when (stm.target) {
             is TreeExp.Temporary ->
                 if (stm.source is TreeExp.Call)
-                    reorderStm(listOf(stm.source.func) + stm.source.args) { TreeStm.Move(TreeExp.Temporary(stm.target.temp), TreeExp.Call(it[0], it.tail())) }
+                    reorderStm(cons(stm.source.func, stm.source.args)) { val (h, t) = it.splitFirst(); TreeStm.Move(TreeExp.Temporary(stm.target.temp), TreeExp.Call(h, t)) }
                 else
-                    reorderStm(listOf(stm.source)) { TreeStm.Move(TreeExp.Temporary(stm.target.temp), it[0]) }
+                    reorderStm(listOf(stm.source)) { TreeStm.Move(TreeExp.Temporary(stm.target.temp), it.single()) }
             is TreeExp.Mem -> reorderStm(listOf(stm.target.exp, stm.source)) { val (e, b) = it; TreeStm.Move(TreeExp.Mem(e), b) }
             is TreeExp.ESeq -> doStm(TreeStm.Seq(stm.target.stm, TreeStm.Move(stm.target.exp, stm.source)))
             else -> error("invalid target: ${stm.target}")
         }
         is TreeStm.Exp     ->
             if (stm.exp is TreeExp.Call)
-                reorderStm(listOf(stm.exp.func) + stm.exp.args) { TreeStm.Exp(TreeExp.Call(it[0], it.tail())) }
+                reorderStm(cons(stm.exp.func, stm.exp.args)) { val (h, t) = it.splitFirst(); TreeStm.Exp(TreeExp.Call(h, t)) }
             else
-                reorderStm(listOf(stm.exp)) { TreeStm.Exp(it[0]) }
+                reorderStm(listOf(stm.exp)) { TreeStm.Exp(it.single()) }
         is TreeStm.Labeled -> reorderStm(emptyList()) { stm }
     }
 
     fun doExp(exp: TreeExp): Pair<TreeStm, TreeExp> = when (exp) {
         is TreeExp.BinOp    -> reorderExp(listOf(exp.lhs, exp.rhs)) { val (a, b) = it; TreeExp.BinOp(exp.binop, a, b) }
-        is TreeExp.Mem      -> reorderExp(listOf(exp.exp)) { TreeExp.Mem(it[0]) }
+        is TreeExp.Mem      -> reorderExp(listOf(exp.exp)) { TreeExp.Mem(it.single()) }
         is TreeExp.ESeq     -> {
             val stms = doStm(exp.stm)
             val (stms2, e) = doExp(exp.exp)
             Pair(stms % stms2, e)
         }
-        is TreeExp.Call     -> reorderExp(listOf(exp.func) + exp.args) { TreeExp.Call(it[0], it.tail()) }
+        is TreeExp.Call     -> reorderExp(cons(exp.func, exp.args)) { val (h, t) = it.splitFirst(); TreeExp.Call(h, t) }
         else                -> reorderExp(emptyList()) { exp }
     }
 }
@@ -207,74 +210,77 @@ private class BasicBlockBuilder {
  * The blocks are reordered to satisfy property 7; also in this reordering as many JUMP(T.NAME(lab)) statements
  * as possible are eliminated by falling through into T.LABEL(lab).
  */
-fun BasicBlockGraph.traceSchedule(): List<TreeStm> {
+fun BasicBlockGraph.traceSchedule(): List<TreeStm> =
+    TraceScheduler(blocks).getNext(blocks) + TreeStm.Labeled(exitLabel)
 
-    val blockMap = mutableMapOf<Label, BasicBlock>()
-    for (b in blocks) {
-        val label = b.label
-        if (label != null)
-            blockMap[label] = b
+private class TraceScheduler(blocks: List<BasicBlock>) {
+
+    private val unprocessedBlocks = mutableMapOf<Label, BasicBlock>().apply {
+        for (b in blocks)
+            this[b.label] = b
     }
 
-    val scheduled = getNext(blockMap, blocks)
+    fun getNext(rest: List<BasicBlock>): List<TreeStm> {
+        if (rest.isEmpty()) return emptyList()
 
-    return scheduled + TreeStm.Labeled(exitLabel)
-}
+        val (head, tail) = rest.splitFirst()
 
-private fun trace(table: MutableMap<Label, BasicBlock>, block: BasicBlock, rest: List<BasicBlock>): List<TreeStm> {
-    table[block.label!!] = BasicBlock(emptyList())
-    val (most, last) = block.statements.splitLast()
-    return when (last) {
-        is TreeStm.Jump -> {
-            if (last.exp is TreeExp.Name) {
-                val b2 = table[last.exp.label]
-                if (b2 != null && b2.statements.size > 0) {
-                    most + trace(table, b2, rest)
+        val block = unprocessedBlocks[head.label]
+        return if (block != null && block.statements.size > 0) {
+            trace(block, tail)
+        } else {
+            getNext(tail)
+        }
+    }
+
+    fun trace(block: BasicBlock, rest: List<BasicBlock>): List<TreeStm> {
+        unprocessedBlocks.remove(block.label) // mark the block as processed
+
+        val (most, last) = block.statements.splitLast()
+        return when (last) {
+            is TreeStm.Jump -> {
+                if (last.exp is TreeExp.Name) {
+                    val b2 = unprocessedBlocks[last.exp.label]
+                    if (b2 != null && b2.statements.size > 0) {
+                        most + trace(b2, rest)
+                    } else {
+                        block.statements + getNext(rest)
+                    }
+
                 } else {
-                    block.statements + getNext(table, rest)
+                    block.statements + getNext(rest)
                 }
-
-            } else {
-                block.statements + getNext(table, rest)
             }
-        }
-        is TreeStm.CJump -> {
-            val trueBlock = table[last.trueLabel]
-            val falseBlock = table[last.trueLabel]
+            is TreeStm.CJump -> {
+                val trueBlock = unprocessedBlocks[last.trueLabel]
+                val falseBlock = unprocessedBlocks[last.trueLabel]
 
-            if (falseBlock != null && !falseBlock.isEmpty()) {
-                block.statements + trace(table, falseBlock, rest)
-            } else if (trueBlock != null && !trueBlock.isEmpty()) {
-                most + TreeStm.CJump(last.relop.not(), last.lhs, last.rhs, last.falseLabel, last.trueLabel) + trace(table, trueBlock, rest)
-            } else {
-                val f = Label()
-                most + TreeStm.CJump(last.relop, last.lhs, last.rhs, last.trueLabel, f) +
-                        TreeStm.Labeled(f) + TreeStm.Jump(TreeExp.Name(f), listOf(f)) +
-                        getNext(table, rest)
+                if (falseBlock != null && !falseBlock.isEmpty()) {
+                    block.statements + trace(falseBlock, rest)
+                } else if (trueBlock != null && !trueBlock.isEmpty()) {
+                    most + TreeStm.CJump(last.relop.not(), last.lhs, last.rhs, last.falseLabel, last.trueLabel) + trace(trueBlock, rest)
+                } else {
+                    val f = Label()
+                    most + TreeStm.CJump(last.relop, last.lhs, last.rhs, last.trueLabel, f) +
+                            TreeStm.Labeled(f) + TreeStm.Jump(TreeExp.Name(f), listOf(f)) +
+                            getNext(rest)
+                }
             }
+            else ->
+                error("invalid last node of basic block: $last")
         }
-        else ->
-            error("invalid last node of basic block: $last")
-    }
-}
-
-private fun getNext(table: MutableMap<Label, BasicBlock>, rest: List<BasicBlock>): List<TreeStm> {
-    if (rest.isEmpty()) return emptyList()
-
-    val head = rest.first()
-    val tail = rest.tail()
-
-    val block = table[head.label!!]
-    return if (block != null && block.statements.size > 0) {
-        trace(table, block, tail)
-    } else {
-        getNext(table, tail)
     }
 }
 
 data class BasicBlock(val statements: List<TreeStm>) {
-    val label: Label?
-        get() = (statements.firstOrNull() as? TreeStm.Labeled)?.label
+    init {
+        require(statements.any()) { "empty basic block" }
+        require(statements.first() is TreeStm.Labeled) { "basic block without start label: $statements" }
+        require(statements.last().isBranch) { "basic block without ending branch: $statements" }
+    }
+
+    val label: Label
+        get() = (statements.first() as TreeStm.Labeled).label
 
     fun isEmpty() = statements.isEmpty()
 }

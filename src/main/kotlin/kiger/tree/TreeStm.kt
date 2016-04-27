@@ -5,6 +5,8 @@ import java.util.*
 
 sealed class TreeStm {
 
+    val isBranch = this is Jump || this is CJump
+
     class Seq(val lhs: TreeStm, val rhs: TreeStm) : TreeStm() {
         override fun equals(other: Any?) = other is Seq && lhs == other.lhs && rhs == other.rhs
         override fun hashCode() = Objects.hash(lhs, rhs)
