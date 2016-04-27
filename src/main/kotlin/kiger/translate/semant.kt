@@ -241,8 +241,8 @@ class Translator {
                 val ivar = Variable.Simple(exp.variable, exp.pos)
                 val limitVar = Variable.Simple(limit, exp.pos)
                 val letDecs = listOf(
-                        Declaration.Var(exp.variable, exp.escape, null, exp.lo, exp.pos),
-                        Declaration.Var(limit, false, null, exp.hi, exp.pos))
+                        Declaration.Var(exp.variable, null, exp.lo, exp.pos, exp.escape),
+                        Declaration.Var(limit, null, exp.hi, exp.pos, escape = false))
 
                 val loop = Expression.While(
                         test = Expression.Op(Expression.Var(ivar), Operator.LessThanOrEqual, Expression.Var(limitVar), exp.pos),

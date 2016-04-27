@@ -23,6 +23,8 @@ class LexerTest {
         assertTokens("let", Keyword.Let)
         assertTokens("while", Keyword.While)
         assertTokens("nil", Keyword.Nil)
+        assertTokens("var", Keyword.Var)
+        assertTokens("of", Keyword.Of)
     }
 
     @Test

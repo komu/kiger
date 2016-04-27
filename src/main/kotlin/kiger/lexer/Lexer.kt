@@ -99,6 +99,7 @@ class Lexer(private val source: String, private val file: String = "<unknown>") 
             "let"       -> Keyword.Let
             "while"     -> Keyword.While
             "nil"       -> Keyword.Nil
+            "var"       -> Keyword.Var
             else        -> Symbol(str)
         }
     }

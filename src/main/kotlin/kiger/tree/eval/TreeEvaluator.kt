@@ -39,9 +39,9 @@ class TreeEvaluator(fragments: List<Fragment>) {
     }
 
     fun evaluate(): Int {
-        dumpCode()
+        //dumpCode()
         val state = EvalState()
-        println(codeLabels)
+        //println(codeLabels)
 
         state.pc = codeLabels[Translator.mainLabel]!!
 
@@ -54,7 +54,7 @@ class TreeEvaluator(fragments: List<Fragment>) {
     }
 
     private fun eval(op: TreeStm, state: EvalState) {
-        println(op)
+        //println(op)
         when (op) {
             is TreeStm.Labeled -> {}
             is TreeStm.Move -> evalMove(op, state)

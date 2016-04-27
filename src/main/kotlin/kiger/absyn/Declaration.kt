@@ -13,7 +13,9 @@ sealed class Declaration {
         override fun toString() = declarations.toString()
     }
 
-    class Var(val name: Symbol, var escape: Boolean, val type: Pair<Symbol, SourceLocation>?, val init: Expression, val pos: SourceLocation) : Declaration()
+    class Var(val name: Symbol, val type: Pair<Symbol, SourceLocation>?, val init: Expression, val pos: SourceLocation, escape: Boolean = true) : Declaration() {
+        var escape = escape
+    }
 }
 
 data class FunctionDeclaration(

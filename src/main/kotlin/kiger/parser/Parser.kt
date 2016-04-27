@@ -4,6 +4,7 @@ import kiger.absyn.*
 import kiger.lexer.*
 import kiger.lexer.Token.Keyword.*
 import kiger.lexer.Token.Keyword.Array
+import kiger.lexer.Token.Keyword.Function
 import kiger.lexer.Token.Operator
 import kiger.lexer.Token.Punctuation.*
 import kiger.lexer.Token.Symbol
@@ -57,21 +58,37 @@ private class Parser(lexer: Lexer) {
         return result
     }
 
-    fun parseDeclaration(): Declaration {
-        return parseFunctionDeclaration()
-    }
+    fun parseDeclaration(): Declaration =
+        if (lexer.nextTokenIs(Function))
+            parseFunctionDeclaration()
+        else if (lexer.nextTokenIs(Var))
+            parseVarDeclaration()
+        else
+            fail(lexer.nextTokenLocation(), "expected function or var declaration")
 
     fun parseFunctionDeclaration(): Declaration.Functions {
-        val pos = lexer.expect(Token.Keyword.Function)
+        val pos = lexer.expect(Function)
         val name = parseName().first
         val params = parseArgumentDefinitionList()
-        val returnType = if (lexer.readNextIf(Colon)) parseName() else null
+        val returnType = parseOptionalType()
         lexer.expect(Equal)
         val body = parseTopLevelExpression()
 
         val func = FunctionDeclaration(name, params, returnType, body, pos)
         return Declaration.Functions(listOf(func))
     }
+
+    fun parseVarDeclaration(): Declaration.Var {
+        val pos = lexer.expect(Var)
+        val name = parseName().first
+        val type = parseOptionalType()
+        lexer.expect(Equal)
+        val init = parseTopLevelExpression()
+
+        return Declaration.Var(name, type, init, pos)
+    }
+
+    private fun parseOptionalType() = if (lexer.readNextIf(Colon)) parseName() else null
 
     fun parseTopLevelExpression(): Expression {
         val location = lexer.nextTokenLocation()
