@@ -8,20 +8,20 @@ import kiger.tree.TreeStm
 
 sealed class TrExp {
 
-    abstract fun unEx(): TreeExp
-    abstract fun unNx(): TreeStm
-    abstract fun unCx(): (Label, Label) -> TreeStm
+    abstract fun asEx(): TreeExp
+    abstract fun asNx(): TreeStm
+    abstract fun asCx(): (Label, Label) -> TreeStm
 
     class Ex(val exp: TreeExp) : TrExp() {
         override fun equals(other: Any?) = other is Ex && exp == other.exp
         override fun hashCode() = exp.hashCode()
         override fun toString() = "Ex[$exp]"
-        override fun unEx() = exp
-        override fun unNx() = TreeStm.Exp(exp)
-        override fun unCx(): (Label, Label) -> TreeStm = when {
-            exp is TreeExp.Const && exp.value == 0 -> { t, f -> TreeStm.Jump(TreeExp.Name(f), listOf(f)) }
-            exp is TreeExp.Const && exp.value == 1 -> { t, f -> TreeStm.Jump(TreeExp.Name(t), listOf(t)) }
-            else -> { t, f -> TreeStm.CJump(RelOp.EQ, exp, TreeExp.Const(0), f, t) }
+        override fun asEx() = exp
+        override fun asNx() = TreeStm.Exp(exp)
+        override fun asCx(): (Label, Label) -> TreeStm = when {
+            exp is TreeExp.Const && exp.value == 0 -> { t, f -> TreeStm.Branch.Jump(TreeExp.Name(f), listOf(f)) }
+            exp is TreeExp.Const && exp.value == 1 -> { t, f -> TreeStm.Branch.Jump(TreeExp.Name(t), listOf(t)) }
+            else -> { t, f -> TreeStm.Branch.CJump(RelOp.EQ, exp, TreeExp.Const(0), f, t) }
         }
     }
 
@@ -29,14 +29,14 @@ sealed class TrExp {
         override fun equals(other: Any?) = other is Nx && stm == other.stm
         override fun hashCode() = stm.hashCode()
         override fun toString() = "Nx[$stm]"
-        override fun unEx() = TreeExp.ESeq(stm, TreeExp.Const(0))
-        override fun unNx() = stm
-        override fun unCx() = error("unCx not supported for $this")
+        override fun asEx() = TreeExp.ESeq(stm, TreeExp.Const(0))
+        override fun asNx() = stm
+        override fun asCx() = error("unCx not supported for $this")
     }
 
     class Cx(val generateStatement: (Label, Label) -> TreeStm) : TrExp() {
         override fun toString() = "Cx[...]"
-        override fun unEx(): TreeExp {
+        override fun asEx(): TreeExp {
             val r = Temp()
             val t = Label()
             val f = Label()
@@ -49,11 +49,11 @@ sealed class TrExp {
                     TreeExp.Temporary(r))
         }
 
-        override fun unNx(): TreeStm {
+        override fun asNx(): TreeStm {
             val l = Label()
             return TreeStm.Seq(generateStatement(l, l), TreeStm.Labeled(l))
         }
 
-        override fun unCx() = generateStatement
+        override fun asCx() = generateStatement
     }
 }

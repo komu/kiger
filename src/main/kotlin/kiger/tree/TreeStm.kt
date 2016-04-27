@@ -5,7 +5,7 @@ import java.util.*
 
 sealed class TreeStm {
 
-    val isBranch = this is Jump || this is CJump
+    val isBranch = this is Branch
 
     class Seq(val lhs: TreeStm, val rhs: TreeStm) : TreeStm() {
         override fun equals(other: Any?) = other is Seq && lhs == other.lhs && rhs == other.rhs
@@ -19,16 +19,19 @@ sealed class TreeStm {
         override fun toString() = "$label:"
     }
 
-    class Jump(val exp: TreeExp, val labels: List<Label>) : TreeStm() {
-        override fun equals(other: Any?) = other is Jump && exp == other.exp && labels == other.labels
-        override fun hashCode() = Objects.hash(exp, labels)
-        override fun toString() = "    Jump[$exp, $labels]"
-    }
+    sealed class Branch : TreeStm() {
+        class Jump(val exp: TreeExp, val labels: List<Label>) : Branch() {
+            constructor(label: Label): this(TreeExp.Name(label), listOf(label))
+            override fun equals(other: Any?) = other is Jump && exp == other.exp && labels == other.labels
+            override fun hashCode() = Objects.hash(exp, labels)
+            override fun toString() = "    Jump[$exp, $labels]"
+        }
 
-    class CJump(val relop: RelOp, val lhs: TreeExp, val rhs: TreeExp, val trueLabel: Label, val falseLabel: Label) : TreeStm() {
-        override fun equals(other: Any?) = other is CJump && relop == other.relop && lhs == other.lhs && rhs == other.rhs && trueLabel == other.trueLabel && falseLabel == other.falseLabel
-        override fun hashCode() = Objects.hash(relop, lhs, rhs, trueLabel, falseLabel)
-        override fun toString() = "    CJump[$relop, $lhs, $rhs, $trueLabel, $falseLabel]"
+        class CJump(val relop: RelOp, val lhs: TreeExp, val rhs: TreeExp, val trueLabel: Label, val falseLabel: Label) : Branch() {
+            override fun equals(other: Any?) = other is CJump && relop == other.relop && lhs == other.lhs && rhs == other.rhs && trueLabel == other.trueLabel && falseLabel == other.falseLabel
+            override fun hashCode() = Objects.hash(relop, lhs, rhs, trueLabel, falseLabel)
+            override fun toString() = "    CJump[$relop, $lhs, $rhs, $trueLabel, $falseLabel]"
+        }
     }
 
     class Move(val target: TreeExp, val source: TreeExp) : TreeStm() {

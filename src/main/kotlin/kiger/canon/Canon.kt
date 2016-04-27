@@ -55,8 +55,8 @@ private object Linearizer {
 
     fun doStm(stm: TreeStm): TreeStm = when (stm) {
         is TreeStm.Seq     -> doStm(stm.lhs) % doStm(stm.rhs)
-        is TreeStm.Jump    -> reorderStm(listOf(stm.exp)) { TreeStm.Jump(it.single(), stm.labels) }
-        is TreeStm.CJump   -> reorderStm(listOf(stm.lhs, stm.rhs)) { val (l, r) = it; TreeStm.CJump(stm.relop, l, r, stm.trueLabel, stm.falseLabel) }
+        is TreeStm.Branch.Jump    -> reorderStm(listOf(stm.exp)) { TreeStm.Branch.Jump(it.single(), stm.labels) }
+        is TreeStm.Branch.CJump   -> reorderStm(listOf(stm.lhs, stm.rhs)) { val (l, r) = it; TreeStm.Branch.CJump(stm.relop, l, r, stm.trueLabel, stm.falseLabel) }
         is TreeStm.Move    -> when (stm.target) {
             is TreeExp.Temporary ->
                 if (stm.source is TreeExp.Call)
@@ -73,6 +73,7 @@ private object Linearizer {
             else
                 reorderStm(listOf(stm.exp)) { TreeStm.Exp(it.single()) }
         is TreeStm.Labeled -> reorderStm(emptyList()) { stm }
+        else -> error("invalid stm $stm")
     }
 
     fun doExp(exp: TreeExp): Pair<TreeStm, TreeExp> = when (exp) {

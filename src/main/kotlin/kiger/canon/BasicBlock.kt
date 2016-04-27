@@ -1,21 +1,13 @@
 package kiger.canon
 
 import kiger.temp.Label
-import kiger.tree.TreeExp
 import kiger.tree.TreeStm
-import kiger.utils.cons
 
-data class BasicBlock(val statements: List<TreeStm>) {
-    init {
-        require(statements.any()) { "empty basic block" }
-        require(statements.first() is TreeStm.Labeled) { "basic block without start label: $statements" }
-        require(statements.last().isBranch) { "basic block without ending branch: $statements" }
-    }
-
-    val label: Label
-        get() = (statements.first() as TreeStm.Labeled).label
-
-    fun isEmpty() = statements.isEmpty()
+class BasicBlock(val label: Label, private val body: List<TreeStm>, val branch: TreeStm.Branch) {
+    val labelledBody: Sequence<TreeStm>
+        get() = sequenceOf(TreeStm.Labeled(label)) + body
+    val allStatements: Sequence<TreeStm>
+        get() = labelledBody + branch
 }
 
 /**
@@ -42,7 +34,7 @@ fun List<TreeStm>.basicBlocks(): BasicBlockGraph {
     for (stm in this)
         builder.process(stm)
 
-    return builder.build()
+    return builder.finish()
 }
 
 private class BasicBlockGraphBuilder {
@@ -55,41 +47,47 @@ private class BasicBlockGraphBuilder {
      * Adds a new statement to the graph of basic blocks.
      */
     fun process(stm: TreeStm) {
-        // First make sure that each basic-block starts with a label
-        if (currentBlock == null && stm !is TreeStm.Labeled)
-            currentBlock = BasicBlockBuilder(Label())
 
-        if (stm is TreeStm.Labeled) {
-            // Labels start a new block unless we are already at the beginning of a block
-            if (currentBlock != null) {
-                currentBlock!!.addJumpTo(stm.label)
-                finishBlock()
+        val block = currentBlock
+
+        // Each block must start with a label. If we actually have a label in the stream,
+        // we'll use that for our new block. Otherwise we'll invent a new label.
+        if (block == null) {
+            if (stm is TreeStm.Labeled) {
+                currentBlock = BasicBlockBuilder(stm.label)
+            } else {
+                currentBlock = BasicBlockBuilder(Label())
+                process(stm) // now that we have fixed the block with our invented label, try again
             }
 
-            currentBlock = BasicBlockBuilder(stm.label)
         } else {
-            currentBlock!! += stm
-            if (stm.isBranch)
-                finishBlock()
+            if (stm is TreeStm.Labeled) {
+                // If we encounter a label, we'll split the block into two blocks, ending the
+                // previous block with a jump to the new label.
+                blocks += block.finishWithJump(stm.label)
+                currentBlock = BasicBlockBuilder(stm.label)
+
+            } else {
+                if (stm is TreeStm.Branch) {
+                    // If we encounter a branch, we must end the block and start a new one on next instruction.
+                    blocks += block.finish(stm)
+                    currentBlock = null
+
+                } else {
+                    block += stm
+                }
+            }
         }
     }
 
-    private fun finishBlock() {
-        val cb = currentBlock
-        if (cb != null) {
-            blocks += cb.build()
-            currentBlock = null
-        }
-    }
-
-    fun build(): BasicBlockGraph {
-        val cb = currentBlock
-        if (cb != null) {
-            if (!cb.endsWithBranch())
-                cb.addJumpTo(exitLabel)
-
-            finishBlock()
-        }
+    /**
+     * All input has been processed: build the graph.
+     */
+    fun finish(): BasicBlockGraph {
+        val block = currentBlock
+        if (block != null)
+            // If we have a current block, it will not have a branch at the end. Add jump to exit.
+            blocks += block.finishWithJump(exitLabel)
 
         return BasicBlockGraph(blocks, exitLabel)
     }
@@ -100,14 +98,10 @@ private class BasicBlockBuilder(private val label: Label) {
     private val stms = mutableListOf<TreeStm>()
 
     operator fun plusAssign(stm: TreeStm) {
+        require(stm !is TreeStm.Branch) { "tried to add branch to middle of basic block: $stm"}
         stms += stm
     }
 
-    fun addJumpTo(label: Label) {
-        stms += TreeStm.Jump(TreeExp.Name(label), listOf(label))
-    }
-
-    fun endsWithBranch() = stms.lastOrNull()?.isBranch ?: false
-
-    fun build() = BasicBlock(cons(TreeStm.Labeled(label), stms))
+    fun finish(branch: TreeStm.Branch) = BasicBlock(label, stms, branch)
+    fun finishWithJump(label: Label) = BasicBlock(label, stms, TreeStm.Branch.Jump(label))
 }
