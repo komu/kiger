@@ -53,16 +53,7 @@ private fun doStm(stm: TreeStm): TreeStm = when (stm) {
     is Jump    -> reorderStm(stm.exp) { Jump(it, stm.labels) }
     is CJump   -> reorderStm(stm.lhs, stm.rhs) { l, r -> CJump(stm.relop, l, r, stm.trueLabel, stm.falseLabel) }
     is Labeled -> stm
-    is Move -> when (stm.target) {
-        is Temporary ->
-            if (stm.source is Call)
-                reorderStm(stm.source.func, stm.source.args) { h, t -> Move(TreeExp.Temporary(stm.target.temp), Call(h, t)) }
-            else
-                reorderStm(stm.source) { Move(Temporary(stm.target.temp), it) }
-        is Mem -> reorderStm(stm.target.exp, stm.source) { t, s -> Move(Mem(t), s) }
-        is ESeq -> doStm(Seq(stm.target.stm, Move(stm.target.exp, stm.source)))
-        else -> error("invalid target: ${stm.target}")
-    }
+    is Move    -> doMove(stm)
     is Exp ->
         if (stm.exp is Call)
             reorderStm(stm.exp.func, stm.exp.args) { h, t -> Exp(Call(h, t)) }
@@ -70,6 +61,20 @@ private fun doStm(stm: TreeStm): TreeStm = when (stm) {
             reorderStm(stm.exp) { Exp(it) }
     else ->
         error("invalid stm $stm")
+}
+
+private fun doMove(stm: Move): TreeStm = when (stm.target) {
+    is Temporary ->
+        if (stm.source is Call)
+            reorderStm(stm.source.func, stm.source.args) { h, t -> Move(TreeExp.Temporary(stm.target.temp), Call(h, t)) }
+        else
+            reorderStm(stm.source) { Move(Temporary(stm.target.temp), it) }
+    is Mem ->
+        reorderStm(stm.target.exp, stm.source) { t, s -> Move(Mem(t), s) }
+    is ESeq ->
+        doStm(Seq(stm.target.stm, Move(stm.target.exp, stm.source)))
+    else ->
+        error("invalid target for move: ${stm.target}")
 }
 
 private fun doExp(exp: TreeExp): Pair<TreeStm, TreeExp> = when (exp) {
