@@ -99,9 +99,8 @@ class JouletteFrame private constructor(name: Label, formalEscapes: List<Boolean
             is FrameAccess.InFrame -> TreeExp.Mem(TreeExp.BinOp(BinaryOp.PLUS, exp, TreeExp.Const(access.offset)))
             is FrameAccess.InReg   -> TreeExp.Temporary(access.reg)
         }
-        override fun externalCall(name: String, args: List<TreeExp>): TreeExp {
-            return TreeExp.Const(0) // TODO: dummy
-        }
+        override fun externalCall(name: String, args: List<TreeExp>): TreeExp =
+            TreeExp.Call(TreeExp.Name(Label(name)), args) // TODO
         override val argumentRegisters: List<Temp> = listOf(a0, a1, a2, a3)
         override val calleeSaves: List<Temp> = listOf(s0, s1, s2, s3, s4, s5, s6, s7)
         override val callerSaves: List<Temp> = listOf(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9)

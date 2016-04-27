@@ -66,6 +66,11 @@ class Translator {
         }
     }
 
+    fun transTopLevelExp(e: Expression): TranslationResult {
+        val mainLevel = translate.newLevel(translate.outermost, mainLabel, emptyList())
+        return transExp(e, baseVenv, baseTenv, mainLevel, null)
+    }
+
     fun transExp(e: Expression, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): TranslationResult {
         fun trexp(exp: Expression): TranslationResult = when (exp) {
             is Expression.Nil ->
