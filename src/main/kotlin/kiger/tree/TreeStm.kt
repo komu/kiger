@@ -5,7 +5,7 @@ import java.util.*
 
 sealed class TreeStm {
 
-    val isBranch = this is Branch
+    fun isConstExpr() = this is Exp && exp is TreeExp.Const
 
     class Seq(val lhs: TreeStm, val rhs: TreeStm) : TreeStm() {
         override fun equals(other: Any?) = other is Seq && lhs == other.lhs && rhs == other.rhs

@@ -5,6 +5,7 @@ import kiger.temp.Temp
 import java.util.*
 
 sealed class TreeExp {
+
     class BinOp(val binop: BinaryOp, val lhs: TreeExp, val rhs: TreeExp) : TreeExp() {
         override fun equals(other: Any?) = other is BinOp && binop == other.binop && lhs == other.lhs && rhs == other.rhs
         override fun hashCode() = Objects.hash(binop, lhs, rhs)
