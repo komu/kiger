@@ -50,14 +50,14 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
 
         val prologue = listOf(
                 "$name:",
-                "    sw \$fp 0(\$sp)",              // save old fp
-                "    move \$fp \$sp",               // make sp to be new fp
-                "    addiu \$sp \$sp -$offset")     // make new sp
+                "    sw \$fp, 0(\$sp)",              // save old fp
+                "    move \$fp, \$sp",               // make sp to be new fp
+                "    addiu \$sp, \$sp, -$offset")     // make new sp
                 .joinToString("\n", postfix = "\n")
 
         val epilogue = listOf(
-                "    move \$sp \$fp",               // restore old sp
-                "    lw \$fp 0(\$sp)",              // restore old fp
+                "    move \$sp, \$fp",               // restore old sp
+                "    lw \$fp, 0(\$sp)",              // restore old fp
                 "    jr \$ra")                      // jump to return address
                 .joinToString("\n", postfix = "\n")
 

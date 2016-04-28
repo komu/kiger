@@ -73,7 +73,7 @@ private fun String.stripComments(): String {
 private val labelNameRegex = Regex("""[a-zA-Z_][a-zA-Z_0-9]*""")
 private val labelDefRegex = Regex("""($labelNameRegex):""")
 private val registerRegex = Regex("""\$[a-z]+\d*""")
-private val immediateRegex = Regex("""\d+""")
+private val immediateRegex = Regex("""-?\d+""")
 private val offsetRegex = Regex("""(\d+)\(($registerRegex)\)""")
 private val operandRegex = Regex("""$registerRegex|$offsetRegex|$labelNameRegex|$immediateRegex""")
 private val opNameRegex = Regex("""\w+""")
