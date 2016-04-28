@@ -35,11 +35,11 @@ data class DeclTranslationResult(val venv: SymbolTable<EnvEntry>, val tenv: Symb
     constructor(venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, vararg exps: TrExp): this(venv, tenv, exps.asList())
 }
 
-class Translator {
+class SemanticAnalyzer {
 
     private val diagnostics = Diagnostics()
 
-    private val translate = Translate()
+    private val translate = Translator()
     private val errorResult = TranslationResult(translate.errorExp, Type.Nil)
 
     var baseVenv = SymbolTable<EnvEntry>()
@@ -54,7 +54,7 @@ class Translator {
         val mainLabel = Label("main")
 
         fun transProg(ex: Expression): List<Fragment> {
-            val translator = Translator()
+            val translator = SemanticAnalyzer()
             val translate = translator.translate
             val mainLevel = translate.newLevel(translate.outermost, mainLabel, emptyList())
 

@@ -12,7 +12,7 @@ import kotlin.test.assertEquals
 
 class TranslationTest {
 
-    val translator = Translator()
+    val translator = SemanticAnalyzer()
 
     @Test
     fun translateLiterals() {
@@ -63,7 +63,7 @@ class TranslationTest {
         val exp = parseExpression(code)
         resetTempSequence()
         resetLabelSequence()
-        val fragments = Translator.transProg(exp)
+        val fragments = SemanticAnalyzer.transProg(exp)
         println(fragments.joinToString("\n"))
     }
 }

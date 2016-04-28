@@ -9,7 +9,7 @@ import kiger.frame.MipsFrame
 import kiger.parser.parseExpression
 import kiger.temp.Label
 import kiger.temp.Temp
-import kiger.translate.Translator
+import kiger.translate.SemanticAnalyzer
 import kiger.tree.BinaryOp
 import kiger.tree.TreeExp
 import kiger.tree.TreeStm
@@ -43,7 +43,7 @@ class TreeEvaluator(fragments: List<Fragment>) {
         val state = EvalState()
         //println(codeLabels)
 
-        state.pc = codeLabels[Translator.mainLabel]!!
+        state.pc = codeLabels[SemanticAnalyzer.mainLabel]!!
 
         while (state.pc < code.size) {
             val op = code[state.pc++]
@@ -117,7 +117,7 @@ class TreeEvaluator(fragments: List<Fragment>) {
     companion object {
         fun evaluate(code: String): Int {
             val exp = parseExpression(code)
-            val fragments = Translator.transProg(exp)
+            val fragments = SemanticAnalyzer.transProg(exp)
             val evaluator = TreeEvaluator(fragments)
             return evaluator.evaluate()
         }

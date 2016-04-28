@@ -8,7 +8,7 @@ import kiger.temp.Label
 import kiger.temp.resetLabelSequence
 import kiger.temp.resetTempSequence
 import kiger.translate.Level
-import kiger.translate.Translator
+import kiger.translate.SemanticAnalyzer
 import kiger.tree.TreeStm
 import kiger.types.Type
 import org.junit.Assert.assertEquals
@@ -33,7 +33,7 @@ class LinearizerTest {
     }
 
     private fun linearize(code: String): List<TreeStm> {
-        val translator = Translator()
+        val translator = SemanticAnalyzer()
         translator.baseVenv = translator.baseVenv.enter(Symbol("f"), EnvEntry.Function(Level.Lev(Level.Top, MipsFrame.newFrame(Label("f"), listOf(false, false))), Label("f"), listOf(Symbol("x") to Type.Int, Symbol("y") to Type.Int), Type.Int))
 
         resetLabelSequence()

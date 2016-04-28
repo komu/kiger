@@ -2,7 +2,7 @@ package kiger.codegen
 
 import kiger.frame.Fragment
 import kiger.parser.parseExpression
-import kiger.translate.Translator
+import kiger.translate.SemanticAnalyzer
 import org.junit.Test
 
 class CodeGenTest {
@@ -14,7 +14,7 @@ class CodeGenTest {
 
     private fun dumpCode(code: String) {
         val exp = parseExpression(code)
-        val fragments = Translator.transProg(exp)
+        val fragments = SemanticAnalyzer.transProg(exp)
 
         for (fragment in fragments) {
             when (fragment) {

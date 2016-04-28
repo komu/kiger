@@ -3,14 +3,14 @@ package kiger
 import kiger.codegen.MipsGen
 import kiger.frame.Fragment
 import kiger.parser.parseExpression
-import kiger.translate.Translator
+import kiger.translate.SemanticAnalyzer
 import java.io.File
 import java.io.Writer
 
 class Kiger(val writer: Writer) {
     fun dumpCode(code: String) {
         val exp = parseExpression(code)
-        val fragments = Translator.transProg(exp)
+        val fragments = SemanticAnalyzer.transProg(exp)
 
         for (fragment in fragments) {
             when (fragment) {

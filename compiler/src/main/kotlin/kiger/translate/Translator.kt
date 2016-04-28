@@ -14,7 +14,7 @@ import kiger.utils.cons
 import kiger.utils.splitLast
 import kiger.utils.tail
 
-class Translate {
+class Translator {
     val fragments = mutableListOf<Fragment>()
 
     val outermost = Level.Top
