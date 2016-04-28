@@ -2,15 +2,27 @@ package kiger.vm
 
 import kiger.vm.Inst.Op.*
 
-class Evaluator(val insts: List<Inst>) {
+class Evaluator(allInstructions: List<Inst>) {
 
     val regs = Registers()
     var pc = 0
-    val labelMap = insts.buildLabelMap()
+
+    val insts = mutableListOf<Inst>()
+    val labelMap = mutableMapOf<String, Int>()
+
     val RA = "\$ra"
     val V0 = "\$v0"
     val A1 = "\$a0"
     var running = true
+
+    init {
+        for (inst in allInstructions) {
+            if (inst is Inst.Label)
+                labelMap[inst.name] = insts.size
+            else
+                insts += inst
+        }
+    }
 
     fun run() {
         pc = labelMap["main"] ?: error("could not find main label")
@@ -42,7 +54,7 @@ class Evaluator(val insts: List<Inst>) {
         val call = regs[V0]
         when (call) {
             1   -> System.out.print(regs[A1])
-            4   -> System.out.print((insts[regs[A1]+1] as Inst.Pseudo.Asciiz).text)
+            4   -> System.out.print((insts[regs[A1]] as Inst.Data).text)
             10  -> running = false
             else -> error("unknown syscall $call")
         }
@@ -79,17 +91,6 @@ class Evaluator(val insts: List<Inst>) {
 
     private val Operand.immediate: Int
         get() = immediate(labelMap)
-}
-
-fun <E> List<E>.buildLabelMap(): Map<String,Int> {
-    val map = mutableMapOf<String, Int>()
-
-    this.forEachIndexed { i, inst ->
-        if (inst is Inst.Label)
-            map[inst.name] = i
-    }
-
-    return map
 }
 
 class Registers {
