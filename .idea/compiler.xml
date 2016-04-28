@@ -19,6 +19,8 @@
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
+      <module name="compiler_main" target="1.8" />
+      <module name="compiler_test" target="1.8" />
       <module name="kiger_main" target="1.8" />
       <module name="kiger_test" target="1.8" />
     </bytecodeTargetLevel>

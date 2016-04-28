@@ -2,9 +2,10 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/compiler/compiler.iml" filepath="$PROJECT_DIR$/.idea/modules/compiler/compiler.iml" group="compiler" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/compiler/compiler_main.iml" filepath="$PROJECT_DIR$/.idea/modules/compiler/compiler_main.iml" group="compiler" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/compiler/compiler_test.iml" filepath="$PROJECT_DIR$/.idea/modules/compiler/compiler_test.iml" group="compiler" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/kiger.iml" filepath="$PROJECT_DIR$/.idea/modules/kiger.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/kiger_main.iml" filepath="$PROJECT_DIR$/.idea/modules/kiger_main.iml" group="kiger" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/kiger_test.iml" filepath="$PROJECT_DIR$/.idea/modules/kiger_test.iml" group="kiger" />
     </modules>
   </component>
 </project>
