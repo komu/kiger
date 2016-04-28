@@ -1,11 +1,12 @@
     .data
-newline:    .asciiz "\n"
+newline:
+    .asciiz "\n"
 
     .text
 
 square:
     mul $v0, $a0, $a0
-    j $ra
+    jr $ra
 
 exit:
     li $v0, 10
@@ -14,13 +15,13 @@ exit:
 print_int:
     li $v0, 1
     syscall
-    j $ra
+    jr $ra
 
 print_newline:
     li $v0, 4
     la $a0, newline
     syscall
-    j $ra
+    jr $ra
 
 main:
     li $a0, 4
