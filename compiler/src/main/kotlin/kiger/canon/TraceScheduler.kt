@@ -6,7 +6,6 @@ import kiger.tree.TreeStm
 import kiger.tree.TreeStm.Branch.CJump
 import kiger.tree.TreeStm.Branch.Jump
 import kiger.tree.TreeStm.Labeled
-import java.util.*
 
 /**
  * Builds a trace from [BasicBlockGraph].
@@ -28,17 +27,7 @@ fun BasicBlockGraph.traceSchedule(): List<TreeStm> {
     return scheduler.output + TreeStm.Labeled(exitLabel)
 }
 
-private class TraceScheduler(blocks: List<BasicBlock>) {
-
-    /**
-     * All of the blocks to process.
-     *
-     * Whenever there's no better candidate to choose, blocks will be traced from the front of
-     * this queue. However, tracing might want to trace other blocks immediately, in which case
-     * they will still be present in the queue. Whenever [buildTrace] takes blocks from the
-     * queue, it will therefore check [untracedBlocks] if they are actually still untraced.
-     */
-    private val workQueue = ArrayDeque(blocks)
+private class TraceScheduler(private val blocks: List<BasicBlock>) {
 
     /**
      * Mapping from labels to all untraced blocks. Initially will contain all blocks to schedule.
@@ -53,14 +42,15 @@ private class TraceScheduler(blocks: List<BasicBlock>) {
 
     /**
      * Processes all blocks from the work-queue to build a trace.
+     *
+     * Most we'll go through the block in order, but [buildTrace] will attempt to trace the
+     * branches immediately after blocks, which means that when we process a block, we'll
+     * have to check if it actually has already been processed and skip it if if has been.
      */
     fun buildTrace() {
-        while (workQueue.any()) {
-            val block = workQueue.removeFirst()
-
+        for (block in blocks)
             if (block.label in untracedBlocks)
                 trace(block)
-        }
     }
 
     /**
