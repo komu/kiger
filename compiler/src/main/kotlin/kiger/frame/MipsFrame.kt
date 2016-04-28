@@ -1,5 +1,6 @@
 package kiger.frame
 
+import kiger.assem.Instr
 import kiger.temp.Label
 import kiger.temp.Temp
 import kiger.translate.seq
@@ -39,6 +40,28 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         val restores = pairs.asReversed().map { TreeStm.Move(TreeExp.Temporary(it.second), exp(it.first, TreeExp.Temporary(FP))) }
 
         return seq(shiftInstructions + saves + body + restores)
+    }
+
+    override fun procEntryExit2(body: List<Instr>): List<Instr> =
+        body + Instr.Oper("", src=listOf(ZERO, RA, SP) + calleeSaves, jump = emptyList())
+
+    override fun procEntryExit3(body: List<Instr>): Triple<String, List<Instr>, String> {
+        val offset = (locals + argumentRegisters.size) * wordSize
+
+        val prologue = listOf(
+                "$name:",
+                "    sw \$fp 0(\$sp)",              // save old fp
+                "    move \$fp \$sp",               // make sp to be new fp
+                "    addiu \$sp \$sp -$offset")     // make new sp
+                .joinToString("\n", postfix = "\n")
+
+        val epilogue = listOf(
+                "    move \$sp \$fp",               // restore old sp
+                "    lw \$fp 0(\$sp)",              // restore old fp
+                "    jr \$ra")                      // jump to return address
+                .joinToString("\n", postfix = "\n")
+
+        return Triple(prologue, body, epilogue)
     }
 
     companion object : FrameType {
@@ -91,8 +114,7 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
                 TreeExp.Call(TreeExp.Name(Label(name)), args) // TODO
         override val argumentRegisters: List<Temp> = listOf(a0, a1, a2, a3)
         override val calleeSaves: List<Temp> = listOf(s0, s1, s2, s3, s4, s5, s6, s7)
-        override val callerSaves: List<Temp> = listOf(t0, t1, t2, t3, t4, t5, t6, t7
-        )
+        override val callerSaves: List<Temp> = listOf(t0, t1, t2, t3, t4, t5, t6, t7)
 
         private val firstLocalOffset = wordSize // fp is stored at 0, locals/params start at fp + wordSize
         private val firstFormalOffset = firstLocalOffset

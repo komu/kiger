@@ -1,5 +1,6 @@
 package kiger
 
+import kiger.assem.Instr
 import kiger.codegen.MipsGen
 import kiger.frame.Fragment
 import kiger.parser.parseExpression
@@ -21,12 +22,12 @@ class Kiger(val writer: Writer) {
     }
 
     private fun dumpProc(fragment: Fragment.Proc) {
-        writer.write("${fragment.frame.name}:\n")
-
-        val instructions = MipsGen.codeGen(fragment.frame, fragment.body)
-        for (instr in instructions) {
-            writer.write("$instr\n")
-        }
+        val (prologue, instructions, epilogue) = fragment.frame.procEntryExit3(MipsGen.codeGen(fragment.frame, fragment.body))
+        writer.write(prologue)
+        for (instr in instructions)
+            if (instr !is Instr.Oper || instr.assem != "")
+                writer.write("$instr\n")
+        writer.write(epilogue)
     }
 
     private fun dumpStr(fragment: Fragment.Str) {

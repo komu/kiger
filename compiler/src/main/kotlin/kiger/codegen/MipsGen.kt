@@ -31,7 +31,7 @@ object MipsGen : CodeGen {
         for (st in trace)
             generator.munchStm(st)
 
-        return generator.instructions
+        return frame.procEntryExit2(generator.instructions)
     }
 }
 
