@@ -183,7 +183,7 @@ class Translator {
             }
 
             is Expression.While -> {
-                val doneLabel = Label()
+                val doneLabel = Label.gen()
                 val (testExp, testTy) = trexp(exp.test)
                 val (bodyExp, bodyTy) = transExp(exp.body, venv, tenv, level, doneLabel)
 
@@ -344,12 +344,12 @@ class Translator {
 
     private fun transDec(dec: Declaration, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): DeclTranslationResult =
         when (dec) {
-            is Declaration.Functions -> transDec(dec, venv, tenv, level, breakLabel)
-            is Declaration.Var       -> transDec(dec, venv, tenv, level, breakLabel)
-            is Declaration.Types     -> transDec(dec, venv, tenv, level, breakLabel)
+            is Declaration.Functions -> transFunDec(dec, venv, tenv, level)
+            is Declaration.Var       -> transVarDec(dec, venv, tenv, level, breakLabel)
+            is Declaration.Types     -> transTypeDec(dec, venv, tenv)
         }
 
-    private fun transDec(dec: Declaration.Var, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): DeclTranslationResult {
+    private fun transVarDec(dec: Declaration.Var, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): DeclTranslationResult {
         val (exp, ty) = transExp(dec.init, venv, tenv, level, breakLabel)
         val type = if (dec.type == null) {
             if (ty == Type.Nil)
@@ -375,7 +375,7 @@ class Translator {
         return DeclTranslationResult(venv2, tenv, translate.assign(varExp, exp))
     }
 
-    private fun transDec(dec: Declaration.Types, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): DeclTranslationResult {
+    private fun transTypeDec(dec: Declaration.Types, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>): DeclTranslationResult {
         // Type declarations may be recursive (or mutually recursive). Therefore we'll perform the translation
         // in two steps: first we'll fill tenv with empty headers, then translate the types.
 
@@ -396,13 +396,13 @@ class Translator {
         return DeclTranslationResult(venv, tenv2)
     }
 
-    private fun transDec(dec: Declaration.Functions, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level, breakLabel: Label?): DeclTranslationResult {
+    private fun transFunDec(dec: Declaration.Functions, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level): DeclTranslationResult {
         // First pass: check formal types and store header info into venv
         fun transFun(f: FunctionDeclaration, env: SymbolTable<EnvEntry>): SymbolTable<EnvEntry> {
             val returnType = f.result?.let { tenv.lookupType(it.first, it.second) } ?: Type.Unit
             val formals = f.params.map { Pair(it.name, tenv.lookupType(it.type, it.pos)) }
             val escapes = f.params.map { it.escape }
-            val label = Label(f.name.name)
+            val label = Label.gen(f.name.name)
 
             checkDuplicates(f.params.map { Pair(it.name, it.pos) })
 

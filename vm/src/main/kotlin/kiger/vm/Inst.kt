@@ -70,16 +70,16 @@ private fun String.stripComments(): String {
     return if (i != -1) substring(0, i - 1).trim() else trim()
 }
 
-private val labelNameRegex = Regex("""[a-zA-Z_]+""")
+private val labelNameRegex = Regex("""[a-zA-Z_][a-zA-Z_0-9]*""")
 private val labelDefRegex = Regex("""($labelNameRegex):""")
-private val registerRegex = Regex("""\$[a-z]+\d?""")
+private val registerRegex = Regex("""\$[a-z]+\d*""")
 private val immediateRegex = Regex("""\d+""")
 private val offsetRegex = Regex("""(\d+)\(($registerRegex)\)""")
-private val operandRegex = Regex("""($registerRegex|$offsetRegex|$labelNameRegex|$immediateRegex)""")
+private val operandRegex = Regex("""$registerRegex|$offsetRegex|$labelNameRegex|$immediateRegex""")
 private val opNameRegex = Regex("""\w+""")
-private val op1Regex = Regex("""($opNameRegex) $operandRegex""")
-private val op2Regex = Regex("""($opNameRegex) $operandRegex, $operandRegex""")
-private val op3Regex = Regex("""($opNameRegex) $operandRegex, $operandRegex, $operandRegex""")
+private val op1Regex = Regex("""($opNameRegex) ($operandRegex)""")
+private val op2Regex = Regex("""($opNameRegex) ($operandRegex), ($operandRegex)""")
+private val op3Regex = Regex("""($opNameRegex) ($operandRegex), ($operandRegex), ($operandRegex)""")
 private val asciiZRegex = Regex("""\.asciiz "(.+)"""")
 
 private fun parseInstruction(ss: String): Inst? {
@@ -100,6 +100,7 @@ private fun parseInstruction(ss: String): Inst? {
     val op2Match = op2Regex.matchEntire(s)
     if (op2Match != null)
         return Inst.Op.Op2(op2Match.groupValues[1], parseOperand(op2Match.groupValues[2]), parseOperand(op2Match.groupValues[5]))
+    println(op2Regex)
 
     val op3Match = op3Regex.matchEntire(s)
     if (op3Match != null)
@@ -112,7 +113,7 @@ private fun parseInstruction(ss: String): Inst? {
     if (asciiZMatch != null)
         return Inst.Data(parseAsciiZText(asciiZMatch))
 
-    error("unknown instruction '$s'")
+    error("invalid instruction format '$s'")
 }
 
 private fun parseOperand(s: String): Operand {

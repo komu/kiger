@@ -21,6 +21,7 @@ class Kiger(val writer: Writer) {
     }
 
     private fun dumpProc(fragment: Fragment.Proc) {
+        writer.write("${fragment.frame.name}:\n")
 
         val instructions = MipsGen.codeGen(fragment.frame, fragment.body)
         for (instr in instructions) {

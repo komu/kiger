@@ -38,8 +38,8 @@ sealed class TrExp {
         override fun toString() = "Cx[...]"
         override fun asEx(): TreeExp {
             val r = Temp()
-            val t = Label()
-            val f = Label()
+            val t = Label.gen()
+            val f = Label.gen()
 
             return TreeExp.ESeq(seq(TreeStm.Move(TreeExp.Temporary(r), TreeExp.Const(1)),
                     generateStatement(t, f),
@@ -50,7 +50,7 @@ sealed class TrExp {
         }
 
         override fun asNx(): TreeStm {
-            val l = Label()
+            val l = Label.gen()
             return TreeStm.Seq(generateStatement(l, l), TreeStm.Labeled(l))
         }
 

@@ -34,7 +34,7 @@ class Translate {
         val t = fragments.asSequence().filterIsInstance<Fragment.Str>().find { s == it.value }
 
         return TrExp.Ex(TreeExp.Name(t?.label ?: run {
-            val label = Label()
+            val label = Label.gen()
             fragments += Fragment.Str(label, s)
             label
         }))
@@ -133,9 +133,9 @@ class Translate {
 
     fun ifElse(testExp: TrExp, thenExp: TrExp, elseExp: TrExp?): TrExp {
         val r = Temp()
-        val t = Label()
-        val f = Label()
-        val finish = Label()
+        val t = Label.gen()
+        val f = Label.gen()
+        val finish = Label.gen()
         val testFun = testExp.asCx()
         return when (thenExp) {
             is TrExp.Ex -> {
@@ -185,8 +185,8 @@ class Translate {
     }
 
     fun loop(test: TrExp, body: TrExp, doneLabel: Label): TrExp {
-        val testLabel = Label()
-        val bodyLabel = Label()
+        val testLabel = Label.gen()
+        val bodyLabel = Label.gen()
 
         return TrExp.Nx(seq(
                         TreeStm.Labeled(testLabel),

@@ -18,6 +18,8 @@ class Evaluator(allInstructions: List<Inst>) {
     val A1 = "\$a0"
     var running = true
 
+    private val mem = Array(1024 * 1024) { 0 }
+
     init {
         for (inst in allInstructions) {
             if (inst is Inst.Label)

@@ -39,7 +39,7 @@ fun List<TreeStm>.basicBlocks(): BasicBlockGraph {
 
 private class BasicBlockGraphBuilder {
 
-    private val exitLabel = Label()
+    private val exitLabel = Label.gen()
     private val blocks = mutableListOf<BasicBlock>()
     private var currentBlock: BasicBlockBuilder? = null
 
@@ -56,7 +56,7 @@ private class BasicBlockGraphBuilder {
             if (stm is TreeStm.Labeled) {
                 currentBlock = BasicBlockBuilder(stm.label)
             } else {
-                currentBlock = BasicBlockBuilder(Label())
+                currentBlock = BasicBlockBuilder(Label.gen())
                 process(stm) // now that we have fixed the block with our invented label, try again
             }
 
