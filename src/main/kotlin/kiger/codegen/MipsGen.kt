@@ -150,112 +150,43 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
     }
 
     private fun munchExp(exp: TreeExp): Temp {
-        when (exp) {
-            is Temporary    -> return exp.temp
-            is Const        -> return result { r -> emit(Oper("li `d0, ${exp.value}", dst = listOf(r))) }
-            is Name         -> return result { r -> emit(Oper("la `d0, ${exp.label}", dst = listOf(r))) }
-            is Call         -> return munchExpCall(exp)
-        }
-
-        if (exp is Mem) {
-            return when {
+        return when (exp) {
+            is Temporary    -> exp.temp
+            is Const        -> emitResult { r -> Oper("li `d0, ${exp.value}", dst = listOf(r)) }
+            is Name         -> emitResult { r -> Oper("la `d0, ${exp.label}", dst = listOf(r)) }
+            is Call         -> munchExpCall(exp)
+            is Mem          -> when {
+                // constant binary operations
                 exp.exp is BinOp && exp.exp.binop == PLUS && exp.exp.rhs is Const ->
                     emitResult { r -> Oper("lw `d0, ${exp.exp.rhs.value}(`s0)", src = listOf(munchExp(exp.exp.lhs)), dst = listOf(r)) }
                 exp.exp is BinOp && exp.exp.binop == PLUS && exp.exp.lhs is Const ->
                     emitResult { r -> Oper("lw `d0, ${exp.exp.lhs.value}(`so)", src = listOf(munchExp(exp.exp.rhs)), dst = listOf(r)) }
+                exp.exp is BinOp && exp.exp.binop == MINUS && exp.exp.rhs is Const ->
+                    emitResult { r -> Oper("lw `d0, ${-exp.exp.rhs.value}(`s0)", src = listOf(munchExp(exp.exp.lhs)), dst = listOf(r)) }
                 exp.exp is Const ->
                     emitResult { r -> Oper("lw `d0, ${exp.exp.value}(\$zero)", dst = listOf(r)) }
                 else ->
-                    emitResult { r -> Oper("lw `d0, `s0(\$zero)", src = listOf(munchExp(exp.exp)), dst = listOf(r)) }
+                    emitResult { r -> Oper("lw `d0, 0(`s0)", src = listOf(munchExp(exp.exp)), dst = listOf(r)) }
             }
-        }
-
-        if (exp is BinOp) {
-            return when {
-                exp.binop == PLUS && exp.rhs is Const ->
-                    emitResult { r -> Oper("addi `d0, `s0, ${exp.rhs.value}", dst = listOf(r), src = listOf(munchExp(exp.lhs))) }
-                exp.binop == PLUS && exp.lhs is Const ->
-                    emitResult { r -> Oper("addi `d0, `s0, ${exp.lhs.value}", dst = listOf(r), src = listOf(munchExp(exp.rhs))) }
-                exp.binop == MINUS && exp.rhs is Const ->
-                    emitResult { r -> Oper("SUBI `d0 <- `s0 - ${exp.rhs.value}", dst = listOf(r), src = listOf(munchExp(exp.lhs))) }
-                exp.binop == MUL ->
-                    emitResult{ r -> Oper("mul `d0, `s0, `s1", src = listOf(munchExp(exp.lhs), munchExp(exp.rhs)), dst = listOf(r)) }
-                else ->
-                    TODO("$exp")
+            is BinOp -> when (exp.binop) {
+                PLUS -> when {
+                    exp.rhs is Const -> emitResult { r -> Oper("addi `d0, `s0, ${exp.rhs.value}", dst = listOf(r), src = listOf(munchExp(exp.lhs))) }
+                    exp.lhs is Const -> emitResult { r -> Oper("addi `d0, `s0, ${exp.lhs.value}", dst = listOf(r), src = listOf(munchExp(exp.rhs))) }
+                    else             -> emitResult { r -> Oper("add `d0, `s0, `s1", dst = listOf(r), src = listOf(munchExp(exp.lhs), munchExp(exp.rhs))) }
+                }
+                MINUS -> when {
+                    exp.rhs is Const -> emitResult { r -> Oper("addi `d0, `s0, ${-exp.rhs.value}", dst = listOf(r), src = listOf(munchExp(exp.lhs))) }
+                    else             -> emitResult { r -> Oper("sub `d0, `s0, `s1", src = listOf(munchExp(exp.lhs), munchExp(exp.rhs)), dst = listOf(r)) }
+                }
+                DIV -> emitResult { r -> Oper("div `d0, `s0, `s1", src = listOf(munchExp(exp.lhs), munchExp(exp.rhs)), dst = listOf(r)) }
+                MUL -> emitResult { r -> Oper("mul `d0, `s0, `s1", src = listOf(munchExp(exp.lhs), munchExp(exp.rhs)), dst = listOf(r)) }
+                else -> TODO("unsupported binop ${exp.binop}")
             }
+            else ->
+                TODO("$exp")
         }
-
-        TODO("$exp")
 
         /*
-        (* memory ops *)
-
-          | munchExp (T.MEM(T.BINOP(T.PLUS, e1, T.CONST i))) =
-            result(fn r => emit(A.OPER{
-                                assem="lw `d0, " ^ int2str i ^ "(`s0)",
-                                src=[munchExp e1],dst=[r],jump=NONE}))
-
-          | munchExp (T.MEM(T.BINOP(T.PLUS, T.CONST i, e2))) =
-            result(fn r => emit(A.OPER{
-                                assem="lw `d0, " ^ int2str i ^ "(`s0)",
-                                src=[munchExp e2],dst=[r],jump=NONE}))
-
-          | munchExp (T.MEM(T.BINOP(T.MINUS, e1, T.CONST i))) =
-            result(fn r => emit(A.OPER{
-                                assem="lw `d0, " ^ int2str (~i) ^ "(`s0)",
-                                src=[munchExp e1],dst=[r],jump=NONE}))
-
-          | munchExp (T.MEM(T.BINOP(T.MINUS, T.CONST i, e2))) =
-            result(fn r => emit(A.OPER{
-                                assem="lw `d0, " ^ int2str (~i) ^ "(`s0)",
-                                src=[munchExp e2],dst=[r],jump=NONE}))
-
-          (* binary operations *)
-
-          (* 1, add/sub immediate *)
-
-          | munchExp (T.BINOP(T.PLUS, e1, T.CONST i)) =
-            result(fn r => emit(A.OPER{
-                               assem="addiu `d0, `s0, " ^ int2str i,
-                               src=[munchExp e1],dst=[r],jump=NONE}))
-
-          | munchExp (T.BINOP (T.PLUS, T.CONST i, e1)) =
-            result(fn r => emit(A.OPER{
-                               assem="addiu `d0, `s0, " ^ int2str i,
-                               src=[munchExp e1],dst=[r],jump=NONE}))
-
-          | munchExp (T.BINOP(T.PLUS, e1, e2)) =
-            result(fn r => emit(A.OPER{
-                               assem="add `d0, `s0, `s1",
-                               src=[munchExp e1,munchExp e2],
-                               dst=[r],jump=NONE}))
-
-          | munchExp (T.BINOP(T.MINUS, e1, T.CONST i)) =
-            result(fn r => emit(A.OPER{
-                               assem="addiu `d0, `s0, " ^ int2str (~i),
-                               src=[munchExp e1],dst=[r],jump=NONE}))
-
-          (* div *)
-
-          | munchExp (T.BINOP(T.DIV, e1, e2)) =
-            result(fn r => emit(A.OPER{
-                               assem="div `d0, `s0, `s1",
-                               src=[munchExp e1,munchExp e2],
-                               dst=[r],jump=NONE}))
-
-          (* mul *)
-
-          | munchExp (T.BINOP(T.MUL, e1, e2)) =
-            result(fn r => emit(A.OPER{
-                               assem="mul `d0, `s0, `s1",
-                               src=[munchExp e1,munchExp e2],
-                               dst=[r],jump=NONE}))
-
-          | munchExp (T.BINOP(T.MINUS, e1, e2)) =
-            result(fn r => emit(A.OPER{
-                                assem="sub `d0, `s0, `s1",
-                                src=[munchExp e1, munchExp e2],
-                                dst=[r],jump=NONE}))
 
           (* and *)
 
@@ -340,27 +271,6 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
                                   src=[munchExp e1, munchExp e2],
                                   dst=[r],
                                   jump=NONE}))
-
-          | munchExp (T.CONST i) =
-            result(fn r => emit(A.OPER{
-                               assem="li `d0, " ^ int2str i,
-                               src=[],
-                               dst=[r],
-                               jump=NONE}))
-
-          | munchExp (T.MEM(e1)) =
-            result(fn r => emit(A.OPER{
-                                assem="lw `d0, 0(`s0)",
-                                src=[munchExp e1],dst=[r],jump=NONE}))
-
-          | munchExp (T.TEMP t) = t
-
-          | munchExp (T.NAME label) =
-            result(fn r => emit(A.OPER{
-                                assem="la `d0, " ^ Symbol.name label,
-                                src=[],
-                                dst=[r],
-                                jump=NONE}))
 
         (* generate code to move all arguments to their correct positions.
          * In SPIM MIPS, we use a0-a3 to store first four parameters, and
