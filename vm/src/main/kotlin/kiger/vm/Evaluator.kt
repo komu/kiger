@@ -42,7 +42,7 @@ class Evaluator(val insts: List<Inst>) {
         val call = regs[V0]
         when (call) {
             1   -> System.out.print(regs[A1])
-            4   -> println() // TODO: support print-strings
+            4   -> System.out.print((insts[regs[A1]+1] as Inst.Pseudo.Asciiz).text)
             10  -> running = false
             else -> error("unknown syscall $call")
         }

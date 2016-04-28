@@ -6,8 +6,19 @@ sealed class Inst {
         override fun toString() = "$name:"
     }
 
-    class Pseudo(val name: String) : Inst() {
-        override fun toString() = "    .$name"
+    sealed class Pseudo : Inst() {
+
+        object Text : Pseudo() {
+            override fun toString() = "    .text"
+        }
+
+        object Data : Pseudo() {
+            override fun toString() = "    .data"
+        }
+
+        class Asciiz(val text: String) : Pseudo() {
+            override fun toString() = "    .asciiz \"${text.replace("\"", "\\\"")}\""
+        }
     }
 
     sealed class Op : Inst() {
@@ -80,6 +91,7 @@ private val opNameRegex = Regex("""\w+""")
 private val op1Regex = Regex("""($opNameRegex) $operandRegex""")
 private val op2Regex = Regex("""($opNameRegex) $operandRegex, $operandRegex""")
 private val op3Regex = Regex("""($opNameRegex) $operandRegex, $operandRegex, $operandRegex""")
+private val asciiZRegex = Regex("""\.asciiz "(.+)"""")
 
 private fun parseInstruction(s: String): Inst {
     val labelMatch = labelDefRegex.matchEntire(s)
@@ -101,8 +113,15 @@ private fun parseInstruction(s: String): Inst {
     if (op3Match != null)
         return Inst.Op.Op3(op3Match.groupValues[1], parseOperand(op3Match.groupValues[2]), parseOperand(op3Match.groupValues[5]), parseOperand(op3Match.groupValues[8]))
 
-    if (s.startsWith("."))
-        return Inst.Pseudo(s.substring(1))
+    if (s.startsWith(".text"))
+        return Inst.Pseudo.Text
+
+    if (s.startsWith(".data"))
+        return Inst.Pseudo.Data
+
+    val asciiZMatch = asciiZRegex.matchEntire(s)
+    if (asciiZMatch != null)
+        return Inst.Pseudo.Asciiz(parseAsciiZText(asciiZMatch))
 
     error("unknown instruction '$s'")
 }
@@ -123,3 +142,6 @@ private fun parseOperand(s: String): Operand {
 
     else error("operand '$s'")
 }
+
+private fun parseAsciiZText(asciiZMatch: MatchResult) =
+    asciiZMatch.groupValues[1].replace("\\n", "\n")
