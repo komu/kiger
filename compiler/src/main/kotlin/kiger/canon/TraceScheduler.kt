@@ -23,8 +23,8 @@ import kiger.tree.TreeStm.Labeled
  */
 fun BasicBlockGraph.traceSchedule(): List<TreeStm> {
     val scheduler = TraceScheduler(blocks)
-    scheduler.buildTrace()
-    return scheduler.output + TreeStm.Labeled(exitLabel)
+    scheduler.buildTrace(exitLabel)
+    return scheduler.output
 }
 
 private class TraceScheduler(private val blocks: List<BasicBlock>) {
@@ -47,10 +47,19 @@ private class TraceScheduler(private val blocks: List<BasicBlock>) {
      * branches immediately after blocks, which means that when we process a block, we'll
      * have to check if it actually has already been processed and skip it if if has been.
      */
-    fun buildTrace() {
+    fun buildTrace(exitLabel: Label) {
         for (block in blocks)
             if (block.label in untracedBlocks)
                 trace(block)
+
+        // If the last statement is a jump to exit label, remove it.
+        // Otherwise add the exit label after all other statements.
+        val finalJumpLabel = (output.lastOrNull() as? TreeStm.Branch.Jump)?.exp as? Name
+        if (finalJumpLabel != null && finalJumpLabel.label == exitLabel) {
+            output.removeAt(output.lastIndex)
+        } else {
+            output += TreeStm.Labeled(exitLabel)
+        }
     }
 
     /**
