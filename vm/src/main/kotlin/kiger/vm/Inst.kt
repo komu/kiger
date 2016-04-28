@@ -100,7 +100,6 @@ private fun parseInstruction(ss: String): Inst? {
     val op2Match = op2Regex.matchEntire(s)
     if (op2Match != null)
         return Inst.Op.Op2(op2Match.groupValues[1], parseOperand(op2Match.groupValues[2]), parseOperand(op2Match.groupValues[5]))
-    println(op2Regex)
 
     val op3Match = op3Regex.matchEntire(s)
     if (op3Match != null)

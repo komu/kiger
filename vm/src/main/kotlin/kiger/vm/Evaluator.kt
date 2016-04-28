@@ -73,6 +73,10 @@ class Evaluator(allInstructions: List<Inst>) {
                 regs[RA] = pc
                 pc = a1.immediate
             }
+            "jalr"   -> {
+                regs[RA] = pc
+                pc = regs[a1.reg]
+            }
             else -> error("Unsupported op: $this")
         }
     }
@@ -80,8 +84,10 @@ class Evaluator(allInstructions: List<Inst>) {
     private fun Op2.eval() {
         when (name) {
             "move"  -> regs[a1.reg] = regs[a2.reg]
+            "lw"    -> regs[a1.reg] = mem[regs[a2.baseReg] + a2.offset]
+            "sw"    -> mem[regs[a2.baseReg] + a2.offset] = regs[a1.reg]
             "li"    -> regs[a1.reg] = a2.immediate
-            "la"    -> regs[a1.reg] = a2.immediate // TODO: what's the difference to li?
+            "la"    -> regs[a1.reg] = a2.immediate
             else    -> error("Unsupported op: $this")
         }
     }
