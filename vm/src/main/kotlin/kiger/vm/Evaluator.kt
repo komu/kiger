@@ -2,6 +2,9 @@ package kiger.vm
 
 import kiger.vm.Inst.Op.*
 
+/**
+ * http://www.mrc.uidaho.edu/mrc/people/jff/digital/MIPSir.html
+ */
 class Evaluator(allInstructions: List<Inst>) {
 
     val regs = Registers()
