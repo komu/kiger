@@ -112,10 +112,11 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         }
         override fun externalCall(name: String, args: List<TreeExp>): TreeExp =
                 TreeExp.Call(TreeExp.Name(Label(name)), args) // TODO
+
+        val specialargs = listOf(RV, FP, SP, RA)
         override val argumentRegisters: List<Temp> = listOf(a0, a1, a2, a3)
         override val calleeSaves: List<Temp> = listOf(s0, s1, s2, s3, s4, s5, s6, s7)
         override val callerSaves: List<Temp> = listOf(t0, t1, t2, t3, t4, t5, t6, t7)
-
         private val firstLocalOffset = wordSize // fp is stored at 0, locals/params start at fp + wordSize
         private val firstFormalOffset = firstLocalOffset
     }

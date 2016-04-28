@@ -16,6 +16,8 @@ class Evaluator(allInstructions: List<Inst>) {
     val RA = "\$ra"
     val V0 = "\$v0"
     val A1 = "\$a0"
+    val FP = "\$fp"
+    val SP = "\$sp"
     var running = true
 
     private val mem = Array(1024 * 1024) { 0 }
@@ -27,6 +29,9 @@ class Evaluator(allInstructions: List<Inst>) {
             else
                 insts += inst
         }
+
+        regs[FP] = mem.size - 1000
+        regs[SP] = mem.size - 1000
     }
 
     fun run() {
@@ -38,6 +43,7 @@ class Evaluator(allInstructions: List<Inst>) {
     }
 
     fun step() {
+        println("$pc: ${insts[pc]}")
         val op = insts[pc++] as? Inst.Op
 
         when (op) {
@@ -94,8 +100,9 @@ class Evaluator(allInstructions: List<Inst>) {
 
     private fun Op3.eval() {
         when (name) {
-            "add" -> regs[a1.reg] = regs[a2.reg] + regs[a3.reg]
-            "mul" -> regs[a1.reg] = regs[a2.reg] * regs[a3.reg]
+            "add"   -> regs[a1.reg] = regs[a2.reg] + regs[a3.reg]
+            "addiu" -> regs[a1.reg] = regs[a2.reg] + a3.immediate
+            "mul"   -> regs[a1.reg] = regs[a2.reg] * regs[a3.reg]
             else -> error("Unsupported op: $this")
         }
     }
