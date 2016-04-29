@@ -2,6 +2,7 @@ package kiger
 
 import kiger.assem.Instr
 import kiger.codegen.MipsGen
+import kiger.escape.analyzeEscapes
 import kiger.frame.Fragment
 import kiger.parser.parseExpression
 import kiger.translate.SemanticAnalyzer
@@ -11,6 +12,7 @@ import java.io.Writer
 class Kiger(val writer: Writer) {
     fun dumpCode(code: String) {
         val exp = parseExpression(code)
+        exp.analyzeEscapes()
         val fragments = SemanticAnalyzer.transProg(exp)
 
         for (fragment in fragments) {
