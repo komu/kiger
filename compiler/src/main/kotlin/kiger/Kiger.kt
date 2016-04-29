@@ -9,36 +9,50 @@ import kiger.translate.SemanticAnalyzer
 import java.io.File
 import java.io.Writer
 
-class Kiger(val writer: Writer) {
-    fun dumpCode(code: String) {
-        val exp = parseExpression(code)
-        exp.analyzeEscapes()
-        val fragments = SemanticAnalyzer.transProg(exp)
+private fun compile(code: String): List<Fragment> =
+    SemanticAnalyzer.transProg(parseExpression(code))
 
-        for (fragment in fragments) {
-            when (fragment) {
-                is Fragment.Proc -> dumpProc(fragment)
-                is Fragment.Str -> dumpStr(fragment)
-            }
-        }
+fun File.writeFragments(fragments: List<Fragment>) {
+    writer().use { it.writeFragments(fragments) }
+}
+
+fun Writer.writeFragments(fragments: List<Fragment>) {
+    val strs = fragments.filterIsInstance<Fragment.Str>()
+    val procs = fragments.filterIsInstance<Fragment.Proc>()
+
+    if (strs.any()) {
+        writeLine("    .data")
+        for (fragment in strs)
+            writeStr(fragment)
     }
 
-    private fun dumpProc(fragment: Fragment.Proc) {
-        val (prologue, instructions, epilogue) = fragment.frame.procEntryExit3(MipsGen.codeGen(fragment.frame, fragment.body))
-        writer.write(prologue)
-        for (instr in instructions)
-            if (instr !is Instr.Oper || instr.assem != "")
-                writer.write("$instr\n")
-        writer.write(epilogue)
-    }
-
-    private fun dumpStr(fragment: Fragment.Str) {
-        writer.write("${fragment.label}: \"${fragment.value.replace("\"", "\\\"")}\"\n")
+    if (procs.any()) {
+        writeLine("    .text")
+        for (fragment in procs)
+            writeProc(fragment)
     }
 }
 
+private fun Writer.writeProc(fragment: Fragment.Proc) {
+    val (prologue, instructions, epilogue) = fragment.frame.procEntryExit3(MipsGen.codeGen(fragment.frame, fragment.body))
+    write(prologue)
+    for (instr in instructions)
+        if (instr !is Instr.Oper || instr.assem != "")
+            writeLine("$instr")
+    write(epilogue)
+}
+
+private fun Writer.writeStr(fragment: Fragment.Str) {
+    writeLine("${fragment.label}: .asciiz \"${fragment.value.replace("\"", "\\\"")}\"")
+}
+
+private fun Writer.writeLine(line: String) {
+    write(line)
+    write("\n")
+}
+
 fun main(args: Array<String>) {
-    File("output.s").writer().use { w ->
-        Kiger(w).dumpCode("let function square(n: int): int = n * n in square(4)")
-    }
+    val fragments = compile("let function square(n: int): int = n * n in square(4)")
+
+    File("output.s").writeFragments(fragments)
 }
