@@ -3,7 +3,6 @@ package kiger
 import kiger.assem.Instr
 import kiger.codegen.MipsGen
 import kiger.frame.Fragment
-import kiger.frame.MipsFrame
 import kiger.parser.parseExpression
 import kiger.regalloc.allocateRegisters
 import kiger.translate.SemanticAnalyzer
@@ -35,9 +34,10 @@ fun Writer.emitFragments(fragments: List<Fragment>) {
 }
 
 private fun Writer.emitProc(fragment: Fragment.Proc) {
-    val instructions = MipsGen.codeGen(fragment.frame, fragment.body)
-    val (instructions2, alloc) = instructions.allocateRegisters(MipsFrame)
-    val (prologue, instructions3, epilogue) = fragment.frame.procEntryExit3(instructions2)
+    val frame = fragment.frame
+    val instructions = MipsGen.codeGen(frame, fragment.body)
+    val (instructions2, alloc) = instructions.allocateRegisters(frame)
+    val (prologue, instructions3, epilogue) = frame.procEntryExit3(instructions2)
 
     write(prologue)
     for (instr in instructions3)

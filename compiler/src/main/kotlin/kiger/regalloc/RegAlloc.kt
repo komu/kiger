@@ -1,9 +1,10 @@
 package kiger.regalloc
 
 import kiger.assem.Instr
-import kiger.frame.FrameType
+import kiger.frame.Frame
 import kiger.frame.Register
 import kiger.temp.Temp
+import kiger.tree.TreeExp
 
 data class Allocation(val registerAssignments: Map<Temp, Register>) {
     operator fun get(t: Temp): Register? = registerAssignments[t]
@@ -14,7 +15,8 @@ data class Allocation(val registerAssignments: Map<Temp, Register>) {
         Allocation(registerAssignments + (t to r))
 }
 
-tailrec fun List<Instr>.allocateRegisters(frameType: FrameType): Pair<List<Instr>, Allocation> {
+tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Allocation> {
+    val frameType = frame.type
     val graph = this.createFlowGraph()
     val igraph = graph.interferenceGraph()
 
@@ -36,21 +38,17 @@ tailrec fun List<Instr>.allocateRegisters(frameType: FrameType): Pair<List<Instr
     return if (spills.isEmpty())
         Pair(filterNot { it.isRedundant() }, allocTable)
     else
-        rewrite(this, frameType, spills).allocateRegisters(frameType)
+        rewrite(this, frame, spills).allocateRegisters(frame)
 }
 
-private fun rewrite(instrs: List<Instr>, frameType: FrameType, spills: Any): List<Instr> {
-    TODO()
-}
-/*
+private fun rewrite(instrs: List<Instr>, frame: Frame, spills: List<Temp>): List<Instr> =
+    spills.fold(instrs) { i, t -> rewrite1(i, frame, t) }
 
-fun rewrite (instrs:A.instr list, frame, spills) : A.instr list =
-    let
-      (* rewrite one temp *)
-      fun rewrite1 (instrs:A.instr list, t:T.temp) =
-          let
-            val ae = Frame.exp (Frame.allocLocal(frame) true) (Tr.TEMP Frame.FP)
+private fun rewrite1(instr: List<Instr>, frame: Frame, t: Temp): List<Instr> {
+    val ae = frame.type.exp(frame.allocLocal(true), TreeExp.Temporary(frame.type.FP))
 
+    // generate fetch or store instruction
+    /*
             (* generate fetch or store instruction *)
             fun gen_instrs (is_def:bool, t:T.temp) =
                 if is_def then MipsGen.codegen(frame)(Tr.MOVE(ae,Tr.TEMP t))
@@ -85,11 +83,8 @@ fun rewrite (instrs:A.instr list, frame, spills) : A.instr list =
             List.foldl (fn (i,acc) => acc @ trans_instr i) nil instrs
           end
 
-      val format0 = A.format(Temp.makestring)
-    in
-      List.foldl (fn (t,ins) => rewrite1(ins,t)) instrs spills
-    end
-
- */
+     */
+    TODO()
+}
 
 private fun <T> Collection<T>.containsToInt(t: T) = if (t in this) 1 else 0
