@@ -7,6 +7,7 @@ import kiger.translate.seq
 import kiger.tree.BinaryOp
 import kiger.tree.TreeExp
 import kiger.tree.TreeStm
+import kiger.utils.cons
 
 class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) : Frame(name) {
 
@@ -38,7 +39,7 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
             FrameAccess.InReg(Temp())
 
     override fun procEntryExit1(body: TreeStm): TreeStm {
-        val pairs = calleeSaves.map { Pair(allocLocal(false), it) }
+        val pairs = cons(RA, calleeSaves).map { Pair(allocLocal(false), it) }
         val saves = pairs.map { TreeStm.Move(exp(it.first, TreeExp.Temporary(FP)), TreeExp.Temporary(it.second)) }
         val restores = pairs.asReversed().map { TreeStm.Move(TreeExp.Temporary(it.second), exp(it.first, TreeExp.Temporary(FP))) }
 

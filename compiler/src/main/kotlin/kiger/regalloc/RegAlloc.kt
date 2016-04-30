@@ -26,9 +26,6 @@ tailrec fun List<Instr>.allocateRegisters(frameType: FrameType): Pair<List<Instr
         return numDu.toDouble() / interferes.toDouble()
     }
 
-
-    // TODO
-
     val (allocTable, spills) = color(igraph, frameType.tempMap, ::spillCost, frameType.registers)
 
     fun Instr.isRedundant() = when (this) {
