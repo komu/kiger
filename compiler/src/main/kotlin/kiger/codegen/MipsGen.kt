@@ -2,7 +2,7 @@ package kiger.codegen
 
 import kiger.assem.Instr
 import kiger.assem.Instr.Oper
-import kiger.canon.basicBlocks
+import kiger.canon.createControlFlowGraph
 import kiger.canon.linearize
 import kiger.canon.traceSchedule
 import kiger.frame.Frame
@@ -27,7 +27,7 @@ object MipsGen : CodeGen {
     override fun codeGen(frame: Frame, stm: TreeStm): List<Instr> {
         val generator = MipsCodeGenerator(frame as MipsFrame)
 
-        val trace = stm.linearize().basicBlocks().traceSchedule()
+        val trace = stm.linearize().createControlFlowGraph().traceSchedule()
         for (st in trace)
             generator.munchStm(st)
 

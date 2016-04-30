@@ -8,7 +8,7 @@ import kiger.tree.TreeStm.Branch.Jump
 import kiger.tree.TreeStm.Labeled
 
 /**
- * Builds a trace from [BasicBlockGraph].
+ * Builds a trace from [ControlFlowGraph].
  *
  * The trace satisfies the following conditions:
  *
@@ -21,7 +21,7 @@ import kiger.tree.TreeStm.Labeled
  * In addition to this, the scheduler also tries to eliminate `Jump(Name(lab))` statements by
  * trying to write the target immediately after the jump, so that the we can simply fall through.
  */
-fun BasicBlockGraph.traceSchedule(): List<TreeStm> {
+fun ControlFlowGraph.traceSchedule(): List<TreeStm> {
     val scheduler = TraceScheduler(blocks)
     scheduler.buildTrace(exitLabel)
     return scheduler.output

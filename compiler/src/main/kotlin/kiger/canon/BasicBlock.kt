@@ -13,7 +13,7 @@ class BasicBlock(val label: Label, private val body: List<TreeStm>, val branch: 
 /**
  * A list of basic blocks along with an [exitLabel] to which the blocks will finally jump to.
  */
-data class BasicBlockGraph(val blocks: List<BasicBlock>, val exitLabel: Label)
+data class ControlFlowGraph(val blocks: List<BasicBlock>, val exitLabel: Label)
 
 /**
  * From a list of canonical trees (provided by [linearize]], produce a list of basic blocks satisfying
@@ -28,8 +28,8 @@ data class BasicBlockGraph(val blocks: List<BasicBlock>, val exitLabel: Label)
  *
  * Also produce the label to which control will be passed upon exit.
  */
-fun List<TreeStm>.basicBlocks(): BasicBlockGraph {
-    val builder = BasicBlockGraphBuilder()
+fun List<TreeStm>.createControlFlowGraph(): ControlFlowGraph {
+    val builder = ControlFlowGraphBuilder()
 
     for (stm in this)
         builder.process(stm)
@@ -37,7 +37,7 @@ fun List<TreeStm>.basicBlocks(): BasicBlockGraph {
     return builder.finish()
 }
 
-private class BasicBlockGraphBuilder {
+private class ControlFlowGraphBuilder {
 
     private val exitLabel = Label.gen()
     private val blocks = mutableListOf<BasicBlock>()
@@ -83,13 +83,13 @@ private class BasicBlockGraphBuilder {
     /**
      * All input has been processed: build the graph.
      */
-    fun finish(): BasicBlockGraph {
+    fun finish(): ControlFlowGraph {
         val block = currentBlock
         if (block != null)
             // If we have a current block, it will not have a branch at the end. Add jump to exit.
             blocks += block.finishWithJump(exitLabel)
 
-        return BasicBlockGraph(blocks, exitLabel)
+        return ControlFlowGraph(blocks, exitLabel)
     }
 }
 

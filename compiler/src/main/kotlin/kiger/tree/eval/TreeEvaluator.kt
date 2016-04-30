@@ -1,6 +1,6 @@
 package kiger.tree.eval
 
-import kiger.canon.basicBlocks
+import kiger.canon.createControlFlowGraph
 import kiger.canon.linearize
 import kiger.canon.traceSchedule
 import kiger.frame.Fragment
@@ -111,7 +111,7 @@ class TreeEvaluator(fragments: List<Fragment>) {
 
     @Suppress("unused")
     private fun dumpCode() {
-        println(code.basicBlocks().traceSchedule().joinToString("\n"))
+        println(code.createControlFlowGraph().traceSchedule().joinToString("\n"))
     }
 
     companion object {
