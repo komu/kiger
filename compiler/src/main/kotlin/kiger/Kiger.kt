@@ -2,9 +2,9 @@ package kiger
 
 import kiger.assem.Instr
 import kiger.codegen.MipsGen
-import kiger.escape.analyzeEscapes
 import kiger.frame.Fragment
 import kiger.parser.parseExpression
+import kiger.regalloc.createFlowGraph
 import kiger.translate.SemanticAnalyzer
 import java.io.File
 import java.io.Writer
@@ -35,6 +35,10 @@ fun Writer.writeFragments(fragments: List<Fragment>) {
 
 private fun Writer.writeProc(fragment: Fragment.Proc) {
     val (prologue, instructions, epilogue) = fragment.frame.procEntryExit3(MipsGen.codeGen(fragment.frame, fragment.body))
+
+    val flowGraph = instructions.createFlowGraph()
+    println(flowGraph)
+
     write(prologue)
     for (instr in instructions)
         if (instr !is Instr.Oper || instr.assem != "")

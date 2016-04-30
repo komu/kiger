@@ -6,11 +6,19 @@ import kiger.temp.Temp
 private val registerRegex = Regex("`([sdj])(\\d+)")
 
 sealed class Instr {
+
+    open val isJump: Boolean
+        get() = false
+
     class Lbl(val assem: String, val label: Label) : Instr() {
         override fun toString() = assem
     }
 
     class Oper(val assem: String, val dst: List<Temp> = emptyList(), val src: List<Temp> = emptyList(), val jump: List<Label>? = null) : Instr() {
+
+        override val isJump: Boolean
+            get() = jump != null
+
         override fun toString(): String =
             "    " + registerRegex.replace(assem) { m ->
                 val type = m.groupValues[1]
