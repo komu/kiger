@@ -1,76 +1,48 @@
 package kiger.regalloc
 
 import kiger.assem.Instr
-import kiger.frame.Frame
+import kiger.frame.FrameType
+import kiger.frame.Register
 import kiger.temp.Temp
 
-data class Allocation(val registerAssignments: Map<Temp, String>) {
-    operator fun get(t: Temp): String =
-        registerAssignments[t] ?: run {
-            // println("WARNING: no register allocation for temp: $t")
-            t.name
-        }
+data class Allocation(val registerAssignments: Map<Temp, Register>) {
+    operator fun get(t: Temp): Register? = registerAssignments[t]
+    fun name(t: Temp): String =
+        registerAssignments[t]?.name ?: t.name
+
+    fun enter(t: Temp, r: Register): Allocation =
+        Allocation(registerAssignments + (t to r))
 }
 
-fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Allocation> {
+tailrec fun List<Instr>.allocateRegisters(frameType: FrameType): Pair<List<Instr>, Allocation> {
+    val graph = this.createFlowGraph()
+    val igraph = graph.interferenceGraph()
+
+    fun spillCost(temp: Temp): Double {
+        val numDu = graph.nodes.sumBy { n -> n.def.containsToInt(temp) + n.use.containsToInt(temp) }
+        val node = igraph.graph.find { it.temp == temp } ?: error("could not find node for $temp")
+        val interferes = node.adj.size
+
+        return numDu.toDouble() / interferes.toDouble()
+    }
+
+
     // TODO
-    return Pair(this, Allocation(emptyMap()))
 
-    /*
-    fun alloc (instrs,frame) : A.instr list * allocation =
-    let
-      fun tempname alloc temp =
-          case Temp.Table.look(alloc,temp) of
-              SOME(r) => r
-            | NONE => Frame.temp_name temp
+    val (allocTable, spills) = color(igraph, frameType.tempMap, ::spillCost, frameType.registers)
 
-      val format1 = A.format(Frame.temp_name)
-      val graph = MakeGraph.instrs2graph instrs
-      val igraph = Liveness.interferenceGraph graph
+    fun Instr.isRedundant() = when (this) {
+        is Instr.Move -> allocTable[dst] == allocTable[src]
+        else          -> false
+    }
 
-      fun spillCost temp =
-          let
-            val Liveness.IGRAPH{graph=igraph,moves} = igraph
-            fun f (s,t) = if List.exists (fn x => x = t) s then 1 else 0
-            val num_du =
-                foldl (fn (Flow.Node{def,use,...},acc) =>
-                          acc + f(def,temp) + f(use,temp))
-                      0 graph
-
-            val Liveness.I.NODE{temp,adj,status} : Liveness.I.node =
-              case List.find
-                (fn Liveness.I.NODE{temp=t,...} => t = temp) igraph
-              of SOME n => n
-               | NONE  => ErrorMsg.impossible("exception in spillCost")
-
-            val interferes = List.length (!adj)
-          in
-              (Real.fromInt(num_du) / Real.fromInt(interferes))
-          end
-
-      val (alloc_table,spills) = Color.color{interference=igraph,
-					                                   initial=Frame.tempMap,
-					                                   spillCost=spillCost,
-                                             registers=Frame.registers}
-
-      fun is_redundant instr =
-          case instr of
-              A.MOVE{assem,dst,src} =>
-              valOf(TT.look(alloc_table,dst)) = valOf(TT.look(alloc_table,src))
-            | _ => false
-
-      val format0 = A.format(tempname alloc_table)
-    in
-      if List.length spills = 0
-      then (List.filter (fn i => not (is_redundant i)) instrs,alloc_table)
-      else alloc(rewrite(instrs,frame,spills),frame)
-    end
-end
-
-     */
+    return if (spills.isEmpty())
+        Pair(filterNot { it.isRedundant() }, allocTable)
+    else
+        rewrite(this, frameType, spills).allocateRegisters(frameType)
 }
 
-private fun rewrite(instrs: List<Instr>, frame: Frame, spills: Any): List<Instr> {
+private fun rewrite(instrs: List<Instr>, frameType: FrameType, spills: Any): List<Instr> {
     TODO()
 }
 /*
@@ -122,3 +94,5 @@ fun rewrite (instrs:A.instr list, frame, spills) : A.instr list =
     end
 
  */
+
+private fun <T> Collection<T>.containsToInt(t: T) = if (t in this) 1 else 0

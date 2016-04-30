@@ -19,4 +19,7 @@ interface FrameType {
     fun exp(access: FrameAccess, exp: TreeExp): TreeExp
 
     fun externalCall(name: String, args: List<TreeExp>): TreeExp
+
+    val tempMap: Map<Temp, Register>
+    val registers: List<Register>
 }

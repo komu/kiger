@@ -3,6 +3,7 @@ package kiger
 import kiger.assem.Instr
 import kiger.codegen.MipsGen
 import kiger.frame.Fragment
+import kiger.frame.MipsFrame
 import kiger.parser.parseExpression
 import kiger.regalloc.allocateRegisters
 import kiger.translate.SemanticAnalyzer
@@ -35,34 +36,15 @@ fun Writer.emitFragments(fragments: List<Fragment>) {
 
 private fun Writer.emitProc(fragment: Fragment.Proc) {
     val instructions = MipsGen.codeGen(fragment.frame, fragment.body)
-    val (instructions2, alloc) = instructions.allocateRegisters(fragment.frame)
+    val (instructions2, alloc) = instructions.allocateRegisters(MipsFrame)
     val (prologue, instructions3, epilogue) = fragment.frame.procEntryExit3(instructions2)
 
     write(prologue)
     for (instr in instructions3)
         if (instr !is Instr.Oper || instr.assem != "")
-            writeLine(instr.format { alloc[it] })
+            writeLine(instr.format { alloc.name(it) })
     write(epilogue)
 }
-
-/*
-fun emitproc out (F.PROC{body,frame}) =
-    let val _ = print ("emit " ^ Symbol.name (Frame.name frame) ^ "\n")
-              val stms = Canon.linearize body
-        val stms' = Canon.traceSchedule(Canon.basicBlocks stms)
-              val instrs = List.concat(map (MipsGen.codegen frame) stms')
-        val instrs2 = Frame.procEntryExit2 (frame,instrs)
-        val format1 = Assem.format(Frame.temp_name)
-        val (instrs2',alloc) = RegAlloc.alloc(instrs2,frame)
-        val {prolog,body,epilog} = Frame.procEntryExit3(frame,instrs2')
-        val instrs'' = addtab body
-        val format0 = Assem.format(tempname alloc)
-    in
-      TextIO.output(out,prolog);
-      app (fn i => TextIO.output(out,(format0 i) ^ "\n")) instrs'';
-      TextIO.output(out,epilog)
-    end
- */
 
 private fun Writer.emitStr(fragment: Fragment.Str) {
     writeLine("${fragment.label}: .asciiz \"${fragment.value.replace("\"", "\\\"")}\"")

@@ -18,5 +18,7 @@ abstract class Frame(val name: Label) {
     abstract fun procEntryExit2(body: List<Instr>): List<Instr>
 
     abstract fun procEntryExit3(body: List<Instr>): Triple<String, List<Instr>, String>
+
+    abstract val type : FrameType
 }
 

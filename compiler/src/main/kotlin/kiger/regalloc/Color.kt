@@ -1,18 +1,13 @@
 package kiger.regalloc
 
 /*
-signature COLOR =
-sig
-  structure Frame : FRAME
-  type allocation = Frame.register Temp.Table.table
-  val color : {interference : Liveness.igraph,
-               initial : allocation,
-               spillCost : Temp.temp -> real,
-               registers : Frame.register list}
-              -> allocation * Temp.temp list
-end
- */
-
+fun color(interference: IGraph,
+            initial: Allocation,
+         spillCost: (Temp) -> Double,
+             registers: List<String>): Pair<Allocation, List<Temp>> {
+    TODO()
+}
+*/
 /*
 (* The book recommends associating each node with
 a membership flag. WE defined it here, but leave it for future improvement *)

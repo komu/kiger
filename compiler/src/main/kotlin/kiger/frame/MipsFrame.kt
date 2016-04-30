@@ -10,6 +10,9 @@ import kiger.tree.TreeStm
 
 class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) : Frame(name) {
 
+    override val type: FrameType
+        get() = Type
+
     var locals = 0
 
     override val formals: List<FrameAccess> = formalEscapes.mapIndexed { index, escape ->
@@ -64,7 +67,7 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         return Triple(prologue, body, epilogue)
     }
 
-    companion object : FrameType {
+    companion object Type : FrameType {
 
         // expression evaluation and results of a functioin
         val v0 = Temp("\$v0")
@@ -113,11 +116,25 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         override fun externalCall(name: String, args: List<TreeExp>): TreeExp =
                 TreeExp.Call(TreeExp.Name(Label(name)), args) // TODO
 
-        val specialargs = listOf(RV, FP, SP, RA)
+        private val registerList =
+            listOf(("\$a0" to a0),("\$a1" to a1),("\$a2" to a2),("\$a3" to a3),
+                    ("\$t0" to t0),("\$t1" to t1),("\$t2" to t2),("\$t3" to t3),
+                    ("\$t4" to t4),("\$t5" to t5),("\$t6" to t6),("\$t7" to t7),
+                    ("\$s0" to s0),("\$s1" to s1),("\$s2" to s2),("\$s3" to s3),
+                    ("\$s4" to s4),("\$s5" to s5),("\$s6" to s6),("\$s7" to s7),
+                    ("\$fp" to FP),("\$v0" to RV),("\$sp" to SP),("\$ra" to RA))
+
+        override val tempMap: Map<Temp, Register> = registerList.map { it -> Pair(it.second, Register(it.first)) }.toMap()
+        
+        val specialArguments = listOf(RV, FP, SP, RA)
         override val argumentRegisters: List<Temp> = listOf(a0, a1, a2, a3)
         override val calleeSaves: List<Temp> = listOf(s0, s1, s2, s3, s4, s5, s6, s7)
         override val callerSaves: List<Temp> = listOf(t0, t1, t2, t3, t4, t5, t6, t7)
         private val firstLocalOffset = wordSize // fp is stored at 0, locals/params start at fp + wordSize
         private val firstFormalOffset = firstLocalOffset
+
+        // a list of all register name, which can be used for coloring
+        override val registers: List<Register> = (argumentRegisters + calleeSaves + callerSaves + specialArguments).map { x -> tempMap[x]!! }
+
     }
 }
