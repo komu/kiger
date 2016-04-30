@@ -17,7 +17,10 @@ sealed class IStatus {
     }
 }
 
-data class INode(val temp: Temp, var adj: List<INode>, var status: IStatus)
+data class INode(val temp: Temp, var adj: List<INode>, var status: IStatus) {
+    override fun toString() =
+        "$temp: $status - adj: ${adj.joinToString(", ") { it.temp.toString() }}"
+}
 
 data class IGraph(val graph: List<INode>, val moves: List<Pair<INode, INode>>) {
     override fun toString() = graph.joinToString("\n")
