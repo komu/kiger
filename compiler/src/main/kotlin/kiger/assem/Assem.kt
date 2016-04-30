@@ -3,15 +3,19 @@ package kiger.assem
 import kiger.temp.Label
 import kiger.temp.Temp
 
-private val registerRegex = Regex("`([sdj])(\\d+)")
+private val registerRegex0 = Regex("`([sdj])")
+private val registerRegexN = Regex("`([sdj])(\\d+)")
 
 sealed class Instr {
 
     open val isJump: Boolean
         get() = false
 
+    abstract fun format(func: (Temp) -> String): String
+
     class Lbl(val assem: String, val label: Label) : Instr() {
         override fun toString() = assem
+        override fun format(func: (Temp) -> String) = assem
     }
 
     class Oper(val assem: String, val dst: List<Temp> = emptyList(), val src: List<Temp> = emptyList(), val jump: List<Label>? = null) : Instr() {
@@ -19,21 +23,32 @@ sealed class Instr {
         override val isJump: Boolean
             get() = jump != null
 
-        override fun toString(): String =
-            "    " + registerRegex.replace(assem) { m ->
+        override fun format(func: (Temp) -> String) =
+            "    " + registerRegexN.replace(assem) { m ->
                 val type = m.groupValues[1]
                 val index = m.groupValues[2].toInt()
                 when (type) {
-                    "s" -> src[index].name
-                    "d" -> dst[index].name
+                    "s" -> func(src[index])
+                    "d" -> func(dst[index])
                     "j" -> jump!![index].name
                     else -> error("invalid type '$type'")
                 }
             }
+
+        override fun toString() = format { it.name }
     }
 
     class Move(val assem: String, val dst: Temp, val src: Temp) : Instr() {
-        override fun toString() = assem
+        override fun toString() = format { it.name }
+        override fun format(func: (Temp) -> String) =
+            "    " + registerRegex0.replace(assem) { m ->
+                val type = m.groupValues[1]
+                when (type) {
+                    "s" -> func(src)
+                    "d" -> func(dst)
+                    else -> error("invalid type '$type'")
+                }
+            }
     }
 }
 
