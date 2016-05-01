@@ -25,22 +25,23 @@ class FlowGraph(val nodes: List<Node>) {
 
         fun findEdges(): Sequence<TempEdge> =
             def.asSequence().flatMap { t -> liveOut.asSequence().filter { it != t }.map { TempEdge(t, it) } }
-    }
 
-    fun format(tempFormat: (Temp) -> String): String {
-        val sb = StringBuilder()
+        override fun toString() = format { it.toString() }
 
-        for (n in nodes) {
-            sb.appendln("n${n.id}")
-            sb.appendln("  def: ${n.def.map(tempFormat)}")
-            sb.appendln("  use: ${n.use.map(tempFormat)}")
-            sb.appendln("  succ: ${n.succ.joinToString(", ") { it.id.toString() }}")
-            sb.appendln("  prev: ${n.prev.joinToString(", ") { it.id.toString() }}")
-            sb.appendln("  liveout: ${n.liveOut}")
+        fun format(tempFormat: (Temp) -> String): String {
+            val sb = StringBuilder()
+            sb.appendln("n$id")
+            sb.appendln("  def: ${def.map(tempFormat)}")
+            sb.appendln("  use: ${use.map(tempFormat)}")
+            sb.appendln("  succ: ${succ.joinToString(", ") { it.id.toString() }}")
+            sb.appendln("  prev: ${prev.joinToString(", ") { it.id.toString() }}")
+            sb.appendln("  liveout: $liveOut")
+            return sb.toString()
         }
-
-        return sb.toString()
     }
+
+    fun format(tempFormat: (Temp) -> String): String =
+        nodes.joinToString("") { it.format(tempFormat) }
 
     override fun toString() = format { it.toString() }
 }
