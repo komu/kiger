@@ -32,10 +32,8 @@ tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Alloc
 
     val (allocTable, spills) = color(igraph, frameType.tempMap, ::spillCost, frameType.registers)
 
-    fun Instr.isRedundant() = when (this) {
-        is Instr.Move -> allocTable[dst] == allocTable[src]
-        else          -> false
-    }
+    fun Instr.isRedundant() =
+            this is Instr.Move && allocTable[dst] == allocTable[src]
 
     return if (spills.isEmpty())
         Pair(filterNot { it.isRedundant() }, allocTable)
