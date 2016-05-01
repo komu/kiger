@@ -1,10 +1,12 @@
 package kiger.regalloc
 
 import kiger.assem.Instr
+import kiger.codegen.MipsGen
 import kiger.frame.Frame
 import kiger.frame.Register
 import kiger.temp.Temp
-import kiger.tree.TreeExp
+import kiger.tree.TreeExp.Temporary
+import kiger.tree.TreeStm.Move
 
 data class Allocation(val registerAssignments: Map<Temp, Register>) {
     operator fun get(t: Temp): Register? = registerAssignments[t]
@@ -44,47 +46,42 @@ tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Alloc
 private fun rewrite(instrs: List<Instr>, frame: Frame, spills: List<Temp>): List<Instr> =
     spills.fold(instrs) { i, t -> rewrite1(i, frame, t) }
 
-private fun rewrite1(instr: List<Instr>, frame: Frame, t: Temp): List<Instr> {
-    val ae = frame.type.exp(frame.allocLocal(true), TreeExp.Temporary(frame.type.FP))
+private fun rewrite1(instrs: List<Instr>, frame: Frame, t: Temp): List<Instr> {
+    val ae = frame.type.exp(frame.allocLocal(true), Temporary(frame.type.FP))
 
     // generate fetch or store instruction
-    /*
-            (* generate fetch or store instruction *)
-            fun gen_instrs (is_def:bool, t:T.temp) =
-                if is_def then MipsGen.codegen(frame)(Tr.MOVE(ae,Tr.TEMP t))
-                else MipsGen.codegen(frame)(Tr.MOVE(Tr.TEMP t,ae))
+    fun genInstrs(isStore: Boolean, t:  Temp) =
+        MipsGen.codeGen(frame, if (isStore) Move(ae, Temporary(t)) else Move(Temporary(t), ae))
 
-            (* allocate new temp for each occurence of t in dus, replace
-             * the occurence with the new temp. *)
-            fun alloc_du (is_def:bool, dus:T.temp list, t) =
-                if List.exists (fn (t') => t = t') dus then
-                  let val nt = T.newtemp () in
-                    (gen_instrs(is_def,nt),
-                     map (fn (t') => if t = t' then nt else t') dus)
-                  end
-                else ([],dus)
+    // allocate new temp for each occurrence of t in dus,
+    // replace the occurrence with the new temp.
+    fun allocDu(isStore: Boolean, dus: List<Temp>, t: Temp):  Pair<List<Instr>, List<Temp>> =
+        if (t in dus) {
+            val nt = Temp()
+            Pair(genInstrs(isStore, nt), dus.map { if (t == it) nt else it })
+        } else {
+            Pair(emptyList(), dus)
+        }
 
-            (* transform one instruction for one spilled temp *)
-            fun trans_instr instr =
-                case instr of
-                    A.OPER{assem,dst,src,jump} =>
-                    let val (store,dst') = alloc_du(true,dst,t)
-                        val (fetch,src') = alloc_du(false,src,t)
-                    in (fetch@[A.OPER{assem=assem,dst=dst',
-                                      src=src',jump=jump}]@store)
-                    end
-                  | A.MOVE{assem,dst,src} =>
-                    let val (store,[dst']) = alloc_du(true,[dst],t)
-                        val (fetch,[src']) = alloc_du(false,[src],t)
-                    in (fetch@[A.MOVE{assem=assem,dst=dst',src=src'}]@store)
-                    end
-                  | instr => [instr]
-          in
-            List.foldl (fn (i,acc) => acc @ trans_instr i) nil instrs
-          end
+    // transform one instruction for one spilled temp
+    fun transInstr(instr: Instr): List<Instr> = when (instr) {
+        is Instr.Oper -> {
+            val (store, dst2) = allocDu(true, instr.dst, t)
+            val (fetch, src2) = allocDu(false, instr.src, t)
 
-     */
-    TODO()
+            fetch + Instr.Oper(instr.assem, dst2, src2, instr.jump) + store
+        }
+        is Instr.Move -> {
+            val (store, dst2) = allocDu(true, listOf(instr.dst), t)
+            val (fetch, src2) = allocDu(false, listOf(instr.src), t)
+
+            fetch + Instr.Move(instr.assem, dst2.single(), src2.single()) + store
+        }
+        is Instr.Lbl ->
+            listOf(instr)
+    }
+
+    return instrs.flatMap { transInstr(it) }
 }
 
 private fun <T> Collection<T>.containsToInt(t: T) = if (t in this) 1 else 0

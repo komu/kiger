@@ -8,7 +8,8 @@ import kiger.vm.Inst.Op.*
 class Evaluator(allInstructions: List<Inst>) {
 
     val regs = Registers()
-    var pc = 0
+    val PC_EXIT = -1
+    var pc = PC_EXIT
 
     val insts = mutableListOf<Inst>()
     val labelMap = mutableMapOf<String, Int>()
@@ -18,7 +19,6 @@ class Evaluator(allInstructions: List<Inst>) {
     val A1 = "\$a0"
     val FP = "\$fp"
     val SP = "\$sp"
-    var running = true
 
     private val mem = Array(1024 * 1024) { 0 }
 
@@ -30,6 +30,7 @@ class Evaluator(allInstructions: List<Inst>) {
                 insts += inst
         }
 
+        regs[RA] = PC_EXIT
         regs[FP] = mem.size - 1000
         regs[SP] = mem.size - 1000
     }
@@ -37,7 +38,7 @@ class Evaluator(allInstructions: List<Inst>) {
     fun run() {
         pc = labelMap["main"] ?: error("could not find main label")
 
-        while (running) {
+        while (pc != PC_EXIT) {
             step()
         }
     }
@@ -66,7 +67,7 @@ class Evaluator(allInstructions: List<Inst>) {
         when (call) {
             1   -> System.out.print(regs[A1])
             4   -> System.out.print((insts[regs[A1]] as Inst.Data).text)
-            10  -> running = false
+            10  -> pc = PC_EXIT
             else -> error("unknown syscall $call")
         }
     }
