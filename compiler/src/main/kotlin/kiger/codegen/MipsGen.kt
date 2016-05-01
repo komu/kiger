@@ -302,7 +302,7 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
             dst is Mem && dst.exp is Const ->
                 emit(Oper("STORE M[${dst.exp.value}] <- `s0", src = listOf(munchExp(src))))
             dst is Temporary ->
-                emit(Oper("move `d0, `s0", src = listOf(munchExp(src)), dst = listOf(dst.temp)))
+                emit(Instr.Move("move `d0, `s0", src = munchExp(src), dst = dst.temp))
             else ->
                 TODO("move: $dst $src")
         }

@@ -3,7 +3,7 @@ package kiger.assem
 import kiger.temp.Label
 import kiger.temp.Temp
 
-private val registerRegex0 = Regex("`([sdj])")
+private val registerRegex0 = Regex("`([sdj]0)")
 private val registerRegexN = Regex("`([sdj])(\\d+)")
 
 sealed class Instr {
@@ -42,11 +42,10 @@ sealed class Instr {
         override fun toString() = format { it.name }
         override fun format(func: (Temp) -> String) =
             "    " + registerRegex0.replace(assem) { m ->
-                val type = m.groupValues[1]
-                when (type) {
-                    "s" -> func(src)
-                    "d" -> func(dst)
-                    else -> error("invalid type '$type'")
+                when (m.groupValues[1]) {
+                    "s0" -> func(src)
+                    "d0" -> func(dst)
+                    else -> error("invalid type '${m.value}'")
                 }
             }
     }
