@@ -2,31 +2,10 @@ package kiger.regalloc
 
 import kiger.temp.Temp
 
-sealed class IStatus {
-
-    object Removed : IStatus() {
-        override fun toString() = "Removed"
-    }
-
-    class InGraph(val degree: Int) : IStatus() {
-        override fun toString() = "InGraph($degree)"
-    }
-
-    class Colored(val color: String) : IStatus() {
-        override fun toString() = "Colored($color)"
-    }
-}
-
-data class INode(val temp: Temp, var adj: List<INode>, var status: IStatus) {
-    override fun toString() =
-        "$temp: $status - adj: ${adj.joinToString(", ") { it.temp.toString() }}"
-}
-
-data class IGraph(val graph: List<INode>, val moves: List<Pair<INode, INode>>) {
-    override fun toString() = graph.joinToString("\n")
-}
-
-fun FlowGraph.interferenceGraph(): IGraph {
+/**
+ * Constructs interference graph from [FlowGraph].
+ */
+fun FlowGraph.interferenceGraph(): InterferenceGraph {
     initializeLiveOuts()
 
     // now for each node n in the flow graph, suppose
@@ -42,7 +21,7 @@ fun FlowGraph.interferenceGraph(): IGraph {
     //   add interference edges (a,b1),...,(a,bj) for any bi that is not
     //   the same as c. *)
 
-    val tempMap = mutableMapOf<Temp,INode>()
+    val tempMap = mutableMapOf<Temp, INode>()
 
     for (t in allUsesAndDefs)
         if (t !in tempMap)
@@ -67,7 +46,7 @@ fun FlowGraph.interferenceGraph(): IGraph {
         }
     }
 
-    return IGraph(tempMap.values.toList(), allMoves)
+    return InterferenceGraph(tempMap.values.toList(), allMoves)
 }
 
 private fun FlowGraph.initializeLiveOuts() {
@@ -83,26 +62,25 @@ private fun FlowGraph.initializeLiveOuts() {
     }
 }
 
-// Given livein map, compute liveout set for node n
-private fun FlowGraph.Node.computeOut(liveMap: LiveMap): Set<Temp> {
-    val set = mutableSetOf<Temp>()
-    for (n in succ)
-        set += liveMap[n.id]!!
-    return set
-}
+/**
+ * Creates a map which contain the liveout set for every node of [FlowGraph].
+ */
+private fun FlowGraph.buildLiveOutMap(): Map<Int, Set<Temp>> {
+    val liveinMap = mutableMapOf<Int, Set<Temp>>()
+    val liveoutMap = mutableMapOf<Int, Set<Temp>>()
 
-private fun FlowGraph.buildLiveOutMap(): LiveMap {
-    val liveinMap = LiveMap(this)
-    val liveoutMap = LiveMap(this)
+    for (node in nodes) {
+        liveinMap[node.id] = emptySet()
+        liveoutMap[node.id] = emptySet()
+    }
 
-    // recursively compute liveSet, until it reaches a fixpoint
     do {
         var changed = false
 
         for (node in nodes) {
             val oldIn = liveinMap[node.id]!!
             val oldOut = liveoutMap[node.id]!!
-            val newIn = node.use.toSet() + (oldOut - node.def.toSet())
+            val newIn = node.use.toSet() + (oldOut - node.def)
             val newOut = node.computeOut(liveinMap)
 
             if (newIn != oldIn || newOut != oldOut) {
@@ -116,18 +94,13 @@ private fun FlowGraph.buildLiveOutMap(): LiveMap {
     return liveoutMap
 }
 
-private class LiveMap(graph: FlowGraph) {
-
-    private val map = mutableMapOf<Int, Set<Temp>>()
-
-    init {
-        for (node in graph.nodes)
-            map[node.id] = emptySet()
-    }
-
-    operator fun get(key: Int) = map[key]
-
-    operator fun set(key: Int, value: Set<Temp>) {
-        map[key] = value
-    }
+/**
+ * Compute liveout set for a node, given a livein map.
+  */
+private fun FlowGraph.Node.computeOut(liveinMap: Map<Int, Set<Temp>>): Set<Temp> {
+    val set = mutableSetOf<Temp>()
+    for (s in succ)
+        set += liveinMap[s.id]!!
+    return set
 }
+

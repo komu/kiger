@@ -15,16 +15,16 @@ sealed class Inst {
             override fun toString() = "    $name"
         }
 
-        class Op1(val name: String, val a1: Operand) : Op() {
-            override fun toString() = "    $name $a1"
+        class Op1(val name: String, val o1: Operand) : Op() {
+            override fun toString() = "    $name $o1"
         }
 
-        class Op2(val name: String, val a1: Operand, val a2: Operand) : Op() {
-            override fun toString() = "    $name $a1, $a2"
+        class Op2(val name: String, val o1: Operand, val o2: Operand) : Op() {
+            override fun toString() = "    $name $o1, $o2"
         }
 
-        class Op3(val name: String, val a1: Operand, val a2: Operand, val a3: Operand) : Op() {
-            override fun toString() = "    $name $a1, $a2, $a3"
+        class Op3(val name: String, val o1: Operand, val o2: Operand, val o3: Operand) : Op() {
+            override fun toString() = "    $name $o1, $o2, $o3"
         }
     }
 }

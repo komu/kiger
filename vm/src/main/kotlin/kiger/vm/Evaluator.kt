@@ -38,13 +38,15 @@ class Evaluator(allInstructions: List<Inst>) {
     fun run() {
         pc = labelMap["main"] ?: error("could not find main label")
 
-        while (pc != PC_EXIT) {
+        var steps = 0
+        while (pc != PC_EXIT && steps < 100) {
             step()
+            steps++
         }
     }
 
     fun step() {
-        println("$pc: ${insts[pc]}")
+        println("$pc: ${insts[pc].toString().padEnd(30)} ${regs}")
         val op = insts[pc++] as? Inst.Op
 
         when (op) {
@@ -74,15 +76,15 @@ class Evaluator(allInstructions: List<Inst>) {
 
     private fun Op1.eval() {
         when (name) {
-            "j"     -> pc = a1.immediate
-            "jr"    -> pc = regs[a1.reg]
+            "j"     -> pc = o1.immediate
+            "jr"    -> pc = regs[o1.reg]
             "jal"   -> {
                 regs[RA] = pc
-                pc = a1.immediate
+                pc = o1.immediate
             }
             "jalr"   -> {
                 regs[RA] = pc
-                pc = regs[a1.reg]
+                pc = regs[o1.reg]
             }
             else -> error("Unsupported op: $this")
         }
@@ -90,20 +92,20 @@ class Evaluator(allInstructions: List<Inst>) {
 
     private fun Op2.eval() {
         when (name) {
-            "move"  -> regs[a1.reg] = regs[a2.reg]
-            "lw"    -> regs[a1.reg] = mem[regs[a2.baseReg] + a2.offset]
-            "sw"    -> mem[regs[a2.baseReg] + a2.offset] = regs[a1.reg]
-            "li"    -> regs[a1.reg] = a2.immediate
-            "la"    -> regs[a1.reg] = a2.immediate
+            "move"  -> regs[o1.reg] = regs[o2.reg]
+            "lw"    -> regs[o1.reg] = mem[regs[o2.baseReg] + o2.offset]
+            "sw"    -> mem[regs[o2.baseReg] + o2.offset] = regs[o1.reg]
+            "li"    -> regs[o1.reg] = o2.immediate
+            "la"    -> regs[o1.reg] = o2.immediate
             else    -> error("Unsupported op: $this")
         }
     }
 
     private fun Op3.eval() {
         when (name) {
-            "add"   -> regs[a1.reg] = regs[a2.reg] + regs[a3.reg]
-            "addiu" -> regs[a1.reg] = regs[a2.reg] + a3.immediate
-            "mul"   -> regs[a1.reg] = regs[a2.reg] * regs[a3.reg]
+            "add"   -> regs[o1.reg] = regs[o2.reg] + regs[o3.reg]
+            "addiu" -> regs[o1.reg] = regs[o2.reg] + o3.immediate
+            "mul"   -> regs[o1.reg] = regs[o2.reg] * regs[o3.reg]
             else -> error("Unsupported op: $this")
         }
     }
@@ -122,5 +124,5 @@ class Registers {
         regs[name] = value
     }
 
-    override fun toString() = regs.toString()
+    override fun toString() = regs.map { Pair(it.key, it.value) }.filter { it.second != 0 }.toString()
 }

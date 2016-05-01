@@ -34,7 +34,7 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
 
     override fun allocLocal(escape: Boolean): FrameAccess =
         if (escape)
-            FrameAccess.InFrame(locals++ * wordSize + firstLocalOffset)
+            FrameAccess.InFrame(++locals * wordSize + firstLocalOffset)
         else
             FrameAccess.InReg(Temp())
 

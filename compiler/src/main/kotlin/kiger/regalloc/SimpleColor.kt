@@ -8,7 +8,7 @@ import kiger.utils.splitFirst
 /**
  * Simple register coloring with spilling, but without coalescing. *)
  */
-fun color(interference: IGraph,
+fun color(interference: InterferenceGraph,
           initAlloc: Map<Temp, Register>,
           spillCost: (Temp) -> Double,
           registers: List<Register>): Pair<Allocation, List<Temp>> {

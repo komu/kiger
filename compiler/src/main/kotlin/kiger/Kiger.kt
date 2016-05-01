@@ -2,6 +2,7 @@ package kiger
 
 import kiger.assem.Instr
 import kiger.codegen.MipsGen
+import kiger.escape.analyzeEscapes
 import kiger.frame.Fragment
 import kiger.parser.parseExpression
 import kiger.regalloc.allocateRegisters
@@ -9,8 +10,11 @@ import kiger.translate.SemanticAnalyzer
 import java.io.File
 import java.io.Writer
 
-private fun compile(code: String): List<Fragment> =
-    SemanticAnalyzer.transProg(parseExpression(code))
+private fun compile(code: String): List<Fragment> {
+    val exp = parseExpression(code)
+    exp.analyzeEscapes()
+    return SemanticAnalyzer.transProg(exp)
+}
 
 fun File.emitFragments(fragments: List<Fragment>) {
     writer().use { it.emitFragments(fragments) }
@@ -37,12 +41,14 @@ private fun Writer.emitProc(fragment: Fragment.Proc) {
     val frame = fragment.frame
     val instructions = MipsGen.codeGen(frame, fragment.body)
     val (instructions2, alloc) = instructions.allocateRegisters(frame)
+    //println(alloc.registerAssignments.entries.filter { it.key.name != it.value.name }.joinToString("\n") { "${it.key} -> ${it.value}" })
     val (prologue, instructions3, epilogue) = frame.procEntryExit3(instructions2)
 
     write(prologue)
     for (instr in instructions3)
         if (instr !is Instr.Oper || instr.assem != "")
-            writeLine(instr.format { alloc.name(it) })
+            //writeLine(instr.format { alloc.name(it) })
+            writeLine(instr.format { alloc.name((it))}.padEnd(50) + " # " + instr.format { it.name })
     write(epilogue)
 }
 
