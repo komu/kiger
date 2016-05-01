@@ -1,6 +1,9 @@
 package kiger
 
 import kiger.assem.Instr
+import kiger.canon.createControlFlowGraph
+import kiger.canon.linearize
+import kiger.canon.traceSchedule
 import kiger.codegen.MipsGen
 import kiger.escape.analyzeEscapes
 import kiger.frame.Fragment
@@ -39,13 +42,15 @@ fun Writer.emitFragments(fragments: List<Fragment>) {
 
 private fun Writer.emitProc(fragment: Fragment.Proc) {
     val frame = fragment.frame
-    val instructions = MipsGen.codeGen(frame, fragment.body)
-    val (instructions2, alloc) = instructions.allocateRegisters(frame)
-    //println(alloc.registerAssignments.entries.filter { it.key.name != it.value.name }.joinToString("\n") { "${it.key} -> ${it.value}" })
-    val (prologue, instructions3, epilogue) = frame.procEntryExit3(instructions2)
+    val traces = fragment.body.linearize().createControlFlowGraph().traceSchedule()
+    val instructions = traces.flatMap { MipsGen.codeGen(frame, it) }
+    val instructions2 = frame.procEntryExit2(instructions)
+
+    val (instructions3, alloc) = instructions2.allocateRegisters(frame)
+    val (prologue, instructions4, epilogue) = frame.procEntryExit3(instructions3)
 
     write(prologue)
-    for (instr in instructions3)
+    for (instr in instructions4)
         if (instr !is Instr.Oper || instr.assem != "")
             //writeLine(instr.format { alloc.name(it) })
             writeLine(instr.format { alloc.name((it))}.padEnd(50) + " # " + instr.format { it.name })

@@ -45,6 +45,8 @@ sealed class Operand {
 
     class Reg(override val reg: String) : Operand() {
         override fun toString() = reg
+        override fun equals(other: Any?) = other is Reg && reg == other.reg
+        override fun hashCode() = reg.hashCode()
     }
 
     class Offset(override val offset: Int, override val baseReg: String) : Operand() {

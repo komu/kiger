@@ -14,12 +14,14 @@ sealed class Instr {
     abstract fun format(func: (Temp) -> String): String
 
     class Lbl(val assem: String, val label: Label) : Instr() {
+        init {
+            require(assem.any())
+        }
         override fun toString() = assem
         override fun format(func: (Temp) -> String) = assem
     }
 
     class Oper(val assem: String, val dst: List<Temp> = emptyList(), val src: List<Temp> = emptyList(), val jump: List<Label>? = null) : Instr() {
-
         override val isJump: Boolean
             get() = jump != null
 
@@ -39,6 +41,9 @@ sealed class Instr {
     }
 
     class Move(val assem: String, val dst: Temp, val src: Temp) : Instr() {
+        init {
+            require(assem.any())
+        }
         override fun toString() = format { it.name }
         override fun format(func: (Temp) -> String) =
             "    " + registerRegex0.replace(assem) { m ->

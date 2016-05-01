@@ -38,15 +38,15 @@ class Evaluator(allInstructions: List<Inst>) {
     fun run() {
         pc = labelMap["main"] ?: error("could not find main label")
 
-        var steps = 0
-        while (pc != PC_EXIT && steps < 100) {
+        while (pc != PC_EXIT) {
             step()
-            steps++
         }
+
+        println("v0: ${regs[V0]}")
     }
 
     fun step() {
-        println("$pc: ${insts[pc].toString().padEnd(30)} ${regs}")
+        // println("$pc: ${insts[pc].toString().padEnd(30)} ${regs}")
         val op = insts[pc++] as? Inst.Op
 
         when (op) {

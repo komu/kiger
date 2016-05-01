@@ -8,10 +8,10 @@ import kiger.utils.splitFirst
 /**
  * Simple register coloring with spilling, but without coalescing. *)
  */
-fun color(interference: InterferenceGraph,
-          initAlloc: Map<Temp, Register>,
-          spillCost: (Temp) -> Double,
-          registers: List<Register>): Pair<Allocation, List<Temp>> {
+fun simpleColor(interference: InterferenceGraph,
+                initAlloc: Map<Temp, Register>,
+                spillCost: (Temp) -> Double,
+                registers: List<Register>): Pair<Allocation, List<Temp>> {
 
     // # of colors available
     val K = registers.size
@@ -141,4 +141,4 @@ fun color(interference: InterferenceGraph,
     return assignColors(stack, emptyList(), Allocation(precolored))
 }
 
-data class WorkLists(val simplify: List<INode>, val spill: List<INode>)
+private data class WorkLists(val simplify: List<INode>, val spill: List<INode>)

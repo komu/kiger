@@ -22,6 +22,17 @@ tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Alloc
     val graph = this.createFlowGraph()
     val igraph = graph.interferenceGraph()
 
+//    println("\n---\n")
+//    println(frame.name)
+
+//    for (node in graph.nodes)
+//        println("${this[node.id].toString().trim().padEnd(30)}: ${node.liveOut.sorted()}")
+//    for (node in graph.nodes)
+//        println("${this[node.id].toString().trim().padEnd(30)}: $node")
+//
+//    println("---")
+//    println(igraph)
+
     fun spillCost(temp: Temp): Double {
         val numDu = graph.nodes.sumBy { n -> n.def.containsToInt(temp) + n.use.containsToInt(temp) }
         val node = igraph.graph.find { it.temp == temp } ?: error("could not find node for $temp")
@@ -30,7 +41,7 @@ tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Alloc
         return numDu.toDouble() / interferes.toDouble()
     }
 
-    val (allocTable, spills) = color(igraph, frameType.tempMap, ::spillCost, frameType.registers)
+    val (allocTable, spills) = simpleColor(igraph, frameType.tempMap, ::spillCost, frameType.registers)
 
     fun Instr.isRedundant() =
             this is Instr.Move && allocTable[dst] == allocTable[src]
@@ -48,7 +59,7 @@ private fun rewrite1(instrs: List<Instr>, frame: Frame, t: Temp): List<Instr> {
     val ae = frame.type.exp(frame.allocLocal(true), Temporary(frame.type.FP))
 
     // generate fetch or store instruction
-    fun genInstrs(isStore: Boolean, t:  Temp) =
+    fun genInstrs(isStore: Boolean, t: Temp) =
         MipsGen.codeGen(frame, if (isStore) Move(ae, Temporary(t)) else Move(Temporary(t), ae))
 
     // allocate new temp for each occurrence of t in dus,

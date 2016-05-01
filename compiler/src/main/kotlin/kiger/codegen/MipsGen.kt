@@ -2,9 +2,6 @@ package kiger.codegen
 
 import kiger.assem.Instr
 import kiger.assem.Instr.Oper
-import kiger.canon.createControlFlowGraph
-import kiger.canon.linearize
-import kiger.canon.traceSchedule
 import kiger.frame.Frame
 import kiger.frame.MipsFrame
 import kiger.temp.Label
@@ -27,11 +24,8 @@ object MipsGen : CodeGen {
     override fun codeGen(frame: Frame, stm: TreeStm): List<Instr> {
         val generator = MipsCodeGenerator(frame as MipsFrame)
 
-        val trace = stm.linearize().createControlFlowGraph().traceSchedule()
-        for (st in trace)
-            generator.munchStm(st)
-
-        return frame.procEntryExit2(generator.instructions)
+        generator.munchStm(stm)
+        return generator.instructions
     }
 }
 
@@ -46,7 +40,7 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
      *  - callersaves: they may be redefined inside the call;
      *  - RV: it will be overwritten for function return.
      */
-    val callDefs = listOf(MipsFrame.RV, MipsFrame.RA) + MipsFrame.argumentRegisters
+    val callDefs = listOf(MipsFrame.RV, MipsFrame.RA) + MipsFrame.callerSaves + MipsFrame.argumentRegisters
 
     private fun emit(instr: Instr) {
         instructions += instr
