@@ -15,6 +15,10 @@ data class Allocation(val registerAssignments: Map<Temp, Register>) {
 
     fun enter(t: Temp, r: Register): Allocation =
         Allocation(registerAssignments + (t to r))
+
+    companion object {
+        fun empty() = Allocation(emptyMap())
+    }
 }
 
 tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Allocation> {
@@ -41,7 +45,7 @@ tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Alloc
         return numDu.toDouble() / interferes.toDouble()
     }
 
-    val (allocTable, spills) = simpleColor(igraph, frameType.tempMap, ::spillCost, frameType.registers)
+    val (allocTable, spills) = color(igraph, frameType.tempMap, ::spillCost, frameType.registers)
 
     fun Instr.isRedundant() =
             this is Instr.Move && allocTable[dst] == allocTable[src]
