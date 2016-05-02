@@ -19,7 +19,7 @@ fun simpleColor(interference: InterferenceGraph,
     val precolored = mutableMapOf<Temp,Register>()
     val initial = mutableListOf<INode>()
 
-    for (n in interference.graph) {
+    for (n in interference.nodes) {
         val reg = initAlloc[n.temp]
         if (reg != null)
             precolored[n.temp] = reg
@@ -29,7 +29,7 @@ fun simpleColor(interference: InterferenceGraph,
 
     // A map from graph nodes to their *initial* degree
     val degreeMap = mutableMapOf<Temp, Int>()
-    for (n in interference.graph)
+    for (n in interference.nodes)
         degreeMap[n.temp] = n.adj.size
 
     // Create initial worklist

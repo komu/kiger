@@ -40,7 +40,7 @@ tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Alloc
 
     fun spillCost(temp: Temp): Double {
         val numDu = graph.nodes.sumBy { n -> n.def.containsToInt(temp) + n.use.containsToInt(temp) }
-        val node = igraph.graph.find { it.temp == temp } ?: error("could not find node for $temp")
+        val node = igraph.nodes.find { it.temp == temp } ?: error("could not find node for $temp")
         val interferes = node.adj.size
 
         return numDu.toDouble() / interferes.toDouble()

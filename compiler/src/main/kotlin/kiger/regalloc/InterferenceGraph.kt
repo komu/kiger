@@ -1,5 +1,5 @@
 package kiger.regalloc
 
-data class InterferenceGraph(val graph: List<INode>, val moves: List<Pair<INode, INode>>) {
-    override fun toString() = graph.sortedBy { it.temp.name }.joinToString("\n")
+data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
+    override fun toString() = nodes.sortedBy { it.temp.name }.joinToString("\n")
 }

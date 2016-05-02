@@ -27,7 +27,7 @@ fun FlowGraph.interferenceGraph(): InterferenceGraph {
         if (t !in tempMap)
             tempMap[t] = INode(t, emptyList(), IStatus.InGraph(0))
 
-    val allMoves = allMoves.map { Pair(tempMap[it.src]!!, tempMap[it.dst]!!) }.toList()
+    val allMoves = allMoves.map { Move(tempMap[it.src]!!, tempMap[it.dst]!!) }.toList()
 
     for ((srcTemp, dstTemp) in allEdges) {
         // don't add duplicate edges

@@ -59,7 +59,7 @@ fun color(interference: InterferenceGraph,
     var coloredNodes = emptySet<INode>()
 
     var selectStack = emptyList<INode>()
-    var coloring = Allocation()
+    val coloring = Allocation()
     var moveList = emptyMap<Temp, Set<Pair<INode, INode>>>()
 
     var precolored = emptySet<INode>()
@@ -72,10 +72,10 @@ fun color(interference: InterferenceGraph,
     // precolorTable is a mapping from temp to register,
     // while initial is a list of uncolored nodes
     fun build() {
-        fun addMove(node: INode, mv: Pair<INode, INode>) {
+        fun addMove(node: INode, mv: Move) {
             val s = moveList[node.temp] ?: emptySet()
 
-            moveList += node.temp to (s + mv)
+            moveList += node.temp to (s + Pair(mv.src, mv.dst))
         }
 
         // initialize colored and precolored
@@ -103,7 +103,7 @@ fun color(interference: InterferenceGraph,
             if (dst !in precolored)
                 addMove(dst, m)
 
-            worklistMoves += m
+            worklistMoves += Pair(m.src, m.dst)
         }
     }
 
