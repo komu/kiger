@@ -8,16 +8,17 @@ import kiger.temp.Temp
 import kiger.tree.TreeExp.Temporary
 import kiger.tree.TreeStm.Move
 
-data class Allocation(val registerAssignments: Map<Temp, Register>) {
-    operator fun get(t: Temp): Register? = registerAssignments[t]
+class Allocation {
+
+    private val registerAssignments = mutableMapOf<Temp, Register>()
+
     fun name(t: Temp): String =
-        registerAssignments[t]?.name ?: t.name
+            registerAssignments[t]?.name ?: t.name
 
-    fun enter(t: Temp, r: Register): Allocation =
-        Allocation(registerAssignments + (t to r))
+    operator fun get(t: Temp): Register? = registerAssignments[t]
 
-    companion object {
-        fun empty() = Allocation(emptyMap())
+    operator fun set(t: Temp, r: Register) {
+        registerAssignments[t] = r
     }
 }
 

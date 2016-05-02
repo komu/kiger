@@ -97,29 +97,34 @@ fun simpleColor(interference: InterferenceGraph,
         return WorkLists(cons(min, si), sp - min)
     }
 
+    val coloring = Allocation()
+    for ((t, r) in precolored)
+        coloring[t] = r
+
     // assign color to all nodes on select stack. The parameter
     // colored is all nodes that are already assigned a color.
-    tailrec fun assignColors(stack: List<INode>, spills: List<Temp>, colored: Allocation): Pair<Allocation, List<Temp>> {
+    tailrec fun assignColors(stack: List<INode>, spills: List<Temp>): List<Temp> {
         if (stack.isEmpty())
-            return Pair(colored, spills)
+            return spills
 
         val (head, ns) = stack.splitFirst()
         val n = head.temp
 
         val availableColors = registers.toMutableSet()
         for (w in head.adj) {
-            val reg = colored[w.temp]
+            val reg = coloring[w.temp]
             if (reg != null)
                 availableColors -= reg
         }
 
         // if no available colors, add the node to spills
         return if (availableColors.isEmpty()) {
-            assignColors(ns, cons(n, spills), colored)
+            assignColors(ns, cons(n, spills))
         } else {
             // choose a color from available colors, and assign
             // it to node n. Also, mark this node as colored
-            assignColors(ns, spills, colored.enter(n, availableColors.first()))
+            coloring[n] = availableColors.first()
+            assignColors(ns, spills)
         }
     }
 
@@ -138,7 +143,8 @@ fun simpleColor(interference: InterferenceGraph,
     val wls = makeWorkLists(initial)
     val stack = iter(emptyList(), wls, degreeMap)
 
-    return assignColors(stack, emptyList(), Allocation(precolored))
+    val spills = assignColors(stack, emptyList())
+    return Pair(coloring, spills)
 }
 
 private data class WorkLists(val simplify: List<INode>, val spill: List<INode>)

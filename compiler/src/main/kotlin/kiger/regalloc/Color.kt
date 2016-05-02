@@ -59,7 +59,7 @@ fun color(interference: InterferenceGraph,
     var coloredNodes = emptySet<INode>()
 
     var selectStack = emptyList<INode>()
-    var colored = Allocation.empty()
+    var coloring = Allocation()
     var moveList = emptyMap<Temp, Set<Pair<INode, INode>>>()
 
     var precolored = emptySet<INode>()
@@ -82,7 +82,7 @@ fun color(interference: InterferenceGraph,
         for (n in graph) {
             val r = initAlloc[n.temp]
             if (r != null) {
-                colored = colored.enter(n.temp, r)
+                coloring[n.temp] = r
                 precolored += n
             } else {
                 initial += n
@@ -325,16 +325,14 @@ fun color(interference: InterferenceGraph,
 
     // assign color to all nodes on select stack. The parameter
     // colored is all nodes that are already assigned a color.
-    tailrec fun assignColors(): Allocation =
+    tailrec fun assignColors() {
         if (selectStack.isEmpty()) {
             for (n in coalescedNodes) {
                 val t = getAlias(n).temp
-                val c = colored[t]!!
+                val c = coloring[t]!!
 
-                colored = colored.enter(n.temp, c)
+                coloring[n.temp] = c
             }
-
-            colored
 
         } else {
             val (n, ns) = selectStack.splitFirst() // TODO: use proper stack
@@ -343,7 +341,7 @@ fun color(interference: InterferenceGraph,
             val availableColors = n.adj.fold(registers.toSet()) { cset, w ->
                 val w2 = getAlias(w)
                 if (w2 in coloredNodes || w2 in precolored) {
-                    val c = colored[w2.temp]!!
+                    val c = coloring[w2.temp]!!
                     if (c in cset)
                         cset - c
                     else
@@ -358,11 +356,12 @@ fun color(interference: InterferenceGraph,
             } else {
                 val r = pickColor(availableColors)
                 coloredNodes += n
-                colored = colored.enter(n.temp, r)
+                coloring[n.temp] = r
             }
 
             assignColors()
         }
+    }
 
     build()
     makeWorklist()
@@ -377,5 +376,7 @@ fun color(interference: InterferenceGraph,
         }
     }
 
-    return Pair(assignColors(), spilledNodes.map { it.temp })
+    assignColors()
+
+    return Pair(coloring, spilledNodes.map { it.temp })
 }
