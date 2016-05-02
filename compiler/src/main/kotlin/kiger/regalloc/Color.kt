@@ -40,7 +40,7 @@ type allocation = Frame.register TT.table
 fun color(interference: InterferenceGraph,
           initAlloc: Map<Temp, Register>,
           spillCost: (Temp) -> Double,
-          registers: List<Register>): Pair<Allocation, List<Temp>> {
+          registers: List<Register>): Pair<Coloring, List<Temp>> {
 
     val (graph, moves) = interference
 
@@ -48,19 +48,18 @@ fun color(interference: InterferenceGraph,
     var freezeWL = emptyList<INode>()
     var spillWL = emptyList<INode>()
 
-    var coalescedMoves = emptySet<Pair<INode, INode>>()
-    var constrainedMoves = emptySet<Pair<INode, INode>>()
-    var frozenMoves = emptySet<Pair<INode, INode>>()
-    var worklistMoves = emptySet<Pair<INode, INode>>()
-    var activeMoves = emptySet<Pair<INode, INode>>()
+    var coalescedMoves = emptySet<Move>()
+    var constrainedMoves = emptySet<Move>()
+    var frozenMoves = emptySet<Move>()
+    var worklistMoves = emptySet<Move>()
+    var activeMoves = emptySet<Move>()
 
     var spilledNodes = emptySet<INode>()
     var coalescedNodes = emptySet<INode>()
     var coloredNodes = emptySet<INode>()
 
     var selectStack = emptyList<INode>()
-    val coloring = Allocation()
-    var moveList = emptyMap<Temp, Set<Pair<INode, INode>>>()
+    val coloring = Coloring()
 
     var precolored = emptySet<INode>()
     var initial = emptyList<INode>()
@@ -72,12 +71,6 @@ fun color(interference: InterferenceGraph,
     // precolorTable is a mapping from temp to register,
     // while initial is a list of uncolored nodes
     fun build() {
-        fun addMove(node: INode, mv: Move) {
-            val s = moveList[node.temp] ?: emptySet()
-
-            moveList += node.temp to (s + Pair(mv.src, mv.dst))
-        }
-
         // initialize colored and precolored
         for (n in graph) {
             val r = initAlloc[n.temp]
@@ -90,25 +83,22 @@ fun color(interference: InterferenceGraph,
         }
 
         // associate each node with a empty move set
-        for (n in graph)
-            moveList += n.temp to emptySet()
-
         // initialize worklistMS and moveList
         for (m in moves) {
             val (src, dst) = m
 
             if (src !in precolored)
-                addMove(src, m)
+                src.moveList += m
 
             if (dst !in precolored)
-                addMove(dst, m)
+                dst.moveList += m
 
-            worklistMoves += Pair(m.src, m.dst)
+            worklistMoves += Move(m.src, m.dst)
         }
     }
 
     fun INode.nodeMoves() =
-            moveList[temp]!!.intersect(activeMoves + worklistMoves)
+            moveList.intersect(activeMoves + worklistMoves)
 
     fun INode.isMoveRelated() =
             nodeMoves().any()
@@ -116,8 +106,6 @@ fun color(interference: InterferenceGraph,
     // Create initial worklist
     fun makeWorklist() {
         for (n in initial) {
-            check(n.isInGraph)
-
             if (n.degree >= K)
                 spillWL += n
             else if (n.isMoveRelated())
@@ -139,8 +127,6 @@ fun color(interference: InterferenceGraph,
     }
 
     fun addWorklist(n: INode) {
-        check(n.isInGraph)
-
         if (n !in precolored && !n.isMoveRelated() && n.degree < K) {
             freezeWL -= n
             simplifyWL += n
@@ -155,7 +141,7 @@ fun color(interference: InterferenceGraph,
 
     // adjacent nodes
     fun adjacent(n: INode) =
-        n.adj.toSet() - (selectStack.toSet() + coalescedNodes)
+        n.adjList.toSet() - (selectStack.toSet() + coalescedNodes)
 
     // decrement degree for graph node n, return
     // modified degreeMap and a (possibly augmented) simplify worklist *)
@@ -163,11 +149,10 @@ fun color(interference: InterferenceGraph,
         // only decrement those non-precolored nodes - for
         // precolored nodes, we treat as if they have infinite
         // degree, since we shouldn't reassign them to different registers
-        check(n.isInGraph)
 
         val d = n.degree
         if (n.temp !in initAlloc) {
-            n.status = IStatus.InGraph(d - 1)
+            n.degree = d - 1
             if (d == K) {
                 enableMoves(adjacent(n) + n)
                 spillWL -= n
@@ -181,7 +166,7 @@ fun color(interference: InterferenceGraph,
 
     // whether v is in adj of u.
     // TODO: replace with more efficient adjSet
-    fun INode.inAdj(v: INode) = v in adj
+    fun INode.inAdj(v: INode) = v in adjList
 
     fun ok(t: INode, r: INode) =
         t.degree < K || t in precolored || t.inAdj(r)
@@ -196,17 +181,16 @@ fun color(interference: InterferenceGraph,
 
     // add new edge to graph
     fun addEdge(u: INode, v: INode) {
-        check(u.isInGraph && v.isInGraph)
 
         if (!u.inAdj(v) && u != v) {
             if (u !in precolored) {
-                u.adj += v
-                u.status = IStatus.InGraph(u.degree + 1)
+                u.adjList += v
+                u.degree += 1
             }
 
             if (v !in precolored) {
-                v.adj += u
-                v.status = IStatus.InGraph(v.degree + 1)
+                v.adjList += u
+                v.degree += 1
             }
         }
     }
@@ -220,13 +204,10 @@ fun color(interference: InterferenceGraph,
         coalescedNodes += v
         alias += (v.temp to u)
 
-        val mvU = moveList[u.temp]!!
-        val mvV = moveList[v.temp]!!
-
-        moveList += (u.temp to mvU + mvV)
+        u.moveList += v.moveList
         enableMoves(setOf(v))
 
-        for (t in v.adj) {
+        for (t in v.adjList) {
             addEdge(t, u)
             decrementDegree(t)
         }
@@ -239,8 +220,8 @@ fun color(interference: InterferenceGraph,
 
     fun coalesce() {
         val m = worklistMoves.first()
-        val x = getAlias(m.first)
-        val y = getAlias(m.second)
+        val x = getAlias(m.src)
+        val y = getAlias(m.dst)
         val (u, v) = if (y in precolored) Pair(y, x) else Pair(x, y)
         worklistMoves -= m
 
@@ -253,7 +234,7 @@ fun color(interference: InterferenceGraph,
             constrainedMoves += m
             addWorklist(u)
             addWorklist(v)
-        } else if ((u in precolored && allOk(u, v.adj)) || (u !in precolored && conservative(u.adj + v.adj))) {
+        } else if ((u in precolored && allOk(u, v.adjList)) || (u !in precolored && conservative(u.adjList + v.adjList))) {
             coalescedMoves += m
             combine(u, v)
             addWorklist(u)
@@ -295,7 +276,7 @@ fun color(interference: InterferenceGraph,
 
         selectStack = cons(n, selectStack)
 
-        for (r in n.adj)
+        for (r in n.adjList)
             decrementDegree(r)
     }
 
@@ -338,7 +319,7 @@ fun color(interference: InterferenceGraph,
             val (n, ns) = selectStack.splitFirst() // TODO: use proper stack
             selectStack = ns
 
-            val availableColors = n.adj.fold(registers.toSet()) { cset, w ->
+            val availableColors = n.adjList.fold(registers.toSet()) { cset, w ->
                 val w2 = getAlias(w)
                 if (w2 in coloredNodes || w2 in precolored) {
                     val c = coloring[w2.temp]!!

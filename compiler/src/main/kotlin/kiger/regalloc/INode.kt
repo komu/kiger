@@ -2,16 +2,7 @@ package kiger.regalloc
 
 import kiger.temp.Temp
 
-class INode(val temp: Temp, var adj: List<INode>, var status: IStatus) {
-
-    val adjList: List<INode>
-        get() = adj
-
-    val degree: Int
-        get() = status.degree
-
-    val isInGraph: Boolean
-        get() = status is IStatus.InGraph
+class INode(val temp: Temp, val adjList: MutableList<INode> = mutableListOf(), var degree: Int = 0) {
 
     /** Mapping from node to moves it's associated with */
     val moveList = mutableListOf<Move>()
@@ -20,7 +11,5 @@ class INode(val temp: Temp, var adj: List<INode>, var status: IStatus) {
     var alias: INode? = null
 
     override fun toString() =
-        "${temp.name.padEnd(10)}: ${adj.map { it.temp.name }.sorted().joinToString(", ")}"
-
-
+        "${temp.name.padEnd(10)}: ${adjList.map { it.temp.name }.sorted().joinToString(", ")}"
 }

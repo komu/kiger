@@ -25,7 +25,7 @@ fun FlowGraph.interferenceGraph(): InterferenceGraph {
 
     for (t in allUsesAndDefs)
         if (t !in tempMap)
-            tempMap[t] = INode(t, emptyList(), IStatus.InGraph(0))
+            tempMap[t] = INode(t)
 
     val allMoves = allMoves.map { Move(tempMap[it.src]!!, tempMap[it.dst]!!) }.toList()
 
@@ -35,21 +35,21 @@ fun FlowGraph.interferenceGraph(): InterferenceGraph {
         val src = tempMap[srcTemp]!!
         val dst = tempMap[dstTemp]!!
 
-        val d1 = (src.status as IStatus.InGraph).degree
-        val d2 = (dst.status as IStatus.InGraph).degree
+        val d1 = src.degree
+        val d2 = dst.degree
 
-        if (dst !in src.adj || src !in dst.adj) {
-            src.adj += dst
-            dst.adj += src
-            src.status = IStatus.InGraph(d1 + 1)
-            dst.status = IStatus.InGraph(d2 + 1)
+        if (dst !in src.adjList || src !in dst.adjList) {
+            src.adjList += dst
+            dst.adjList += src
+            src.degree = d1 + 1
+            dst.degree = d2 + 1
         }
     }
 
     return InterferenceGraph(tempMap.values.toList(), allMoves)
 }
 
-private fun FlowGraph.initializeLiveOuts() {
+fun FlowGraph.initializeLiveOuts() {
     val liveoutMap = buildLiveOutMap()
 
     // set liveout for each node

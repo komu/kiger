@@ -3,29 +3,14 @@ package kiger.regalloc
 import kiger.assem.Instr
 import kiger.codegen.MipsGen
 import kiger.frame.Frame
-import kiger.frame.Register
 import kiger.temp.Temp
 import kiger.tree.TreeExp.Temporary
 import kiger.tree.TreeStm.Move
 
-class Allocation {
+tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Coloring> {
 
-    private val registerAssignments = mutableMapOf<Temp, Register>()
-
-    fun name(t: Temp): String =
-            registerAssignments[t]?.name ?: t.name
-
-    operator fun get(t: Temp): Register? = registerAssignments[t]
-
-    operator fun set(t: Temp, r: Register) {
-        registerAssignments[t] = r
-    }
-}
-
-tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Allocation> {
-    val frameType = frame.type
     val graph = this.createFlowGraph()
-    val igraph = graph.interferenceGraph()
+    val interferenceGraph = graph.interferenceGraph()
 
 //    println("\n---\n")
 //    println(frame.name)
@@ -40,19 +25,20 @@ tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Alloc
 
     fun spillCost(temp: Temp): Double {
         val numDu = graph.nodes.sumBy { n -> n.def.containsToInt(temp) + n.use.containsToInt(temp) }
-        val node = igraph.nodes.find { it.temp == temp } ?: error("could not find node for $temp")
-        val interferes = node.adj.size
+        val node = interferenceGraph.nodes.find { it.temp == temp } ?: error("could not find node for $temp")
+        val interferes = node.adjList.size
 
         return numDu.toDouble() / interferes.toDouble()
     }
 
-    val (allocTable, spills) = color(igraph, frameType.tempMap, ::spillCost, frameType.registers)
+    val frameType = frame.type
+    val (colors, spills) = newColor(interferenceGraph, frameType.tempMap, ::spillCost, frameType.registers)
 
     fun Instr.isRedundant() =
-            this is Instr.Move && allocTable[dst] == allocTable[src]
+        this is Instr.Move && colors[dst] == colors[src]
 
     return if (spills.isEmpty())
-        Pair(filterNot { it.isRedundant() }, allocTable)
+        Pair(filterNot { it.isRedundant() }, colors)
     else
         rewrite(this, frame, spills).allocateRegisters(frame)
 }
