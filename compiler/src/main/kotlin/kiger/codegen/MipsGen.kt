@@ -81,13 +81,23 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
     }
 
     private fun munchStmtCall(exp: TreeExp.Call) {
-        emit(Oper("jalr `s0",
-            src = cons(munchExp(exp.func), munchArgs(0, exp.args)),
-            dst = callDefs))
+        if (exp.func is Name) {
+            emit(Oper("jal ${exp.func.label}",
+                    src = munchArgs(0, exp.args),
+                    dst = callDefs))
+        } else {
+            emit(Oper("jalr `s0",
+                    src = cons(munchExp(exp.func), munchArgs(0, exp.args)),
+                    dst = callDefs))
+        }
     }
 
     private fun munchExpCall(exp: TreeExp.Call): Temp {
-        emitResult { r -> Oper("jalr `s0", src = cons(munchExp(exp.func), munchArgs(0, exp.args)), dst = callDefs) }
+        if (exp.func is Name) {
+            emitResult { r -> Oper("jal ${exp.func.label}", src = munchArgs(0, exp.args), dst = callDefs) }
+        } else {
+            emitResult { r -> Oper("jalr `s0", src = cons(munchExp(exp.func), munchArgs(0, exp.args)), dst = callDefs) }
+        }
 
         return frameType.RV
     }
