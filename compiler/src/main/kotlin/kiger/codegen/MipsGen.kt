@@ -52,12 +52,6 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
         return t
     }
 
-    private inline fun result(gen: (Temp) -> Unit): Temp {
-        val t = Temp()
-        gen(t)
-        return t
-    }
-
     fun munchStm(stm: TreeStm): Unit {
         when (stm) {
             is TreeStm.Seq -> {
@@ -87,35 +81,13 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
     }
 
     private fun munchStmtCall(exp: TreeExp.Call) {
-        val pairs = frameType.calleeSaves.map { r -> Pair(Temp(), r) }
-
-        fun fetch(a: Temp, r: Temp) = Move(Temporary(r), Temporary(a))
-        fun store(a: Temp, r: Temp) = Move(Temporary(a), Temporary(r))
-
-        for ((a, r) in pairs)
-            munchStm(store(a, r))
-
         emit(Oper("jalr `s0",
             src = cons(munchExp(exp.func), munchArgs(0, exp.args)),
             dst = callDefs))
-
-        for ((a, r) in pairs.asReversed())
-            munchStm(fetch(a, r))
     }
 
     private fun munchExpCall(exp: TreeExp.Call): Temp {
-        val pairs = frameType.calleeSaves.map { r -> Pair(Temp(), r) }
-
-        fun fetch(a: Temp, r: Temp) = Move(Temporary(r), Temporary(a))
-        fun store(a: Temp, r: Temp) = Move(Temporary(a), Temporary(r))
-
-        for ((a, r) in pairs)
-            munchStm(store(a, r))
-
         emitResult { r -> Oper("jalr `s0", src = cons(munchExp(exp.func), munchArgs(0, exp.args)), dst = callDefs) }
-
-        for ((a, r) in pairs.asReversed())
-            munchStm(fetch(a, r))
 
         return frameType.RV
     }
