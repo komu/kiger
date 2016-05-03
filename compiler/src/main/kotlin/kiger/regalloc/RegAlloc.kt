@@ -22,7 +22,7 @@ tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Color
     }
 
     val frameType = frame.type
-    val (colors, spills) = newColor(flowGraph, interferenceGraph, frameType.tempMap, ::spillCost, frameType.registers)
+    val (colors, spills) = color(flowGraph, interferenceGraph, frameType.tempMap, ::spillCost, frameType.registers)
 
     fun Instr.isRedundant() =
         this is Instr.Move && colors[dst] == colors[src]

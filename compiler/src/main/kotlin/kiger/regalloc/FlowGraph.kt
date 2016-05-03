@@ -1,5 +1,7 @@
 package kiger.regalloc
 
+import kiger.assem.Instr
+import kiger.temp.Label
 import kiger.temp.Temp
 
 class FlowGraph(val nodes: List<Node>) {
@@ -12,21 +14,16 @@ class FlowGraph(val nodes: List<Node>) {
         var prev: List<Node> = emptyList()
         var liveOut: Set<Temp> = emptySet()
 
-        fun findEdges(): Sequence<TempEdge> =
-            def.asSequence().flatMap { t -> liveOut.asSequence().filter { it != t }.map { TempEdge(t, it) } }
-
         override fun toString() = format { it.toString() }
 
-        fun format(tempFormat: (Temp) -> String): String {
-            val sb = StringBuilder()
-            sb.appendln("n$id")
-            sb.appendln("  def: ${def.map(tempFormat)}")
-            sb.appendln("  use: ${use.map(tempFormat)}")
-            sb.appendln("  succ: ${succ.joinToString(", ") { it.id.toString() }}")
-            sb.appendln("  prev: ${prev.joinToString(", ") { it.id.toString() }}")
-            sb.appendln("  liveout: $liveOut")
-            return sb.toString()
-        }
+        fun format(tempFormat: (Temp) -> String): String =
+            listOf(
+                "n$id",
+                "  def: ${def.map(tempFormat)}",
+                "  use: ${use.map(tempFormat)}",
+                "  succ: ${succ.joinToString(", ") { it.id.toString() }}",
+                "  prev: ${prev.joinToString(", ") { it.id.toString() }}",
+                "  liveout: $liveOut\n").joinToString("\n")
     }
 
     fun format(tempFormat: (Temp) -> String): String =
@@ -35,4 +32,65 @@ class FlowGraph(val nodes: List<Node>) {
     override fun toString() = format { it.toString() }
 }
 
-data class TempEdge(val src: Temp, val dst: Temp)
+/**
+ * Create a data flow graph from list of instructions.
+ *
+ * Algorithm:
+ * first pass: make node for each instr,
+ * second pass: for each OPER instr, search in the instr list
+ *  for a label that it jumps to, and make a new edge from the
+ *  node of this instr to the node of the label.
+ * third pass: connect all the nodes in sequential order (which
+ *  are not connected by explicit jump in the original instr)
+ *
+ * This is probably too inefficient, as it requires O(n^3) time.
+ * But, I'll leave improvement for future.
+ */
+fun List<Instr>.createFlowGraph(): FlowGraph {
+    // we have to maintain the order of node-list wrt instrs
+    val nodeList = mapIndexed { i, instr -> instr.makeNode(i) }
+
+    val compList = this.zip(nodeList)
+
+    for ((instr, node) in compList)
+        compList.doJump(instr, node)
+
+    compList.connect()
+
+    return FlowGraph(nodeList)
+}
+
+private fun Instr.makeNode(id: Int): FlowGraph.Node = when (this) {
+    is Instr.Oper   -> FlowGraph.Node(id, dst.toSet(), src.toSet(), false)
+    is Instr.Lbl    -> FlowGraph.Node(id, emptySet(), emptySet(), false)
+    is Instr.Move   -> FlowGraph.Node(id, setOf(dst), setOf(src), true)
+}
+
+private fun makeEdge(from: FlowGraph.Node, to: FlowGraph.Node) {
+    if (to !in from.succ) {
+        from.succ += to
+        to.prev += from
+    }
+}
+
+// only connect x with y if x doesn't jump
+private fun List<Pair<Instr, FlowGraph.Node>>.connect() {
+
+    for (i in 0..lastIndex-1) {
+        val (op, node) = this[i]
+        if (!op.isJump)
+            makeEdge(node, this[i+1].second)
+    }
+}
+
+private fun List<Pair<Instr, FlowGraph.Node>>.findNodeByLabel(label: Label): FlowGraph.Node =
+        find {
+            var instr = it.first
+            instr is Instr.Lbl && instr.label == label
+        }!!.second
+
+private fun List<Pair<Instr, FlowGraph.Node>>.doJump(instr: Instr, node: FlowGraph.Node) {
+    if (instr is Instr.Oper && instr.jump != null)
+        for (label in instr.jump)
+            makeEdge(node, findNodeByLabel(label))
+}

@@ -1,14 +1,16 @@
 package kiger.regalloc
 
-import kiger.regalloc.InterferenceGraph.INode
 import kiger.temp.Temp
 
 data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
 
-    private val adjSet = AdjSet()
-    fun addEdge(u: INode, v: INode) = adjSet.addEdge(u, v)
+    private val adjSet = mutableSetOf<Pair<INode,INode>>() // TODO: use bitset
 
-    fun contains(u: INode, v: INode) = adjSet.contains(u, v)
+    fun addEdge(u: INode, v: INode) {
+        adjSet += Pair(u, v)
+    }
+
+    fun contains(u: INode, v: INode) = Pair(u, v) in adjSet
 
     override fun toString() = nodes.sortedBy { it.temp.name }.joinToString("\n")
 
@@ -36,7 +38,10 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
         }
     }
 
-    class INode(val temp: Temp, val adjList: MutableSet<INode> = mutableSetOf(), var degree: Int = 0) {
+    class INode(val temp: Temp) {
+
+        val adjList = mutableSetOf<INode>()
+        var degree = 0
 
         /** Mapping from node to moves it's associated with */
         val moveList = mutableListOf<Move>()
@@ -47,18 +52,10 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
         override fun toString() =
                 "${temp.name.padEnd(10)}: ${adjList.map { it.temp.name }.sorted().joinToString(", ")}"
     }
-}
 
-private class AdjSet : Iterable<Pair<INode, INode>> {
-
-    private val set = mutableSetOf<Pair<INode,INode>>() // TODO: use bitset
-
-    fun contains(u: INode, v: INode) =
-            Pair(u, v) in set
-
-    fun addEdge(u: INode, v: INode) {
-        set += Pair(u, v)
+    class Move(val src: INode, val dst: INode) {
+        override fun toString() = "${src.temp} -> ${dst.temp}"
+        operator fun component1() = src
+        operator fun component2() = dst
     }
-
-    override fun iterator() = set.iterator()
 }

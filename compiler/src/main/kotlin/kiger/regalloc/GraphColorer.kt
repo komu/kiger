@@ -2,15 +2,16 @@ package kiger.regalloc
 
 import kiger.frame.Register
 import kiger.regalloc.InterferenceGraph.INode
+import kiger.regalloc.InterferenceGraph.Move
 import kiger.temp.Temp
 import kiger.utils.removeAny
 import java.util.*
 
-fun newColor(flowGraph: FlowGraph,
-             interferenceGraph: InterferenceGraph,
-             preallocatedColors: Map<Temp, Register>,
-             spillCost: (Temp) -> Double,
-             registers: Collection<Register>): Pair<Coloring, List<Temp>> {
+fun color(flowGraph: FlowGraph,
+          interferenceGraph: InterferenceGraph,
+          preallocatedColors: Map<Temp, Register>,
+          spillCost: (Temp) -> Double,
+          registers: Collection<Register>): Pair<Coloring, List<Temp>> {
 
     val colorer = GraphColorer(flowGraph, interferenceGraph, spillCost, registers)
 
@@ -439,10 +440,6 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
 
     val INode.adjacent: Iterable<INode>
         get() = adjList - (selectStack + coalescedNodes) // TODO: optimize
-}
-
-data class Move(val src: INode, val dst: INode) {
-    override fun toString() = "${src.temp} -> ${dst.temp}"
 }
 
 private class Worklist : Iterable<INode> {

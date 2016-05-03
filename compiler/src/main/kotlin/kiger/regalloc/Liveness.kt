@@ -1,6 +1,7 @@
 package kiger.regalloc
 
 import kiger.regalloc.InterferenceGraph.INode
+import kiger.regalloc.InterferenceGraph.Move
 import kiger.temp.Temp
 
 /**
@@ -9,27 +10,17 @@ import kiger.temp.Temp
 fun FlowGraph.interferenceGraph(): InterferenceGraph {
     initializeLiveOuts()
 
-    // now for each node n in the flow graph, suppose
-    // there is a newly define temp d, and temporaries
-    // t1, ..., tn are in liveout set of node n. Then,
-    // we add edge (d,t1), ..., (d,tn) to the igraph.
-    // Mappings between temps and igraph nodes are also recorded.
-    // The rules for adding interference edges are:
-    // 1. At any non-move instruction that defines a variable a, where the
-    //   live-out variables are b1,...bj, add interference edges
-    //   (a,b1),...,(a,bj).
-    // 2. At a move instruction a <- c, where variables b1,...,bj are live-out,
-    //   add interference edges (a,b1),...,(a,bj) for any bi that is not
-    //   the same as c. *)
-    val tempMap = mutableMapOf<Temp, INode>()
+    val nodeByTemp = mutableMapOf<Temp, INode>()
 
-    for (t in nodes.asSequence().flatMap { it.def.asSequence() + it.use.asSequence() })
-        if (t !in tempMap)
-            tempMap[t] = INode(t)
+    val allDefs = nodes.asSequence().flatMap { it.def.asSequence() + it.use.asSequence() }
 
-    val allMoves = nodes.asSequence().filter { it.isMove }.map { Move(tempMap[it.use.single()]!!, tempMap[it.def.single()]!!) }.toList()
+    for (t in allDefs)
+        if (t !in nodeByTemp)
+            nodeByTemp[t] = INode(t)
 
-    return InterferenceGraph(tempMap.values.toList(), allMoves)
+    val allMoves = nodes.asSequence().filter { it.isMove }.map { Move(nodeByTemp[it.use.single()]!!, nodeByTemp[it.def.single()]!!) }.toList()
+
+    return InterferenceGraph(nodeByTemp.values.toList(), allMoves)
 }
 
 fun FlowGraph.initializeLiveOuts() {
