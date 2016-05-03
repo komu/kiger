@@ -32,9 +32,9 @@ fun List<Instr>.createFlowGraph(): FlowGraph {
 }
 
 private fun Instr.makeNode(id: Int): FlowGraph.Node = when (this) {
-    is Instr.Oper   -> FlowGraph.Node(id, dst, src, false)
-    is Instr.Lbl    -> FlowGraph.Node(id, emptyList(), emptyList(), false)
-    is Instr.Move   -> FlowGraph.Node(id, listOf(dst), listOf(src), true)
+    is Instr.Oper   -> FlowGraph.Node(id, dst.toSet(), src.toSet(), false)
+    is Instr.Lbl    -> FlowGraph.Node(id, emptySet(), emptySet(), false)
+    is Instr.Move   -> FlowGraph.Node(id, setOf(dst), setOf(src), true)
 }
 
 private fun makeEdge(from: FlowGraph.Node, to: FlowGraph.Node) {

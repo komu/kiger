@@ -2,7 +2,7 @@ package kiger.regalloc
 
 import kiger.temp.Temp
 
-class INode(val temp: Temp, val adjList: MutableList<INode> = mutableListOf(), var degree: Int = 0) {
+class INode(val temp: Temp, val adjList: MutableSet<INode> = mutableSetOf(), var degree: Int = 0) {
 
     /** Mapping from node to moves it's associated with */
     val moveList = mutableListOf<Move>()

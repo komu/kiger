@@ -20,31 +20,25 @@ fun FlowGraph.interferenceGraph(): InterferenceGraph {
     // 2. At a move instruction a <- c, where variables b1,...,bj are live-out,
     //   add interference edges (a,b1),...,(a,bj) for any bi that is not
     //   the same as c. *)
-
     val tempMap = mutableMapOf<Temp, INode>()
 
-    for (t in allUsesAndDefs)
+    for (t in nodes.asSequence().flatMap { it.def.asSequence() + it.use.asSequence() })
         if (t !in tempMap)
             tempMap[t] = INode(t)
 
-    val allMoves = allMoves.map { Move(tempMap[it.src]!!, tempMap[it.dst]!!) }.toList()
+    val allEdges = nodes.asSequence().flatMap { it.findEdges() }.map { Pair(tempMap[it.src]!!, tempMap[it.dst]!!)}
+    val allMoves = nodes.asSequence().filter { it.isMove }.map { Move(tempMap[it.use.single()]!!, tempMap[it.def.single()]!!) }.toList()
 
-    for ((srcTemp, dstTemp) in allEdges) {
-        // don't add duplicate edges
-
-        val src = tempMap[srcTemp]!!
-        val dst = tempMap[dstTemp]!!
-
-        val d1 = src.degree
-        val d2 = dst.degree
-
-        if (dst !in src.adjList || src !in dst.adjList) {
-            src.adjList += dst
-            dst.adjList += src
-            src.degree = d1 + 1
-            dst.degree = d2 + 1
-        }
-    }
+//    for ((src, dst) in allEdges) {
+//        // don't add duplicate edges
+//
+//        if (dst !in src.adjList || src !in dst.adjList) {
+//            src.adjList += dst
+//            dst.adjList += src
+//            src.degree += 1
+//            dst.degree += 1
+//        }
+//    }
 
     return InterferenceGraph(tempMap.values.toList(), allMoves)
 }
@@ -56,7 +50,7 @@ fun FlowGraph.initializeLiveOuts() {
     for (node in nodes) {
         val s = liveoutMap[node.id]
         if (s != null)
-            node.liveOut = s.toList()
+            node.liveOut = s
         else
             error("liveout map is not one-to-one")
     }
@@ -69,24 +63,24 @@ private fun FlowGraph.buildLiveOutMap(): Map<Int, Set<Temp>> {
     val liveinMap = mutableMapOf<Int, Set<Temp>>()
     val liveoutMap = mutableMapOf<Int, Set<Temp>>()
 
-    for (node in nodes) {
-        liveinMap[node.id] = emptySet()
-        liveoutMap[node.id] = emptySet()
+    for (n in nodes) {
+        liveinMap[n.id] = emptySet()
+        liveoutMap[n.id] = emptySet()
     }
 
     do {
         var changed = false
 
-        for (node in nodes) {
-            val oldIn = liveinMap[node.id]!!
-            val oldOut = liveoutMap[node.id]!!
-            val newIn = node.use.toSet() + (oldOut - node.def)
-            val newOut = node.computeOut(liveinMap)
+        for (n in nodes.asReversed()) {
+            val oldIn = liveinMap[n.id]!!
+            val oldOut = liveoutMap[n.id]!!
+            val newIn = n.use + (oldOut - n.def)
+            val newOut = n.computeOut(liveinMap)
 
             if (newIn != oldIn || newOut != oldOut) {
                 changed = true
-                liveinMap[node.id] = newIn
-                liveoutMap[node.id] = newOut
+                liveinMap[n.id] = newIn
+                liveoutMap[n.id] = newOut
             }
         }
     } while (changed)

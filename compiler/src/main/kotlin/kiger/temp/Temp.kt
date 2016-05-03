@@ -4,7 +4,7 @@ private var tempIdSeq = 0;
 
 class Temp(val name: String) : Comparable<Temp> {
 
-    constructor(): this("\$tmp" + ++tempIdSeq)
+    constructor(): this("t" + ++tempIdSeq)
 
     override fun toString() = name
     override fun equals(other: Any?) = other is Temp && name == other.name

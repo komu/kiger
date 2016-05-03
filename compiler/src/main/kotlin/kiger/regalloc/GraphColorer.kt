@@ -4,11 +4,15 @@ import kiger.frame.Register
 import kiger.temp.Temp
 import java.util.*
 
-fun newColor(interferenceGraph: InterferenceGraph,
+fun newColor(flowGraph: FlowGraph,
+             interferenceGraph: InterferenceGraph,
              preallocatedColors: Map<Temp, Register>,
              spillCost: (Temp) -> Double,
-             registers: List<Register>): Pair<Coloring, List<Temp>> {
-    val colorer = GraphColorer(interferenceGraph, preallocatedColors, spillCost, registers)
+             registers: Collection<Register>): Pair<Coloring, List<Temp>> {
+
+    val colorer = GraphColorer(flowGraph, interferenceGraph, spillCost, registers)
+
+    colorer.build(preallocatedColors)
     colorer.makeWorklist()
     colorer.mainLoop()
     colorer.assignColors()
@@ -19,13 +23,10 @@ fun newColor(interferenceGraph: InterferenceGraph,
 /**
  * Graph coloring as described in pages 241-249 of Modern Compiler Implementation in ML.
  */
-private class GraphColorer(interferenceGraph: InterferenceGraph,
-                           preallocatedColors: Map<Temp, Register>,
-                           val spillCost: (Temp) -> Double,
-                           val registers: List<Register>) {
+class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: InterferenceGraph, val spillCost: (Temp) -> Double, val registers: Collection<Register>) {
 
     /** The number of colors available */
-    val K = registers.size
+    private val K = registers.size
 
     //
     // Node work-lists, sets and stacks.
@@ -35,34 +36,34 @@ private class GraphColorer(interferenceGraph: InterferenceGraph,
     //
 
     /** Machine registers, preassigned a color */
-    val precolored = mutableSetOf<INode>()
+    private val precolored = mutableSetOf<INode>()
 
     /** Temporary registers, not [precolored] and not yet processed */
-    val initial = mutableSetOf<INode>()
+    private val initial = mutableSetOf<INode>()
 
     /** List of low-degree non-move-related nodes */
-    val simplifyWorklist = Worklist()
+    private val simplifyWorklist = Worklist()
 
     /** Low-degree move-related nodes */
-    val freezeWorklist = Worklist()
+    private val freezeWorklist = Worklist()
 
     /** High-degree nodes */
-    val spillWorklist = Worklist()
+    private val spillWorklist = Worklist()
 
     /** Nodes marked for spilling during this round; initially empty */
-    val spilledNodes = mutableSetOf<INode>()
+    private val spilledNodes = mutableSetOf<INode>()
 
     /**
      * Registers that have been coalesced; when `u <- v` is coalesced,
      * `v` is added to this set and `u` is put back on some work-list (or vice versa).
      */
-    val coalescedNodes = mutableSetOf<INode>()
+    private val coalescedNodes = mutableSetOf<INode>()
 
     /** Nodes successfully colored */
-    val coloredNodes = mutableSetOf<INode>()
+    private val coloredNodes = mutableSetOf<INode>()
 
     /** Stack containing temporaries removed from the graph */
-    val selectStack = NodeStack()
+    private val selectStack = NodeStack()
 
     //
     // Move sets.
@@ -72,26 +73,29 @@ private class GraphColorer(interferenceGraph: InterferenceGraph,
     //
 
     /** Moves that have been coalesced */
-    val coalescedMoves = MoveSet()
+    private val coalescedMoves = MoveSet()
 
     /** Moves whose source and target interface */
-    val constrainedMoves = MoveSet()
+    private val constrainedMoves = MoveSet()
 
     /** Move that will no longer be considered for coalescing */
-    val frozenMoves = MoveSet()
+    private val frozenMoves = MoveSet()
 
     /** Moves enabled for possible coalescing */
-    val worklistMoves = MoveSet()
+    private val worklistMoves = MoveSet()
 
     /** Moves not yet ready for coalescing */
-    val activeMoves = MoveSet()
+    private val activeMoves = MoveSet()
 
     /** Mapping from nodes to their selected colors */
-    val coloring = Coloring()
+    private val coloring = Coloring()
 
-    val adjSet = AdjSet()
-
-    init {
+    /**
+     * Construct the interference graph and categorize each node as either move-related
+     * or non-move-related. A move-related nove is one that is either the source or
+     * destination of a move-instruction.
+     */
+    fun build(preallocatedColors: Map<Temp, Register>) {
         // initialize colored and precolored
         for (node in interferenceGraph.nodes) {
             val color = preallocatedColors[node.temp]
@@ -104,26 +108,52 @@ private class GraphColorer(interferenceGraph: InterferenceGraph,
         }
 
         for (m in interferenceGraph.moves) {
-            if (m.src !in precolored)
+            // TODO: why are the move-lists conditions in original code?
+//            if (m.src !in precolored)
                 m.src.moveList.add(m)
 
-            if (m.dst !in precolored)
+//            if (m.dst !in precolored)
                 m.dst.moveList.add(m)
 
             worklistMoves += m
         }
 
-        for (p1 in precolored)
-            for (p2 in precolored)
-                addEdge(p1, p2)
+        // TODO: where is this coming from if not here?
+        for (v in precolored) {
+            v.degree = K
+            for (u in precolored)
+                addEdge(v, u)
+        }
+
+        interferenceGraph.dump(precolored)
+        for (i in flowGraph.nodes) {
+            for (d in i.def) {
+                for (l in i.liveOut) {
+                    addEdge(interferenceGraph.nodes.find { it.temp == l }!!, interferenceGraph.nodes.find { it.temp == d }!!)
+                }
+            }
+        }
+        // TODO: fix this code
+//        for (u in interferenceGraph.nodes)
+//            for (v in u.adjList)
+//                if (v != u) {
+//                    interferenceGraph.addEdge(u, v)
+//                }
+
+        println("\n\n---\n\n")
+//        println(interferenceGraph)
+        interferenceGraph.dump(precolored)
+//        interferenceGraph.check()
+
 
         checkInvariants()
+
     }
 
     private fun addEdge(u: INode, v: INode) {
-        if (!adjSet.contains(u, v) && u != v) {
-            adjSet.addEdge(v, u)
-            adjSet.addEdge(u, v)
+        if (!interferenceGraph.contains(u, v) && u != v) {
+            interferenceGraph.addEdge(v, u)
+            interferenceGraph.addEdge(u, v)
 
             if (u !in precolored) {
                 u.adjList += v
@@ -157,10 +187,10 @@ private class GraphColorer(interferenceGraph: InterferenceGraph,
         checkInvariants()
         while (true) {
             when {
-                simplifyWorklist.any()  -> simplify()
-                worklistMoves.any()     -> coalesce()
-                freezeWorklist.any()    -> freeze()
-                spillWorklist.any()     -> selectSpill()
+                simplifyWorklist.any()  -> { println("simplify"); simplify() }
+                worklistMoves.any()     -> { println("coal"); coalesce() }
+                freezeWorklist.any()    -> { println("freeze"); freeze() }
+                spillWorklist.any()     -> { println("spill"); selectSpill() }
                 else                    -> return
             }
 
@@ -193,8 +223,11 @@ private class GraphColorer(interferenceGraph: InterferenceGraph,
     fun result(): Pair<Coloring, List<Temp>> =
         Pair(coloring, spilledNodes.map { it.temp })
 
+    /**
+     * One at a time, remove non-move-related nodes of low (< K) degree from the graph.
+     */
     private fun simplify() {
-        val n = simplifyWorklist.removeFirst()
+        val n = simplifyWorklist.removeAny()
 
         selectStack.push(n)
         for (m in n.adjacent)
@@ -202,6 +235,11 @@ private class GraphColorer(interferenceGraph: InterferenceGraph,
     }
 
     private fun decrementDegree(m: INode) {
+        // only decrement those non-precolored nodes - for
+        // precolored nodes, we treat as if they have infinite
+        // degree, since we shouldn't reassign them to different registers
+        if (m in precolored) return // TODO: not in book
+
         val d = m.degree
         m.degree = d - 1
 
@@ -224,6 +262,15 @@ private class GraphColorer(interferenceGraph: InterferenceGraph,
                 }
     }
 
+    /**
+     * Perform conservative coalescing on the reduced graph obtained in the simplification
+     * phase. Since the degrees of many nodes have been reduced by [simplify], the conservative
+     * strategy is likely to find many more moves to coalesce than it would have in the initial
+     * inference graph. After two nodes have been coalesced (and the move instruction deleted),
+     * if the resulting node is no longer move-related it will be available for the next round
+     * of simplification. [simplify] and [coalesce] are repeated until only significant-degree
+     * or move-related nodes remain.
+     */
     private fun coalesce() {
         val m = worklistMoves.removeAny()
         val x = getAlias(m.src)
@@ -244,7 +291,7 @@ private class GraphColorer(interferenceGraph: InterferenceGraph,
                 coalescedMoves += m
                 addWorklist(u)
             }
-            v in precolored || adjSet.contains(u, v) -> {
+            v in precolored || interferenceGraph.contains(u, v) -> {
                 constrainedMoves += m
                 addWorklist(u)
                 addWorklist(v)
@@ -267,7 +314,7 @@ private class GraphColorer(interferenceGraph: InterferenceGraph,
     }
 
     private fun ok(t: INode, r: INode): Boolean =
-        t.degree < K || t in precolored || adjSet.contains(t, r)
+        t.degree < K || t in precolored || interferenceGraph.contains(t, r)
 
     private fun conservative(nodes: Iterable<INode>): Boolean =
         nodes.count { it.degree >= K } < K
@@ -307,8 +354,15 @@ private class GraphColorer(interferenceGraph: InterferenceGraph,
         freezeMoves(m)
     }
 
+    /**
+     * If neither [simplify] or [coalesce] applies, we look for a move-related node of low degree.
+     * We freeze the moves ([freezeMoves]) in which this node is involved: that is, we give up
+     * hope of coalescing those moves. This causes the node (and perhaps other nodes related to
+     * the frozen moves) to be considered non-move-related, which should enable more simplification.
+     * Now [simplify] and [coalesce] are resumed.
+     */
     private fun freeze() {
-        val u = freezeWorklist.removeFirst()
+        val u = freezeWorklist.removeAny()
         simplifyWorklist += u
         freezeMoves(u)
     }
@@ -332,25 +386,48 @@ private class GraphColorer(interferenceGraph: InterferenceGraph,
      * After initialization the following invariants always hold.
      */
     private fun checkInvariants() {
+        interferenceGraph.check(precolored)
+        checkWorkListsAreDistinct()
         checkDegreeInvariant()
         checkSimplifyWorklistInvariant()
         checkFreezeWorklistInvariant()
         checkSpillWorklistInvariant()
     }
 
+    private fun checkWorkListsAreDistinct() {
+        val lists = listOf("precolored" to precolored, "initial" to initial, "simplify" to simplifyWorklist, "freeze" to freezeWorklist, "spill" to spillWorklist, "spilled" to spilledNodes, "coalesced" to coalescedNodes, "colored" to coloredNodes, "selectStack" to selectStack)
+
+        // check that each node is in single list
+        for (n in interferenceGraph.nodes) {
+            val ls = lists.filter { n in it.second }.map { it.first }
+            check(ls.size == 1) { "node $n was in $${ls.size} lists: $ls"}
+        }
+
+        // .. and all nodes are in some list
+        val totalSize = lists.sumBy { it.second.count() }
+        check(totalSize == interferenceGraph.nodes.size) { "expected ${interferenceGraph.nodes.size} nodes, but got $totalSize"}
+    }
+
     private fun checkDegreeInvariant() {
-        // TODO
         val lists = precolored + simplifyWorklist + freezeWorklist + spillWorklist
 
-        for (n in simplifyWorklist + freezeWorklist + spillWorklist) {
+        fun checkInvariant(n: INode, listName: String) {
             val expected = n.adjList.intersect(lists).size
-            check(n.degree == expected) { "degree ${n.degree} != $expected" }
+            check(n.degree == expected) { "degree for node ${n.temp} in $listName unexpected: ${n.degree} != $expected" }
         }
+
+        for (n in simplifyWorklist)
+            checkInvariant(n, "simplifyWorklist")
+
+        for (n in freezeWorklist)
+            checkInvariant(n, "freezeWorklist")
+
+        for (n in spillWorklist)
+            checkInvariant(n, "spillWorklist")
     }
 
     private fun checkSimplifyWorklistInvariant() {
         for (n in simplifyWorklist) {
-            // TODO: this is violated for some reason
             check(n.degree < K) { "simplifyWorklist has node ${n.temp} with invalid degree: ${n.degree} >= $K" }
             check(n.moveList.intersect(activeMoves + worklistMoves).isEmpty())
         }
@@ -377,18 +454,19 @@ private class GraphColorer(interferenceGraph: InterferenceGraph,
             coloring[temp] = v
         }
 
-    val INode.adjacent: List<INode>
+    val INode.adjacent: Iterable<INode>
         get() = adjList - (selectStack + coalescedNodes) // TODO: optimize
 }
 
-data class Move(val src: INode, val dst: INode)
+data class Move(val src: INode, val dst: INode) {
+    override fun toString() = "${src.temp} -> ${dst.temp}"
+}
 
-private class Worklist(val predicate: (INode) -> Boolean = { true }) : Iterable<INode> {
+private class Worklist : Iterable<INode> {
 
-    private val nodes = ArrayDeque<INode>()
+    private val nodes = mutableSetOf<INode>()
 
     operator fun plusAssign(node: INode) {
-        check(predicate(node)) { "node did not satisfy predicate" }
         nodes += node
     }
 
@@ -398,7 +476,10 @@ private class Worklist(val predicate: (INode) -> Boolean = { true }) : Iterable<
 
     override fun iterator() = nodes.iterator()
 
-    fun removeFirst(): INode = nodes.removeFirst()
+    fun removeAny(): INode = nodes.removeAny()
+
+    val size: Int
+        get() = nodes.size
 }
 
 private class NodeStack : Iterable<INode> {
@@ -415,6 +496,9 @@ private class NodeStack : Iterable<INode> {
     override fun iterator(): Iterator<INode> = stack.iterator()
 
     fun isNotEmpty(): Boolean = stack.isNotEmpty()
+
+    val size: Int
+        get() = stack.size
 }
 
 // Note that the book says:
@@ -447,14 +531,3 @@ private fun <T> MutableIterable<T>.removeAny(): T {
     return move
 }
 
-private class AdjSet {
-
-    private val set = mutableSetOf<Pair<INode,INode>>() // TODO: use bitset
-
-    fun contains(u: INode, v: INode) =
-        Pair(u, v) in set
-
-    fun addEdge(u: INode, v: INode) {
-        set += Pair(u, v)
-    }
-}

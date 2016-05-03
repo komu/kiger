@@ -7,7 +7,6 @@ import kiger.translate.seq
 import kiger.tree.BinaryOp
 import kiger.tree.TreeExp
 import kiger.tree.TreeStm
-import kiger.utils.cons
 
 class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) : Frame(name) {
 
@@ -39,18 +38,25 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
             FrameAccess.InReg(Temp())
 
     override fun procEntryExit1(body: TreeStm): TreeStm {
-        val pairs = cons(RA, calleeSaves).map { Pair(allocLocal(false), it) }
-        val saves = pairs.map { TreeStm.Move(exp(it.first, TreeExp.Temporary(FP)), TreeExp.Temporary(it.second)) }
-        val restores = pairs.asReversed().map { TreeStm.Move(TreeExp.Temporary(it.second), exp(it.first, TreeExp.Temporary(FP))) }
+        val pairs = (calleeSaves + RA).map { Pair(Temp(), it) }
+
+        val saves = pairs.map { TreeStm.Move(TreeExp.Temporary(it.first), TreeExp.Temporary(it.second)) }
+        val restores = pairs.asReversed().map { TreeStm.Move(TreeExp.Temporary(it.second), TreeExp.Temporary(it.first)) }
 
         return seq(shiftInstructions + saves + body + restores)
     }
 
-    override fun procEntryExit2(body: List<Instr>): List<Instr> =
-        body + Instr.Oper("", src=listOf(ZERO, RA, SP) + calleeSaves, jump = emptyList())
+    override fun procEntryExit2(body: List<Instr>): List<Instr> {
+        val enter = Instr.Oper("", src = listOf(ZERO, RA, SP, FP) + calleeSaves + argumentRegisters, jump = emptyList())
+        val exit = Instr.Oper("", src = listOf(ZERO, RA, SP, FP, RV) + calleeSaves, jump = emptyList())
+        return listOf(enter) + body + exit
+    }
 
     override fun procEntryExit3(body: List<Instr>): Triple<String, List<Instr>, String> {
-        val offset = (locals + argumentRegisters.size) * wordSize
+        val offset = locals + wordSize
+
+        // TODO: optimize movement if offset = 0
+        // TODO: use virtual frame pointer
 
         val prologue = listOf(
                 "$name:",
@@ -72,7 +78,7 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
 
         // expression evaluation and results of a functioin
         val v0 = Temp("\$v0")
-        val v1 = Temp("\$v1")
+//        val v1 = Temp("\$v1")
 
         // arguments
         val a0 = Temp("\$a0")
@@ -89,8 +95,8 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         val t5 = Temp("\$t5")
         val t6 = Temp("\$t6")
         val t7 = Temp("\$t7")
-//        val t8 = Temp("\$t8")
-//        val t9 = Temp("\$t9")
+        val t8 = Temp("\$t8")
+        val t9 = Temp("\$t9")
 
         // saved temporary - preserved across call
         val s0 = Temp("\$s0")
@@ -103,11 +109,11 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         val s7 = Temp("\$s7")
 
         val ZERO = Temp("\$zero") // constant 0
-        val GP = Temp("\$gp") // pointer for global area
+        //val GP = Temp("\$gp") // pointer for global area
         override val FP = Temp("\$fp") // frame pointer
         override val SP = Temp("\$sp") // stack pointer
         override val RA = Temp("\$ra") // return address
-        override val RV = Temp("\$v0") // return value
+        override val RV = v0 // return value
         override val wordSize = 4
         override fun newFrame(name: Label, formalEscapes: List<Boolean>) = MipsFrame(name, formalEscapes)
         override fun exp(access: FrameAccess, exp: TreeExp) = when (access) {
@@ -117,25 +123,17 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         override fun externalCall(name: String, args: List<TreeExp>): TreeExp =
                 TreeExp.Call(TreeExp.Name(Label(name)), args) // TODO
 
-        private val registerList =
-            listOf(("\$a0" to a0),("\$a1" to a1),("\$a2" to a2),("\$a3" to a3),
-                    ("\$t0" to t0),("\$t1" to t1),("\$t2" to t2),("\$t3" to t3),
-                    ("\$t4" to t4),("\$t5" to t5),("\$t6" to t6),("\$t7" to t7),
-                    ("\$s0" to s0),("\$s1" to s1),("\$s2" to s2),("\$s3" to s3),
-                    ("\$s4" to s4),("\$s5" to s5),("\$s6" to s6),("\$s7" to s7),
-                    ("\$fp" to FP),("\$v0" to RV),("\$sp" to SP),("\$ra" to RA))
-
-        override val tempMap: Map<Temp, Register> = registerList.map { it -> Pair(it.second, Register(it.first)) }.toMap()
-        
-        val specialArguments = listOf(RV, FP, SP, RA)
-        override val argumentRegisters: List<Temp> = listOf(a0, a1, a2, a3)
-        override val calleeSaves: List<Temp> = listOf(s0, s1, s2, s3, s4, s5, s6, s7)
-        override val callerSaves: List<Temp> = listOf(t0, t1, t2, t3, t4, t5, t6, t7)
+        private val specialRegisters = listOf(RV, FP, SP, RA, ZERO)
+        override val argumentRegisters = listOf(a0, a1, a2, a3)
+        override val calleeSaves = listOf(s0, s1, s2, s3, s4, s5, s6, s7)
+        override val callerSaves = listOf(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9)
         private val firstLocalOffset = wordSize // fp is stored at 0, locals/params start at fp + wordSize
         private val firstFormalOffset = firstLocalOffset
 
-        // a list of all register name, which can be used for coloring
-        override val registers: List<Register> = (argumentRegisters + calleeSaves + callerSaves + specialArguments).map { x -> tempMap[x]!! }
+        private val registerList = argumentRegisters + calleeSaves + callerSaves + specialRegisters
 
+        override val tempMap: Map<Temp, Register> = registerList.map { it -> Pair(it, Register(it.name)) }.toMap()
+
+        override val registers: List<Register> = tempMap.values.toList()
     }
 }

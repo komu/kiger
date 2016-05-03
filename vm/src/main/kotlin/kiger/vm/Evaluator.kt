@@ -46,7 +46,7 @@ class Evaluator(allInstructions: List<Inst>) {
     }
 
     fun step() {
-        // println("$pc: ${insts[pc].toString().padEnd(30)} ${regs}")
+        println("$pc: ${insts[pc].toString().padEnd(30)} ${regs}")
         val op = insts[pc++] as? Inst.Op
 
         when (op) {

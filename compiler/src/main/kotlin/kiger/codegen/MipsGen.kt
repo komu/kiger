@@ -36,10 +36,12 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
 
     /**
      * Calling a function will trash a particular set of registers:
-     *  - argregs: they are defined to pass parameters;
-     *  - callersaves: they may be redefined inside the call;
+     *  - argument registers: they are defined to pass parameters;
+     *  - caller-saves: they may be redefined inside the call;
      *  - RV: it will be overwritten for function return.
+     *  - RA: it will be overwritten for function return.
      */
+    // TODO: do we need to save args?
     val callDefs = listOf(MipsFrame.RV, MipsFrame.RA) + MipsFrame.callerSaves + MipsFrame.argumentRegisters
 
     private fun emit(instr: Instr) {
@@ -73,30 +75,18 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
 
             is TreeStm.Exp ->
                 if (stm.exp is TreeExp.Call) {
-                    munchStmtCall(stm.exp)
+                    munchCall(stm.exp)
                 } else {
                     munchExp(stm.exp)
                 }
         }
     }
 
-    private fun munchStmtCall(exp: TreeExp.Call) {
+    private fun munchCall(exp: TreeExp.Call): Temp {
         if (exp.func is Name) {
-            emit(Oper("jal ${exp.func.label}",
-                    src = munchArgs(0, exp.args),
-                    dst = callDefs))
+            emit(Oper("jal ${exp.func.label}", src = munchArgs(0, exp.args), dst = callDefs))
         } else {
-            emit(Oper("jalr `s0",
-                    src = cons(munchExp(exp.func), munchArgs(0, exp.args)),
-                    dst = callDefs))
-        }
-    }
-
-    private fun munchExpCall(exp: TreeExp.Call): Temp {
-        if (exp.func is Name) {
-            emitResult { r -> Oper("jal ${exp.func.label}", src = munchArgs(0, exp.args), dst = callDefs) }
-        } else {
-            emitResult { r -> Oper("jalr `s0", src = cons(munchExp(exp.func), munchArgs(0, exp.args)), dst = callDefs) }
+            emit(Oper("jalr `s0", src = cons(munchExp(exp.func), munchArgs(0, exp.args)), dst = callDefs))
         }
 
         return frameType.RV
@@ -130,7 +120,7 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
             is Temporary    -> exp.temp
             is Const        -> emitResult { r -> Oper("li `d0, ${exp.value}", dst = listOf(r)) }
             is Name         -> emitResult { r -> Oper("la `d0, ${exp.label}", dst = listOf(r)) }
-            is Call         -> munchExpCall(exp)
+            is Call         -> munchCall(exp)
             is Mem          -> when {
                 // constant binary operations
                 exp.exp is BinOp && exp.exp.binop == PLUS && exp.exp.rhs is Const ->
