@@ -1,7 +1,9 @@
 package kiger.regalloc
 
 import kiger.frame.Register
+import kiger.regalloc.InterferenceGraph.INode
 import kiger.temp.Temp
+import kiger.utils.removeAny
 import java.util.*
 
 fun newColor(flowGraph: FlowGraph,
@@ -504,11 +506,3 @@ private class MoveSet : Iterable<Move> {
 
     override fun iterator() = moves.iterator()
 }
-
-private fun <T> MutableIterable<T>.removeAny(): T {
-    val it = iterator()
-    val move = it.next()
-    it.remove()
-    return move
-}
-

@@ -35,3 +35,15 @@ fun <T> List<T>.splitLast(): Pair<List<T>, T> =
  */
 fun <T> cons(x: T, xs: List<T>): List<T> =
     listOf(x) + xs
+
+
+/**
+ * Returns and removes arbitrary single element from iterable.
+ */
+fun <T> MutableIterable<T>.removeAny(): T {
+    val it = iterator()
+    val move = it.next()
+    it.remove()
+    return move
+}
+

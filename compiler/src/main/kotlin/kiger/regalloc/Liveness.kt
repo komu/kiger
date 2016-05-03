@@ -1,5 +1,6 @@
 package kiger.regalloc
 
+import kiger.regalloc.InterferenceGraph.INode
 import kiger.temp.Temp
 
 /**
@@ -26,19 +27,7 @@ fun FlowGraph.interferenceGraph(): InterferenceGraph {
         if (t !in tempMap)
             tempMap[t] = INode(t)
 
-    val allEdges = nodes.asSequence().flatMap { it.findEdges() }.map { Pair(tempMap[it.src]!!, tempMap[it.dst]!!)}
     val allMoves = nodes.asSequence().filter { it.isMove }.map { Move(tempMap[it.use.single()]!!, tempMap[it.def.single()]!!) }.toList()
-
-//    for ((src, dst) in allEdges) {
-//        // don't add duplicate edges
-//
-//        if (dst !in src.adjList || src !in dst.adjList) {
-//            src.adjList += dst
-//            dst.adjList += src
-//            src.degree += 1
-//            dst.degree += 1
-//        }
-//    }
 
     return InterferenceGraph(tempMap.values.toList(), allMoves)
 }
