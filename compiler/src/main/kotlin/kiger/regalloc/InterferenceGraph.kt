@@ -19,12 +19,6 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
     fun dump(precolored: Set<INode>) {
         val nodes = nodes.sortedBy { if (it in precolored) "z${it.temp.name}" else it.temp.name }
 
-//        for (n in nodes) {
-//            println("${n.temp} moves ${n.moveList}")
-//        }
-
-//        println("---")
-
         for (row in nodes) {
             print(row.temp.name.padStart(10) + " ")
             for (col in nodes) {

@@ -19,6 +19,7 @@ class Evaluator(allInstructions: List<Inst>) {
     val A1 = "\$a0"
     val FP = "\$fp"
     val SP = "\$sp"
+    var trace = false
 
     private val mem = Array(1024 * 1024) { 0 }
 
@@ -46,7 +47,9 @@ class Evaluator(allInstructions: List<Inst>) {
     }
 
     fun step() {
-        println("$pc: ${insts[pc].toString().padEnd(30)} ${regs}")
+        if (trace)
+            println("$pc: ${insts[pc].toString().padEnd(30)} $regs")
+
         val op = insts[pc++] as? Inst.Op
 
         when (op) {

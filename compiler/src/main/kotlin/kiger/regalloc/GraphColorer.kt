@@ -13,8 +13,11 @@ fun newColor(flowGraph: FlowGraph,
     val colorer = GraphColorer(flowGraph, interferenceGraph, spillCost, registers)
 
     colorer.build(preallocatedColors)
+    colorer.checkInvariants()
     colorer.makeWorklist()
+    colorer.checkInvariants()
     colorer.mainLoop()
+    colorer.checkInvariants()
     colorer.assignColors()
 
     return colorer.result()
@@ -109,10 +112,10 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
 
         for (m in interferenceGraph.moves) {
             // TODO: why are the move-lists conditions in original code?
-//            if (m.src !in precolored)
+            if (m.src !in precolored)
                 m.src.moveList.add(m)
 
-//            if (m.dst !in precolored)
+            if (m.dst !in precolored)
                 m.dst.moveList.add(m)
 
             worklistMoves += m
@@ -125,7 +128,6 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
                 addEdge(v, u)
         }
 
-        interferenceGraph.dump(precolored)
         for (i in flowGraph.nodes) {
             for (d in i.def) {
                 for (l in i.liveOut) {
@@ -133,21 +135,6 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
                 }
             }
         }
-        // TODO: fix this code
-//        for (u in interferenceGraph.nodes)
-//            for (v in u.adjList)
-//                if (v != u) {
-//                    interferenceGraph.addEdge(u, v)
-//                }
-
-        println("\n\n---\n\n")
-//        println(interferenceGraph)
-        interferenceGraph.dump(precolored)
-//        interferenceGraph.check()
-
-
-        checkInvariants()
-
     }
 
     private fun addEdge(u: INode, v: INode) {
@@ -168,8 +155,6 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
     }
 
     fun makeWorklist() {
-        checkInvariants()
-
         for (n in initial) {
             when {
                 n.degree >= K    -> spillWorklist += n
@@ -179,22 +164,17 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
         }
 
         initial.clear() // we don't need to keep the data around
-
-        checkInvariants()
     }
 
     fun mainLoop() {
-        checkInvariants()
         while (true) {
             when {
-                simplifyWorklist.any()  -> { println("simplify"); simplify() }
-                worklistMoves.any()     -> { println("coal"); coalesce() }
-                freezeWorklist.any()    -> { println("freeze"); freeze() }
-                spillWorklist.any()     -> { println("spill"); selectSpill() }
+                simplifyWorklist.any()  -> simplify()
+                worklistMoves.any()     -> coalesce()
+                freezeWorklist.any()    -> freeze()
+                spillWorklist.any()     -> selectSpill()
                 else                    -> return
             }
-
-            checkInvariants()
         }
     }
 
@@ -349,6 +329,7 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
 
     private fun selectSpill() {
         val m = spillWorklist.minBy { spillCost(it.temp) }!!
+
         spillWorklist -= m
         simplifyWorklist += m
         freezeMoves(m)
@@ -385,7 +366,7 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
     /**
      * After initialization the following invariants always hold.
      */
-    private fun checkInvariants() {
+    fun checkInvariants() {
         interferenceGraph.check(precolored)
         checkWorkListsAreDistinct()
         checkDegreeInvariant()

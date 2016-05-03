@@ -42,8 +42,6 @@ fun color(interference: InterferenceGraph,
           spillCost: (Temp) -> Double,
           registers: List<Register>): Pair<Coloring, List<Temp>> {
 
-    val (graph, moves) = interference
-
     var simplifyWL = emptyList<INode>()
     var freezeWL = emptyList<INode>()
     var spillWL = emptyList<INode>()
@@ -72,7 +70,7 @@ fun color(interference: InterferenceGraph,
     // while initial is a list of uncolored nodes
     fun build() {
         // initialize colored and precolored
-        for (n in graph) {
+        for (n in interference.nodes) {
             val r = initAlloc[n.temp]
             if (r != null) {
                 coloring[n.temp] = r
@@ -84,7 +82,7 @@ fun color(interference: InterferenceGraph,
 
         // associate each node with a empty move set
         // initialize worklistMS and moveList
-        for (m in moves) {
+        for (m in interference.moves) {
             val (src, dst) = m
 
             if (src !in precolored)

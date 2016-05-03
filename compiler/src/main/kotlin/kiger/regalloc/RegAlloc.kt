@@ -12,16 +12,6 @@ tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Color
     val flowGraph = this.createFlowGraph()
     val interferenceGraph = flowGraph.interferenceGraph()
 
-    println("\n---\n")
-    println(frame.name)
-
-//    for (node in flowGraph.nodes)
-//        println("${this[node.id].toString().trim().padEnd(30)}: ${node.liveOut.sorted()}")
-//    for (node in flowGraph.nodes)
-//        println("${this[node.id].toString().trim().padEnd(30)}: $node")
-//
-//    println("---")
-//    println(igraph)
 
     fun spillCost(temp: Temp): Double {
         val numDu = flowGraph.nodes.sumBy { n -> n.def.containsToInt(temp) + n.use.containsToInt(temp) }
@@ -33,7 +23,6 @@ tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Color
 
     val frameType = frame.type
     val (colors, spills) = newColor(flowGraph, interferenceGraph, frameType.tempMap, ::spillCost, frameType.registers)
-//    val (colors, spills) = color(interferenceGraph, frameType.tempMap, ::spillCost, frameType.registers)
 
     fun Instr.isRedundant() =
         this is Instr.Move && colors[dst] == colors[src]
