@@ -1,5 +1,8 @@
 package kiger.codegen
 
+import kiger.canon.createControlFlowGraph
+import kiger.canon.linearize
+import kiger.canon.traceSchedule
 import kiger.frame.Fragment
 import kiger.parser.parseExpression
 import kiger.translate.SemanticAnalyzer
@@ -26,7 +29,9 @@ class CodeGenTest {
 
     private fun dumpProc(fragment: Fragment.Proc) {
 
-        val instructions = MipsGen.codeGen(fragment.frame, fragment.body)
+        val traces = fragment.body.linearize().createControlFlowGraph().traceSchedule()
+
+        val instructions = traces.flatMap { MipsGen.codeGen(fragment.frame, it) }
         for (instr in instructions) {
             println(instr)
         }

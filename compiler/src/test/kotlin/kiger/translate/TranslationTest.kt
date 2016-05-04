@@ -1,5 +1,6 @@
 package kiger.translate
 
+import kiger.frame.MipsFrame
 import kiger.parser.parseExpression
 import kiger.temp.Label
 import kiger.temp.resetLabelSequence
@@ -18,7 +19,7 @@ class TranslationTest {
     fun translateLiterals() {
         assertTranslation("nil", Type.Nil, TrExp.Ex(TreeExp.Const(0)))
         assertTranslation("42", Type.Int, TrExp.Ex(TreeExp.Const(42)))
-        assertTranslation("\"foo\"", Type.String, TrExp.Ex(TreeExp.Name(Label("l1"))))
+        assertTranslation("\"foo\"", Type.String, TrExp.Ex(TreeExp.Name(Label("l2"))))
     }
 
     @Test
@@ -56,7 +57,8 @@ class TranslationTest {
         val exp = parseExpression(code)
         resetTempSequence()
         resetLabelSequence()
-        return translator.transExp(exp, translator.baseVenv, translator.baseTenv, Level.Top, null)
+        return translator.transExp(exp, translator.baseVenv, translator.baseTenv,
+                Level.Lev(Level.Top, MipsFrame.newFrame(Label.gen(), emptyList())), null)
     }
 
     private fun dump(code: String) {
