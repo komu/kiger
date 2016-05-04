@@ -37,8 +37,8 @@ class Evaluator(allInstructions: List<Inst>) {
         }
 
         regs.ra.value = PC_EXIT
-        regs.fp.value = mem.size - 1000
-        regs.sp.value = mem.size - 1000
+        regs.fp.value = mem.size - 4
+        regs.sp.value = mem.size - 4
     }
 
     fun run() {
@@ -109,12 +109,18 @@ private fun Op1.analyze(regs: Registers): Instruction =
 
 private fun Op2.analyze(regs: Registers): Instruction =
     when (name) {
-        "move"  -> { val d = regs[o1.reg]; val s = regs[o2.reg]; Instruction(this) { d.value = s.value } }
-        "lw"    -> { val d = regs[o1.reg]; val b = regs[o2.baseReg]; val o = o2.offset; Instruction(this) { d.value = mem[b.value + o] } }
-        "sw"    -> { val b = regs[o2.baseReg]; val o = o2.offset; val s = regs[o1.reg]; Instruction(this) { mem[b.value + o] = s.value } }
-        "li"    -> { val d = regs[o1.reg]; Instruction(this) { d.value = o2.immediate } }
-        "la"    -> { val d = regs[o1.reg]; Instruction(this) { d.value = o2.immediate } }
-        else    -> error("Unsupported op: $this")
+        "move"      -> { val d = regs[o1.reg]; val s = regs[o2.reg]; Instruction(this) { d.value = s.value } }
+        "lw"        -> { val d = regs[o1.reg]; val b = regs[o2.baseReg]; val o = o2.offset; Instruction(this) { d.value = mem[b.value + o] } }
+        "sw"        -> { val b = regs[o2.baseReg]; val o = o2.offset; val s = regs[o1.reg]; Instruction(this) { mem[b.value + o] = s.value } }
+        "li"        -> { val d = regs[o1.reg]; Instruction(this) { d.value = o2.immediate } }
+        "la"        -> { val d = regs[o1.reg]; Instruction(this) { d.value = o2.immediate } }
+        "bgez"      -> { val r = regs[o1.reg]; Instruction(this) { if (r.value >= 0) pc = o2.immediate } }
+        "bgezal"    -> { val r = regs[o1.reg]; Instruction(this) { if (r.value >= 0) { regs.ra.value = pc; pc = o2.immediate } } }
+        "bgtz"      -> { val r = regs[o1.reg]; Instruction(this) { if (r.value > 0) pc = o2.immediate } }
+        "blez"      -> { val r = regs[o1.reg]; Instruction(this) { if (r.value <= 0) pc = o2.immediate } }
+        "bltz"      -> { val r = regs[o1.reg]; Instruction(this) { if (r.value < 0) pc = o2.immediate } }
+        "bltzal"    -> { val r = regs[o1.reg]; Instruction(this) { if (r.value < 0) { regs.ra.value = pc; pc = o2.immediate } } }
+        else        -> error("Unsupported op: $this")
     }
 
 private fun Op3.analyze(regs: Registers): Instruction =
@@ -123,7 +129,8 @@ private fun Op3.analyze(regs: Registers): Instruction =
         "addi",
         "addiu" -> { val d = regs[o1.reg]; val l = regs[o2.reg]; Instruction(this) { d.value = l.value + o3.immediate } }
         "mul"   -> { val d = regs[o1.reg]; val l = regs[o2.reg]; val r = regs[o3.reg]; Instruction(this) { d.value = l.value * r.value } }
-        "bgez"  -> { val l = regs[o1.reg]; val r = regs[o2.reg]; Instruction(this) { if (l.value >= r.value) pc = o3.immediate } }
+        "beq"   -> { val r1 = regs[o1.reg]; val r2 = regs[o2.reg]; Instruction(this) { if (r1.value == r2.value) pc = o3.immediate } }
+        "bne"   -> { val r1 = regs[o1.reg]; val r2 = regs[o2.reg]; Instruction(this) { if (r1.value != r2.value) pc = o3.immediate } }
         else -> error("Unsupported op: $this")
     }
 
