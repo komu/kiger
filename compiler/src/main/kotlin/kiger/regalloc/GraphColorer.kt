@@ -466,6 +466,8 @@ private class Worklist : Iterable<INode> {
 
     val size: Int
         get() = nodes.size
+
+    override fun toString() = nodes.toString()
 }
 
 private class NodeStack : Iterable<INode> {
