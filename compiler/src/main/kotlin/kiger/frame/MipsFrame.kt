@@ -16,10 +16,11 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
     var locals = 0
 
     override val formals: List<FrameAccess> = formalEscapes.mapIndexed { index, escape ->
-        if (escape)
-            FrameAccess.InFrame(firstFormalOffset + index * wordSize)
-        else
-            FrameAccess.InReg(Temp())
+        allocLocal(escape)
+//        if (escape)
+//            FrameAccess.InFrame(firstFormalOffset + index * wordSize)
+//        else
+//            FrameAccess.InReg(Temp())
     }
 
     val shiftInstructions: List<TreeStm> = run {
@@ -53,25 +54,31 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
     }
 
     override fun procEntryExit3(body: List<Instr>): Triple<String, List<Instr>, String> {
-        val offset = locals + wordSize
+        // TODO: offset calculation is wrong since we still do "sw $a0, 4($fp)" at the start to save the link to frame
+        val frameSize = locals * wordSize
 
-        // TODO: optimize movement if offset = 0
+
         // TODO: use virtual frame pointer
+        if (frameSize != 0) {
+            val offset = frameSize + firstLocalOffset // add extra word for stored frame pointer
+            val prologue = listOf(
+                    "$name:",
+                    "    sw \$fp, 0(\$sp)", // save old fp
+                    "    move \$fp, \$sp", // make sp to be new fp
+                    "    addiu \$sp, \$sp, -$offset")     // make new sp
+                    .joinToString("\n", postfix = "\n")
 
-        val prologue = listOf(
-                "$name:",
-                "    sw \$fp, 0(\$sp)",              // save old fp
-                "    move \$fp, \$sp",               // make sp to be new fp
-                "    addiu \$sp, \$sp, -$offset")     // make new sp
-                .joinToString("\n", postfix = "\n")
+            val epilogue = listOf(
+                    "    move \$sp, \$fp", // restore old sp
+                    "    lw \$fp, 0(\$sp)", // restore old fp
+                    "    jr \$ra")                      // jump to return address
+                    .joinToString("\n", postfix = "\n")
 
-        val epilogue = listOf(
-                "    move \$sp, \$fp",               // restore old sp
-                "    lw \$fp, 0(\$sp)",              // restore old fp
-                "    jr \$ra")                      // jump to return address
-                .joinToString("\n", postfix = "\n")
-
-        return Triple(prologue, body, epilogue)
+            return Triple(prologue, body, epilogue)
+        } else {
+            val prologue = "$name\n"
+            return Triple(prologue, body, "    jr \$ra\n")
+        }
     }
 
     companion object Type : FrameType {
@@ -128,7 +135,6 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         override val calleeSaves = listOf(s0, s1, s2, s3, s4, s5, s6, s7)
         override val callerSaves = listOf(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9)
         private val firstLocalOffset = wordSize // fp is stored at 0, locals/params start at fp + wordSize
-        private val firstFormalOffset = firstLocalOffset
 
         private val registerList = argumentRegisters + calleeSaves + callerSaves + specialRegisters
 
