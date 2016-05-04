@@ -4,15 +4,23 @@ import kiger.assem.Instr
 import kiger.temp.Label
 import kiger.temp.Temp
 
+/**
+ * Create a data flow graph from list of instructions.
+ */
+fun List<Instr>.createFlowGraph(): FlowGraph {
+    val compList = FlowGraphBuilder(this)
+
+    compList.createEdges()
+
+    return compList.build()
+}
+
 class FlowGraph(val nodes: List<Node>) {
 
-    data class Node(val id: Int,
-                    val def: Set<Temp>,
-                    val use: Set<Temp>,
-                    val isMove: Boolean) {
-        var succ: List<Node> = emptyList()
-        var prev: List<Node> = emptyList()
-        var liveOut: Set<Temp> = emptySet()
+    data class Node(val id: Int, val def: Set<Temp>, val use: Set<Temp>, val isMove: Boolean) {
+        val succ = mutableListOf<Node>()
+        val prev = mutableListOf<Node>()
+        var liveOut = emptySet<Temp>()
 
         override fun toString() = format { it.toString() }
 
@@ -32,65 +40,62 @@ class FlowGraph(val nodes: List<Node>) {
     override fun toString() = format { it.toString() }
 }
 
-/**
- * Create a data flow graph from list of instructions.
- *
- * Algorithm:
- * first pass: make node for each instr,
- * second pass: for each OPER instr, search in the instr list
- *  for a label that it jumps to, and make a new edge from the
- *  node of this instr to the node of the label.
- * third pass: connect all the nodes in sequential order (which
- *  are not connected by explicit jump in the original instr)
- *
- * This is probably too inefficient, as it requires O(n^3) time.
- * But, I'll leave improvement for future.
- */
-fun List<Instr>.createFlowGraph(): FlowGraph {
-    // we have to maintain the order of node-list wrt instrs
-    val nodeList = mapIndexed { i, instr -> instr.makeNode(i) }
+private class FlowGraphBuilder(private val instructions: List<Instr>) {
 
-    val compList = this.zip(nodeList)
+    /**
+     * Nodes corresponding to instructions.
+     *
+     * Each node in this list has same index as corresponding instruction in [instructions].
+     */
+    private val nodes = instructions.mapIndexed { i, inst -> makeNode(inst, i)}
 
-    for ((instr, node) in compList)
-        compList.doJump(instr, node)
+    /**
+     * Create edges between instructions.
+     *
+     * Go through instructions:
+     *   - for every jump, create edge to all jump targets
+     *   - for non-jumps, create edge to next instruction, if there is one
+     */
+    fun createEdges() {
+        val nodesByLabels = createLabelMap()
 
-    compList.connect()
+        for (i in instructions.indices) {
+            val inst = instructions[i]
+            val node = nodes[i]
 
-    return FlowGraph(nodeList)
-}
+            if (inst is Instr.Oper && inst.jump != null) {
+                for (label in inst.jump)
+                    makeEdge(node, nodesByLabels[label] ?: error("undefined label $label"))
 
-private fun Instr.makeNode(id: Int): FlowGraph.Node = when (this) {
-    is Instr.Oper   -> FlowGraph.Node(id, dst.toSet(), src.toSet(), false)
-    is Instr.Lbl    -> FlowGraph.Node(id, emptySet(), emptySet(), false)
-    is Instr.Move   -> FlowGraph.Node(id, setOf(dst), setOf(src), true)
-}
+            } else if (i < instructions.lastIndex) {
+                makeEdge(nodes[i], nodes[i + 1])
+            }
+        }
+    }
 
-private fun makeEdge(from: FlowGraph.Node, to: FlowGraph.Node) {
-    if (to !in from.succ) {
-        from.succ += to
-        to.prev += from
+
+    fun build() = FlowGraph(nodes)
+
+    private fun makeEdge(from: FlowGraph.Node, to: FlowGraph.Node) {
+        if (to !in from.succ) {
+            from.succ += to
+            to.prev += from
+        }
+    }
+
+    private fun makeNode(inst: Instr, id: Int): FlowGraph.Node = when (inst) {
+        is Instr.Oper   -> FlowGraph.Node(id, inst.dst.toSet(), inst.src.toSet(), false)
+        is Instr.Lbl    -> FlowGraph.Node(id, emptySet(), emptySet(), false)
+        is Instr.Move   -> FlowGraph.Node(id, setOf(inst.dst), setOf(inst.src), true)
+    }
+
+    private fun createLabelMap(): Map<Label, FlowGraph.Node> {
+        val labelMap = mutableMapOf<Label, FlowGraph.Node>()
+        instructions.forEachIndexed { i, inst ->
+            if (inst is Instr.Lbl)
+                labelMap[inst.label] = nodes[i]
+        }
+        return labelMap
     }
 }
 
-// only connect x with y if x doesn't jump
-private fun List<Pair<Instr, FlowGraph.Node>>.connect() {
-
-    for (i in 0..lastIndex-1) {
-        val (op, node) = this[i]
-        if (!op.isJump)
-            makeEdge(node, this[i+1].second)
-    }
-}
-
-private fun List<Pair<Instr, FlowGraph.Node>>.findNodeByLabel(label: Label): FlowGraph.Node =
-        find {
-            var instr = it.first
-            instr is Instr.Lbl && instr.label == label
-        }!!.second
-
-private fun List<Pair<Instr, FlowGraph.Node>>.doJump(instr: Instr, node: FlowGraph.Node) {
-    if (instr is Instr.Oper && instr.jump != null)
-        for (label in instr.jump)
-            makeEdge(node, findNodeByLabel(label))
-}

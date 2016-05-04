@@ -353,7 +353,7 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
     private fun munchCJump(relop: RelOp, lhs: TreeExp, rhs: TreeExp, trueLabel: Label, falseLabel: Label) {
         // TODO: add special cases for comparison to 0
         when (relop) {
-            LT      -> emit(Oper("BGEZ `s0, `s1, `j0", src=listOf(munchExp(lhs), munchExp(rhs)), jump=listOf(falseLabel)))
+            LT      -> emit(Oper("BGEZ `s0, `s1, `j0", src=listOf(munchExp(lhs), munchExp(rhs)), jump=listOf(trueLabel, falseLabel)))
             else    -> TODO("cjump $relop $lhs $rhs $trueLabel $falseLabel")
         }
 
