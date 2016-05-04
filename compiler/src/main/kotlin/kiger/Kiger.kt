@@ -51,8 +51,10 @@ private fun Writer.emitProc(fragment: Fragment.Proc) {
 
     write(prologue)
     for (instr in instructions4)
-        if (instr !is Instr.Oper || instr.assem != "")
+        if (instr !is Instr.Oper || instr.assem != "") {
+//            writeLine(instr.format { alloc.name((it))}.padEnd(50) + " # " + instr.format { it.name })
             writeLine(instr.format { alloc.name(it) })
+        }
     write(epilogue)
 }
 

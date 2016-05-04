@@ -12,6 +12,9 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
 
     fun contains(u: INode, v: INode) = Pair(u, v) in adjSet
 
+    fun nodeForTemp(t: Temp): INode =
+        nodes.find { it.temp == t } ?: error("could not find node for $t")
+
     override fun toString() = nodes.sortedBy { it.temp.name }.joinToString("\n")
 
     fun check(precolored: Set<INode>) {
@@ -21,6 +24,7 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
         check(adjSet.all { (it.second in precolored || it.first in it.second.adjList) && (it.first in precolored || it.second in it.first.adjList) })
     }
 
+    @Suppress("unused")
     fun dump(precolored: Set<INode>) {
         val nodes = nodes.sortedBy { if (it in precolored) "z${it.temp.name}" else it.temp.name }
 

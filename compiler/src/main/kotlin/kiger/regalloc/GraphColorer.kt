@@ -7,13 +7,9 @@ import kiger.temp.Temp
 import kiger.utils.removeAny
 import java.util.*
 
-fun color(flowGraph: FlowGraph,
-          interferenceGraph: InterferenceGraph,
-          preallocatedColors: Map<Temp, Register>,
-          spillCost: (Temp) -> Double,
-          registers: Collection<Register>): Pair<Coloring, List<Temp>> {
+fun color(flowGraph: FlowGraph, preallocatedColors: Map<Temp, Register>, registers: Collection<Register>): Pair<Coloring, List<Temp>> {
 
-    val colorer = GraphColorer(flowGraph, interferenceGraph, spillCost, registers)
+    val colorer = GraphColorer(flowGraph, registers)
 
     colorer.build(preallocatedColors)
     colorer.checkInvariants()
@@ -29,10 +25,12 @@ fun color(flowGraph: FlowGraph,
 /**
  * Graph coloring as described in pages 241-249 of Modern Compiler Implementation in ML.
  */
-class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: InterferenceGraph, val spillCost: (Temp) -> Double, val registers: Collection<Register>) {
+class GraphColorer(val flowGraph: FlowGraph, val registers: Collection<Register>) {
 
     /** The number of colors available */
     private val K = registers.size
+
+    private val interferenceGraph = flowGraph.interferenceGraph()
 
     //
     // Node work-lists, sets and stacks.
@@ -424,6 +422,14 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
     private fun checkSpillWorklistInvariant() {
         for (n in spillWorklist)
             check(n.degree >= K) { "spillWorklist has node with invalid degree: ${n.degree} < $K" }
+    }
+
+    private fun spillCost(temp: Temp): Double {
+        val defs = flowGraph.nodes.count { temp in it.def }
+        val uses = flowGraph.nodes.count { temp in it.use }
+        val interferes = interferenceGraph.nodeForTemp(temp).adjList.size
+
+        return (defs + uses).toDouble() / interferes.toDouble()
     }
 
     private val INode.nodeMoves: Set<Move>

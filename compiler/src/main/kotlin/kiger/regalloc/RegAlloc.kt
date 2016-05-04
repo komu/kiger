@@ -7,22 +7,17 @@ import kiger.temp.Temp
 import kiger.tree.TreeExp.Temporary
 import kiger.tree.TreeStm.Move
 
+/**
+ * Given a list of instructions and [frame], allocate registers. Returns
+ * rewritten list of instructions and a coloring that maps [Temp]-values
+ * to registers.
+ */
 tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Coloring> {
 
-    val flowGraph = this.createFlowGraph()
-    val interferenceGraph = flowGraph.interferenceGraph()
-
-
-    fun spillCost(temp: Temp): Double {
-        val numDu = flowGraph.nodes.sumBy { n -> n.def.containsToInt(temp) + n.use.containsToInt(temp) }
-        val node = interferenceGraph.nodes.find { it.temp == temp } ?: error("could not find node for $temp")
-        val interferes = node.adjList.size
-
-        return numDu.toDouble() / interferes.toDouble()
-    }
+    val flowGraph = createFlowGraph()
 
     val frameType = frame.type
-    val (colors, spills) = color(flowGraph, interferenceGraph, frameType.tempMap, ::spillCost, frameType.registers)
+    val (colors, spills) = color(flowGraph, frameType.tempMap, frameType.registers)
 
     fun Instr.isRedundant() =
         this is Instr.Move && colors[dst] == colors[src]
@@ -33,45 +28,61 @@ tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Color
         rewrite(this, frame, spills).allocateRegisters(frame)
 }
 
-private fun rewrite(instrs: List<Instr>, frame: Frame, spills: List<Temp>): List<Instr> =
+/**
+ * Rewrite instructions to spill of temporaries defined in [spills].
+ */
+private fun rewrite(instrs: List<Instr>, frame: Frame, spills: Collection<Temp>): List<Instr> =
     spills.fold(instrs) { i, t -> rewrite1(i, frame, t) }
 
-private fun rewrite1(instrs: List<Instr>, frame: Frame, t: Temp): List<Instr> {
-    val ae = frame.type.exp(frame.allocLocal(true), Temporary(frame.type.FP))
+/**
+ * Rewrite instructions to spill [spill].
+ */
+private fun rewrite1(instrs: List<Instr>, frame: Frame, spill: Temp): List<Instr> {
+    val varInFrame = frame.type.exp(frame.allocLocal(true), Temporary(frame.type.FP))
 
-    // generate fetch or store instruction
-    fun genInstrs(isStore: Boolean, t: Temp) =
-        MipsGen.codeGen(frame, if (isStore) Move(ae, Temporary(t)) else Move(Temporary(t), ae))
+    /**
+     * Generate instruction for load/store between frame and given temp.
+     */
+    fun genInstrs(store: Boolean, t: Temp) =
+        MipsGen.codeGen(frame, if (store) Move(varInFrame, Temporary(t)) else Move(Temporary(t), varInFrame))
 
-    // allocate new temp for each occurrence of t in dus,
-    // replace the occurrence with the new temp.
-    fun allocDu(isStore: Boolean, dus: List<Temp>, t: Temp):  Pair<List<Instr>, List<Temp>> =
-        if (t in dus) {
+    /**
+     * If spilled register is in given def/use set, allocate a new temp and
+     * generate instructions for storing/loading the value from frame to temp.
+     * Replace all uses of spill value with the new temp.
+     */
+    fun allocDu(store: Boolean, dus: List<Temp>): Pair<List<Instr>, List<Temp>> =
+        if (spill in dus) {
             val nt = Temp.gen()
-            Pair(genInstrs(isStore, nt), dus.map { if (t == it) nt else it })
+            Pair(genInstrs(store, nt), dus.map { if (spill == it) nt else it })
         } else {
             Pair(emptyList(), dus)
         }
 
-    // transform one instruction for one spilled temp
-    fun transInstr(instr: Instr): List<Instr> = when (instr) {
-        is Instr.Oper -> {
-            val (store, dst2) = allocDu(true, instr.dst, t)
-            val (fetch, src2) = allocDu(false, instr.src, t)
+    /**
+     * Transform instruction if it contains the spilled temporary.
+     */
+    fun transInstr(instr: Instr): List<Instr> {
+        // If the instruction doesn't define or use t, it does not need to be transformed
+        if (!instr.references(spill)) return listOf(instr)
 
-            fetch + Instr.Oper(instr.assem, dst2, src2, instr.jump) + store
-        }
-        is Instr.Move -> {
-            val (store, dst2) = allocDu(true, listOf(instr.dst), t)
-            val (fetch, src2) = allocDu(false, listOf(instr.src), t)
+        return when (instr) {
+            is Instr.Oper -> {
+                val (store, dst2) = allocDu(true, instr.dst)
+                val (fetch, src2) = allocDu(false, instr.src)
 
-            fetch + Instr.Move(instr.assem, dst2.single(), src2.single()) + store
+                fetch + instr.rewriteRegisters(dst2, src2) + store
+            }
+            is Instr.Move -> {
+                val (store, dst2) = allocDu(true, listOf(instr.dst))
+                val (fetch, src2) = allocDu(false, listOf(instr.src))
+
+                fetch + instr.rewriteRegisters(dst2.single(), src2.single()) + store
+            }
+            is Instr.Lbl ->
+                listOf(instr)
         }
-        is Instr.Lbl ->
-            listOf(instr)
     }
 
     return instrs.flatMap { transInstr(it) }
 }
-
-private fun <T> Collection<T>.containsToInt(t: T) = if (t in this) 1 else 0
