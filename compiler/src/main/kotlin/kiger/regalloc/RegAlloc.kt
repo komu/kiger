@@ -13,11 +13,7 @@ import kiger.tree.TreeStm.Move
  * to registers.
  */
 tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Coloring> {
-
-    val flowGraph = createFlowGraph()
-
-    val frameType = frame.type
-    val (colors, spills) = color(flowGraph, frameType.tempMap, frameType.registers)
+    val (colors, spills) = color(this, frame.type)
 
     fun Instr.isRedundant() =
         this is Instr.Move && colors[dst] == colors[src]

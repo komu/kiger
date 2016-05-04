@@ -1,5 +1,7 @@
 package kiger.regalloc
 
+import kiger.assem.Instr
+import kiger.frame.FrameType
 import kiger.frame.Register
 import kiger.regalloc.InterferenceGraph.INode
 import kiger.regalloc.InterferenceGraph.Move
@@ -7,7 +9,13 @@ import kiger.temp.Temp
 import kiger.utils.removeAny
 import java.util.*
 
-fun color(flowGraph: FlowGraph, preallocatedColors: Map<Temp, Register>, registers: Collection<Register>): Pair<Coloring, List<Temp>> {
+fun color(instrs: List<Instr>, frameType: FrameType): Pair<Coloring, List<Temp>> {
+    val preallocatedColors = frameType.tempMap
+    val registers = frameType.registers
+
+    check(preallocatedColors.size == registers.size)
+
+    val flowGraph = instrs.createFlowGraph()
 
     val colorer = GraphColorer(flowGraph, registers)
 
@@ -96,7 +104,7 @@ class GraphColorer(val flowGraph: FlowGraph, val registers: Collection<Register>
 
     /**
      * Construct the interference graph and categorize each node as either move-related
-     * or non-move-related. A move-related nove is one that is either the source or
+     * or non-move-related. A move-related node is one that is either the source or
      * destination of a move-instruction.
      */
     fun build(preallocatedColors: Map<Temp, Register>) {
@@ -113,10 +121,10 @@ class GraphColorer(val flowGraph: FlowGraph, val registers: Collection<Register>
 
         for (m in interferenceGraph.moves) {
             // TODO: why are the move-lists conditions in original code?
-            if (m.src !in precolored)
+//            if (m.src !in precolored)
                 m.src.moveList.add(m)
 
-            if (m.dst !in precolored)
+//            if (m.dst !in precolored)
                 m.dst.moveList.add(m)
 
             worklistMoves += m
@@ -358,6 +366,7 @@ class GraphColorer(val flowGraph: FlowGraph, val registers: Collection<Register>
             frozenMoves += m
 
             if (v.nodeMoves.isEmpty() && v.degree < K) { // && v !in precolored) { // TODO the precolored test is added
+                check(v !in precolored) // TODO: added
                 freezeWorklist -= v
                 simplifyWorklist += v
             }
@@ -487,6 +496,8 @@ private class NodeStack : Iterable<INode> {
 
     val size: Int
         get() = stack.size
+
+    override fun toString() = stack.toString()
 }
 
 // Note that the book says:
@@ -510,4 +521,6 @@ private class MoveSet : Iterable<Move> {
     fun removeAny(): Move = moves.removeAny()
 
     override fun iterator() = moves.iterator()
+
+    override fun toString() = moves.toString()
 }

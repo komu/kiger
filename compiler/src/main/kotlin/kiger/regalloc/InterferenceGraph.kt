@@ -53,8 +53,7 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
         /** When move `(u,v)` has been coalesced, and `v` is put in coalescedNodes, then `alias(v) == u` */
         var alias: INode? = null
 
-        override fun toString() =
-                "${temp.name.padEnd(10)}: ${adjList.map { it.temp.name }.sorted().joinToString(", ")}"
+        override fun toString() = temp.name
     }
 
     class Move(val src: INode, val dst: INode) {
