@@ -16,7 +16,7 @@ interface FrameType {
     val callerSaves: List<Temp>
     val calleeSaves: List<Temp>
 
-    fun exp(access: FrameAccess, exp: TreeExp): TreeExp
+    fun exp(access: FrameAccess, fp: TreeExp): TreeExp
 
     fun externalCall(name: String, args: List<TreeExp>): TreeExp
 

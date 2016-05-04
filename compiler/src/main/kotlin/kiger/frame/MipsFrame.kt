@@ -15,16 +15,13 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
 
     var locals = 0
 
-    override val formals: List<FrameAccess> = formalEscapes.mapIndexed { index, escape ->
-        allocLocal(escape)
-//        if (escape)
-//            FrameAccess.InFrame(firstFormalOffset + index * wordSize)
-//        else
-//            FrameAccess.InReg(Temp())
-    }
+    override val formals: List<FrameAccess> = formalEscapes.map { allocLocal(it) }
 
-    val shiftInstructions: List<TreeStm> = run {
-        fun viewShift(acc: FrameAccess, r: Temp) = TreeStm.Move(exp(acc, TreeExp.Temporary(FP)), TreeExp.Temporary(r))
+    /**
+     * Instructions to copy all incoming arguments to correct places.
+     */
+    private val shiftInstructions: List<TreeStm> = run {
+        fun viewShift(acc: FrameAccess, arg: Temp) = TreeStm.Move(exp(acc, TreeExp.Temporary(FP)), TreeExp.Temporary(arg))
 
         if (formals.size > argumentRegisters.size)
             error("passed ${formals.size} arguments, but only ${argumentRegisters.size} arguments are supported")
@@ -48,15 +45,20 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
     }
 
     override fun procEntryExit2(body: List<Instr>): List<Instr> {
-        val enter = Instr.Oper("", src = listOf(ZERO, RA, SP, FP) + calleeSaves + argumentRegisters, jump = emptyList())
-        val exit = Instr.Oper("", src = listOf(ZERO, RA, SP, FP, RV) + calleeSaves, jump = emptyList())
-        return listOf(enter) + body + exit
+//        val enter = Instr.Oper("", src = listOf(ZERO, RA, SP, FP) + calleeSaves + argumentRegisters)
+
+        // Dummy instruction that simply tells register allocator what registers are live at the end
+//        val sink = Instr.Oper("", src = listOf(ZERO, RA, SP, FP, RV) + calleeSaves, jump = emptyList())
+        // TODO: book does not keep RV live
+        val sink = Instr.Oper("", src = listOf(ZERO, RA, SP, FP, RV) + calleeSaves, jump = emptyList())
+
+        return body + sink
     }
 
     override fun procEntryExit3(body: List<Instr>): Triple<String, List<Instr>, String> {
         // TODO: offset calculation is wrong since we still do "sw $a0, 4($fp)" at the start to save the link to frame
-        val frameSize = locals * wordSize
-
+        // TODO: improve this
+        val frameSize = (1 + locals + argumentRegisters.size) * wordSize
 
         // TODO: use virtual frame pointer
         if (frameSize != 0) {
@@ -83,7 +85,7 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
 
     companion object Type : FrameType {
 
-        // expression evaluation and results of a functioin
+        // expression evaluation and results of a function
         val v0 = Temp("\$v0")
 //        val v1 = Temp("\$v1")
 
@@ -123,8 +125,8 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         override val RV = v0 // return value
         override val wordSize = 4
         override fun newFrame(name: Label, formalEscapes: List<Boolean>) = MipsFrame(name, formalEscapes)
-        override fun exp(access: FrameAccess, exp: TreeExp) = when (access) {
-            is FrameAccess.InFrame -> TreeExp.Mem(TreeExp.BinOp(BinaryOp.PLUS, exp, TreeExp.Const(access.offset)))
+        override fun exp(access: FrameAccess, fp: TreeExp) = when (access) {
+            is FrameAccess.InFrame -> TreeExp.Mem(TreeExp.BinOp(BinaryOp.PLUS, fp, TreeExp.Const(access.offset)))
             is FrameAccess.InReg -> TreeExp.Temporary(access.reg)
         }
         override fun externalCall(name: String, args: List<TreeExp>): TreeExp =

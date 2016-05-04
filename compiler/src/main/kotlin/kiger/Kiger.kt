@@ -66,7 +66,9 @@ private fun Writer.writeLine(line: String) {
 }
 
 fun main(args: Array<String>) {
-    val fragments = compile("let function square(n: int): int = n * n in square(4)")
+//    val fragments = compile("let function square(n: int): int = n * n in square(4)")
+    val fragments = compile("let function fib(n: int): int = if n < 2 then n else fib(n - 1) + fib(n - 2) in fib(20)")
+//    val fragments = compile("let function fib(n: int): int = if n < 2 then n else fib(n - 1) in fib(4)")
 
     File("output.s").emitFragments(fragments)
 }

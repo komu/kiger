@@ -16,6 +16,7 @@ class Evaluator(allInstructions: List<Inst>) {
     val labelMap = mutableMapOf<String, Int>()
 
     var trace = false
+    var singleStep = false
 
     val mem = Array(1024 * 1024) { 0 }
 
@@ -53,6 +54,9 @@ class Evaluator(allInstructions: List<Inst>) {
     fun step() {
         if (trace)
             println("$pc: ${instructions[pc].toString().padEnd(30)} $regs")
+
+        if (singleStep)
+            System.`in`?.read()
 
         val oldPc = pc
         try {
@@ -116,8 +120,10 @@ private fun Op2.analyze(regs: Registers): Instruction =
 private fun Op3.analyze(regs: Registers): Instruction =
     when (name) {
         "add"   -> { val d = regs[o1.reg]; val l = regs[o2.reg]; val r = regs[o3.reg]; Instruction(this) { d.value = l.value + r.value } }
+        "addi",
         "addiu" -> { val d = regs[o1.reg]; val l = regs[o2.reg]; Instruction(this) { d.value = l.value + o3.immediate } }
         "mul"   -> { val d = regs[o1.reg]; val l = regs[o2.reg]; val r = regs[o3.reg]; Instruction(this) { d.value = l.value * r.value } }
+        "bgez"  -> { val l = regs[o1.reg]; val r = regs[o2.reg]; Instruction(this) { if (l.value >= r.value) pc = o3.immediate } }
         else -> error("Unsupported op: $this")
     }
 
@@ -125,7 +131,9 @@ class Instruction(val inst: Inst, val eval: Evaluator.() -> Unit) {
     override fun toString() = inst.toString()
 }
 
-class Register(val name: String, var value: Int = 0)
+class Register(val name: String, var value: Int = 0) {
+    override fun toString() = "$name: $value"
+}
 
 class Registers {
 
