@@ -36,10 +36,10 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         if (escape)
             FrameAccess.InFrame(++locals * wordSize + firstLocalOffset)
         else
-            FrameAccess.InReg(Temp())
+            FrameAccess.InReg(Temp.gen())
 
     override fun procEntryExit1(body: TreeStm): TreeStm {
-        val pairs = (calleeSaves + RA).map { Pair(Temp(), it) }
+        val pairs = (calleeSaves + RA).map { Pair(Temp.gen(), it) }
 
         val saves = pairs.map { TreeStm.Move(TreeExp.Temporary(it.first), TreeExp.Temporary(it.second)) }
         val restores = pairs.asReversed().map { TreeStm.Move(TreeExp.Temporary(it.second), TreeExp.Temporary(it.first)) }

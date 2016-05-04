@@ -100,7 +100,7 @@ class Translator {
             TreeExp.BinOp(BinaryOp.MUL, offset.asEx(), TreeExp.Const(frameType.wordSize))))
 
     fun record(fields: List<TrExp>): TrExp {
-        val r = Temp()
+        val r = Temp.gen()
         val init = TreeStm.Move(TreeExp.Temporary(r), frameType.externalCall("allocRecord", listOf(TreeExp.Const(fields.size * frameType.wordSize))))
 
         val inits = fields.mapIndexed { i, e ->
@@ -132,7 +132,7 @@ class Translator {
         TrExp.Nx(TreeStm.Move(left.asEx(), right.asEx()))
 
     fun ifElse(testExp: TrExp, thenExp: TrExp, elseExp: TrExp?): TrExp {
-        val r = Temp()
+        val r = Temp.gen()
         val t = Label.gen()
         val f = Label.gen()
         val finish = Label.gen()

@@ -47,7 +47,7 @@ private fun rewrite1(instrs: List<Instr>, frame: Frame, t: Temp): List<Instr> {
     // replace the occurrence with the new temp.
     fun allocDu(isStore: Boolean, dus: List<Temp>, t: Temp):  Pair<List<Instr>, List<Temp>> =
         if (t in dus) {
-            val nt = Temp()
+            val nt = Temp.gen()
             Pair(genInstrs(isStore, nt), dus.map { if (t == it) nt else it })
         } else {
             Pair(emptyList(), dus)

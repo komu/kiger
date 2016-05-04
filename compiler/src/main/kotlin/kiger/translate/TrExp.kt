@@ -37,7 +37,7 @@ sealed class TrExp {
     class Cx(val generateStatement: (Label, Label) -> TreeStm) : TrExp() {
         override fun toString() = "Cx[...]"
         override fun asEx(): TreeExp {
-            val r = Temp()
+            val r = Temp.gen()
             val t = Label.gen()
             val f = Label.gen()
 

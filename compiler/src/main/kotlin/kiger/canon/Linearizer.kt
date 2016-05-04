@@ -29,7 +29,7 @@ private fun reorder(exps: List<TreeExp>): Pair<TreeStm, List<TreeExp>> = when {
         Pair(nop, emptyList())
 
     exps[0] is Call -> {
-        val t = Temp()
+        val t = Temp.gen()
         val (head, tail) = exps.splitFirst()
         reorder(cons(ESeq(Move(Temporary(t), head), Temporary(t)), tail))
     }
@@ -42,7 +42,7 @@ private fun reorder(exps: List<TreeExp>): Pair<TreeStm, List<TreeExp>> = when {
         if (stms2.commute(e)) {
             Pair(stms + stms2, cons(e, el))
         } else {
-            val t = Temp()
+            val t = Temp.gen()
             Pair(stms + Move(Temporary(t), e) + stms2, cons(Temporary(t), el))
         }
     }

@@ -2,9 +2,15 @@ package kiger.temp
 
 private var tempIdSeq = 0;
 
-class Temp(val name: String) : Comparable<Temp> {
+class Temp constructor(val name: String) : Comparable<Temp> {
 
-    constructor(): this("t" + ++tempIdSeq)
+    companion object {
+
+        /**
+         * Generates a new unique temp.
+         */
+        fun gen() = Temp("t" + ++tempIdSeq)
+    }
 
     override fun toString() = name
     override fun equals(other: Any?) = other is Temp && name == other.name

@@ -49,7 +49,7 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
     }
 
     private inline fun emitResult(gen: (Temp) -> Instr): Temp {
-        val t = Temp()
+        val t = Temp.gen()
         emit(gen(t))
         return t
     }
