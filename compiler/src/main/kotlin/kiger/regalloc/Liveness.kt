@@ -5,7 +5,7 @@ import kiger.regalloc.InterferenceGraph.Move
 import kiger.temp.Temp
 
 /**
- * Constructs interference graph from [FlowGraph].
+ * Constructs an interference graph from [FlowGraph].
  */
 fun FlowGraph.interferenceGraph(): InterferenceGraph {
     initializeLiveOuts()
@@ -23,58 +23,49 @@ fun FlowGraph.interferenceGraph(): InterferenceGraph {
     return InterferenceGraph(nodeByTemp.values.toList(), allMoves)
 }
 
+/**
+ * Computers the liveout sets for all nodes in the graph.
+ */
 fun FlowGraph.initializeLiveOuts() {
     val liveoutMap = buildLiveOutMap()
 
-    // set liveout for each node
-    for (node in nodes) {
-        val s = liveoutMap[node.id]
-        if (s != null)
-            node.liveOut = s
-        else
-            error("liveout map is not one-to-one")
-    }
+    for (node in nodes)
+        node.liveOut = liveoutMap[node.id]
 }
 
 /**
- * Creates a map which contain the liveout set for every node of [FlowGraph].
+ * Creates an array which contain the liveout set for every node in the graph.
  */
-private fun FlowGraph.buildLiveOutMap(): Map<Int, Set<Temp>> {
-    val liveinMap = mutableMapOf<Int, Set<Temp>>()
-    val liveoutMap = mutableMapOf<Int, Set<Temp>>()
-
-    for (n in nodes) {
-        liveinMap[n.id] = emptySet()
-        liveoutMap[n.id] = emptySet()
-    }
+private fun FlowGraph.buildLiveOutMap(): Array<Set<Temp>> {
+    val liveIn = Array<Set<Temp>>(size) { emptySet() }
+    val liveOut = Array<Set<Temp>>(size) { emptySet() }
 
     do {
         var changed = false
 
         for (n in nodes.asReversed()) {
-            val oldIn = liveinMap[n.id]!!
-            val oldOut = liveoutMap[n.id]!!
+            val oldIn = liveIn[n.id]
+            val oldOut = liveOut[n.id]
             val newIn = n.use + (oldOut - n.def)
-            val newOut = n.computeOut(liveinMap)
+            val newOut = n.computeOut(liveIn)
 
             if (newIn != oldIn || newOut != oldOut) {
                 changed = true
-                liveinMap[n.id] = newIn
-                liveoutMap[n.id] = newOut
+                liveIn[n.id] = newIn
+                liveOut[n.id] = newOut
             }
         }
     } while (changed)
 
-    return liveoutMap
+    return liveOut
 }
 
 /**
  * Compute liveout set for a node, given a livein map.
   */
-private fun FlowGraph.Node.computeOut(liveinMap: Map<Int, Set<Temp>>): Set<Temp> {
+private fun FlowGraph.Node.computeOut(liveinMap: Array<Set<Temp>>): Set<Temp> {
     val set = mutableSetOf<Temp>()
     for (s in succ)
-        set += liveinMap[s.id]!!
+        set += liveinMap[s.id]
     return set
 }
-

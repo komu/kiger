@@ -17,6 +17,9 @@ fun List<Instr>.createFlowGraph(): FlowGraph {
 
 class FlowGraph(val nodes: List<Node>) {
 
+    val size: Int
+        get() = nodes.size
+
     data class Node(val id: Int, val def: Set<Temp>, val use: Set<Temp>, val isMove: Boolean) {
         val succ = mutableListOf<Node>()
         val prev = mutableListOf<Node>()
