@@ -3,6 +3,7 @@ package kiger.regalloc
 import kiger.regalloc.InterferenceGraph.INode
 import kiger.regalloc.InterferenceGraph.Move
 import kiger.temp.Temp
+import java.util.*
 
 /**
  * Constructs an interference graph from [FlowGraph].
@@ -64,7 +65,7 @@ private fun FlowGraph.buildLiveOutMap(): Array<Set<Temp>> {
  * Compute liveout set for a node, given a livein map.
   */
 private fun FlowGraph.Node.computeOut(liveinMap: Array<Set<Temp>>): Set<Temp> {
-    val set = mutableSetOf<Temp>()
+    val set = TreeSet<Temp>()
     for (s in succ)
         set += liveinMap[s.id]
     return set
