@@ -183,7 +183,7 @@ class SemanticAnalyzer {
             }
 
             is Expression.While -> {
-                val doneLabel = Label.gen()
+                val doneLabel = Label.gen("whileDone")
                 val (testExp, testTy) = trexp(exp.test)
                 val (bodyExp, bodyTy) = transExp(exp.body, venv, tenv, level, doneLabel)
 

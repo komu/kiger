@@ -109,7 +109,7 @@ private class TraceScheduler(private val blocks: List<BasicBlock>) {
                         trace(trueTarget)
                     }
                     else -> {
-                        val f = Label.gen()
+                        val f = Label.gen("false")
                         output += block.labelledBody
                         output += CJump(br.relop, br.lhs, br.rhs, br.trueLabel, f)
                         output += Labeled(f)

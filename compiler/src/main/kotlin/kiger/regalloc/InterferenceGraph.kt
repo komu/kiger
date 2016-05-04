@@ -22,6 +22,9 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
         check(precolored.all { v -> precolored.all { u -> v == u || contains(u, v) }}) { "no edges for precolored" }
         check(nodes.all { v -> v.adjList.all { u -> contains(v,u) && contains(u, v) }}) { "no set for adjList item" }
         check(adjSet.all { (it.second in precolored || it.first in it.second.adjList) && (it.first in precolored || it.second in it.first.adjList) })
+
+        check(nodes.all { it !in it.adjList}) { "node is in its own adjacency set"}
+        check(nodes.all { !contains(it, it) }) { "self-edge on adjacency set" }
     }
 
     @Suppress("unused")
@@ -29,14 +32,10 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
         val nodes = nodes.sortedBy { if (it in precolored) "z${it.temp.name}" else it.temp.name }
 
         for (row in nodes) {
-            print(row.temp.name.padStart(10) + " ")
+            print(row.temp.name.padStart(10) + " [${row.degree}/${row.adjList.size}]: ")
             for (col in nodes) {
-                if (col in precolored) continue
-                if (contains(row, col)) {
-                    print("x")
-                } else {
-                    print(" ")
-                }
+                if (contains(row, col))
+                    print("${col.temp} ")
             }
             println()
         }

@@ -16,8 +16,9 @@ fun color(instrs: List<Instr>, frameType: FrameType): Pair<Coloring, List<Temp>>
     check(preallocatedColors.size == registers.size)
 
     val flowGraph = instrs.createFlowGraph()
+    val interferenceGraph = flowGraph.interferenceGraph()
 
-    val colorer = GraphColorer(flowGraph, registers)
+    val colorer = GraphColorer(flowGraph, interferenceGraph, registers)
 
     colorer.build(preallocatedColors)
     colorer.checkInvariants()
@@ -33,12 +34,10 @@ fun color(instrs: List<Instr>, frameType: FrameType): Pair<Coloring, List<Temp>>
 /**
  * Graph coloring as described in pages 241-249 of Modern Compiler Implementation in ML.
  */
-class GraphColorer(val flowGraph: FlowGraph, val registers: Collection<Register>) {
+class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: InterferenceGraph, val registers: Collection<Register>) {
 
     /** The number of colors available */
     private val K = registers.size
-
-    private val interferenceGraph = flowGraph.interferenceGraph()
 
     //
     // Node work-lists, sets and stacks.
@@ -523,4 +522,7 @@ private class MoveSet : Iterable<Move> {
     override fun iterator() = moves.iterator()
 
     override fun toString() = moves.toString()
+
+    val size: Int
+        get() = moves.size
 }

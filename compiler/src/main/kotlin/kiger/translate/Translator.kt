@@ -133,9 +133,9 @@ class Translator {
 
     fun ifElse(testExp: TrExp, thenExp: TrExp, elseExp: TrExp?): TrExp {
         val r = Temp.gen()
-        val t = Label.gen()
-        val f = Label.gen()
-        val finish = Label.gen()
+        val t = Label.gen("true")
+        val f = Label.gen("false")
+        val finish = Label.gen("after_if")
         val testFun = testExp.asCx()
         return when (thenExp) {
             is TrExp.Ex -> {
@@ -185,8 +185,8 @@ class Translator {
     }
 
     fun loop(test: TrExp, body: TrExp, doneLabel: Label): TrExp {
-        val testLabel = Label.gen()
-        val bodyLabel = Label.gen()
+        val testLabel = Label.gen("loopTest")
+        val bodyLabel = Label.gen("loopBody")
 
         return TrExp.Nx(seq(
                         TreeStm.Labeled(testLabel),

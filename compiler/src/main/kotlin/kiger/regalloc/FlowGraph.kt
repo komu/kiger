@@ -20,7 +20,7 @@ class FlowGraph(val nodes: List<Node>) {
     val size: Int
         get() = nodes.size
 
-    data class Node(val id: Int, val def: Set<Temp>, val use: Set<Temp>, val isMove: Boolean) {
+    class Node(val id: Int, val def: Set<Temp>, val use: Set<Temp>, val isMove: Boolean, val instr: Instr) {
         val succ = mutableListOf<Node>()
         val prev = mutableListOf<Node>()
         var liveOut = emptySet<Temp>()
@@ -28,17 +28,11 @@ class FlowGraph(val nodes: List<Node>) {
         override fun toString() = format { it.toString() }
 
         fun format(tempFormat: (Temp) -> String): String =
-            listOf(
-                "n$id",
-                "  def: ${def.map(tempFormat)}",
-                "  use: ${use.map(tempFormat)}",
-                "  succ: ${succ.joinToString(", ") { it.id.toString() }}",
-                "  prev: ${prev.joinToString(", ") { it.id.toString() }}",
-                "  liveout: $liveOut\n").joinToString("\n")
+            "${id.toString().padStart(4)}: ${instr.format(tempFormat).padEnd(30)} ; liveout: $liveOut; def=${def.map(tempFormat)}, use=${use.map(tempFormat)}, succ: ${succ.joinToString(", ") { it.id.toString() }}, prev: ${prev.joinToString(", ") { it.id.toString() }}"
     }
 
     fun format(tempFormat: (Temp) -> String): String =
-        nodes.joinToString("") { it.format(tempFormat) }
+        nodes.joinToString("\n") { it.format(tempFormat) }
 
     override fun toString() = format { it.toString() }
 }
@@ -87,9 +81,9 @@ private class FlowGraphBuilder(private val instructions: List<Instr>) {
     }
 
     private fun makeNode(inst: Instr, id: Int): FlowGraph.Node = when (inst) {
-        is Instr.Oper   -> FlowGraph.Node(id, inst.dst.toSet(), inst.src.toSet(), false)
-        is Instr.Lbl    -> FlowGraph.Node(id, emptySet(), emptySet(), false)
-        is Instr.Move   -> FlowGraph.Node(id, setOf(inst.dst), setOf(inst.src), true)
+        is Instr.Oper   -> FlowGraph.Node(id, inst.dst.toSet(), inst.src.toSet(), false, inst)
+        is Instr.Lbl    -> FlowGraph.Node(id, emptySet(), emptySet(), false, inst)
+        is Instr.Move   -> FlowGraph.Node(id, setOf(inst.dst), setOf(inst.src), true, inst)
     }
 
     private fun createLabelMap(): Map<Label, FlowGraph.Node> {

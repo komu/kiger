@@ -39,7 +39,7 @@ fun List<TreeStm>.createControlFlowGraph(): ControlFlowGraph {
 
 private class ControlFlowGraphBuilder {
 
-    private val exitLabel = Label.gen()
+    private val exitLabel = Label.gen("exit")
     private val blocks = mutableListOf<BasicBlock>()
     private var currentBlock: BasicBlockBuilder? = null
 
@@ -56,7 +56,7 @@ private class ControlFlowGraphBuilder {
             if (stm is TreeStm.Labeled) {
                 currentBlock = BasicBlockBuilder(stm.label)
             } else {
-                currentBlock = BasicBlockBuilder(Label.gen())
+                currentBlock = BasicBlockBuilder(Label.gen("dummy"))
                 process(stm) // now that we have fixed the block with our invented label, try again
             }
 
