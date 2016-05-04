@@ -31,7 +31,7 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
 
     override fun allocLocal(escape: Boolean): FrameAccess =
         if (escape)
-            FrameAccess.InFrame(++locals * wordSize + firstLocalOffset)
+            FrameAccess.InFrame(- (locals++ * wordSize + firstLocalOffset))
         else
             FrameAccess.InReg(Temp.gen())
 
@@ -50,15 +50,14 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         // Dummy instruction that simply tells register allocator what registers are live at the end
 //        val sink = Instr.Oper("", src = listOf(ZERO, RA, SP, FP, RV) + calleeSaves, jump = emptyList())
         // TODO: book does not keep RV live
-        val sink = Instr.Oper("", src = listOf(ZERO, RA, SP, FP, RV) + calleeSaves, jump = emptyList())
+        val sink = Instr.Oper("", src = listOf(ZERO, RA, SP, FP) + calleeSaves, jump = emptyList())
 
         return body + sink
     }
 
     override fun procEntryExit3(body: List<Instr>): Triple<String, List<Instr>, String> {
         // TODO: offset calculation is wrong since we still do "sw $a0, 4($fp)" at the start to save the link to frame
-        // TODO: improve this
-        val frameSize = (1 + locals + argumentRegisters.size) * wordSize
+        val frameSize = locals * wordSize
 
         // TODO: use virtual frame pointer
         if (frameSize != 0) {

@@ -6,6 +6,7 @@ import kiger.frame.Frame
 import kiger.frame.MipsFrame
 import kiger.temp.Label
 import kiger.temp.Temp
+import kiger.tree.BinaryOp
 import kiger.tree.BinaryOp.*
 import kiger.tree.RelOp
 import kiger.tree.RelOp.LT
@@ -353,7 +354,7 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
     private fun munchCJump(relop: RelOp, lhs: TreeExp, rhs: TreeExp, trueLabel: Label, falseLabel: Label) {
         // TODO: add special cases for comparison to 0
         when (relop) {
-            LT      -> emit(Oper("bgez `s0, `s1, `j1", src=listOf(munchExp(lhs), munchExp(rhs)), jump=listOf(trueLabel, falseLabel)))
+            LT      -> emit(Oper("bgez `s0, `j1", src=listOf(munchExp(TreeExp.BinOp(BinaryOp.MINUS, lhs, rhs))), jump=listOf(trueLabel, falseLabel)))
             else    -> TODO("cjump $relop $lhs $rhs $trueLabel $falseLabel")
         }
 
