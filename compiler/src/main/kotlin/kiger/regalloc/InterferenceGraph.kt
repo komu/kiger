@@ -29,8 +29,6 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
     fun nodeForTemp(t: Temp): INode =
         nodes.find { it.temp == t } ?: error("could not find node for $t")
 
-    override fun toString() = nodes.sortedBy { it.temp.name }.joinToString("\n")
-
     fun check(precolored: Set<INode>) {
         check(precolored.all { it.adjList.isEmpty() }) { "precolored nodes with adj-lists" }
         check(precolored.all { v -> precolored.all { u -> v == u || contains(u, v) }}) { "no edges for precolored" }
@@ -41,18 +39,20 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
         check(nodes.all { !contains(it, it) }) { "self-edge on adjacency set" }
     }
 
-    @Suppress("unused")
-    fun dump() {
+    override fun toString(): String {
         val nodes = nodes.sortedBy { if (it.precolored) "z${it.temp.name}" else it.temp.name }
 
+        val sb = StringBuilder()
         for (row in nodes) {
-            print(row.temp.name.padStart(10) + " [${row.degree}/${row.adjList.size}]: ")
+            sb.append(row.temp.name.padStart(10) + " [${row.degree}/${row.adjList.size}]: ")
             for (col in nodes) {
                 if (contains(row, col))
-                    print("${col.temp} ")
+                    sb.append("${col.temp} ")
             }
-            println()
+            sb.appendln()
         }
+
+        return sb.toString()
     }
 
     class INode(val temp: Temp) {
