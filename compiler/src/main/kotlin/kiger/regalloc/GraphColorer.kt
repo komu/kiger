@@ -16,9 +16,8 @@ fun color(instrs: List<Instr>, frameType: FrameType): Pair<Coloring, List<Temp>>
     check(preallocatedColors.size == registers.size)
 
     val flowGraph = instrs.createFlowGraph()
-    val interferenceGraph = flowGraph.interferenceGraph()
 
-    val colorer = GraphColorer(flowGraph, interferenceGraph, registers)
+    val colorer = GraphColorer(flowGraph, registers)
 
     colorer.build(preallocatedColors)
     colorer.checkInvariants()
@@ -34,10 +33,15 @@ fun color(instrs: List<Instr>, frameType: FrameType): Pair<Coloring, List<Temp>>
 /**
  * Graph coloring as described in pages 241-249 of Modern Compiler Implementation in ML.
  */
-class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: InterferenceGraph, val registers: Collection<Register>) {
+class GraphColorer(val flowGraph: FlowGraph, val registers: Collection<Register>) {
 
     /** The number of colors available */
     private val K = registers.size
+
+    /**
+     * Interference graph.
+     */
+    val interferenceGraph = flowGraph.interferenceGraph()
 
     //
     // Node work-lists, sets and stacks.
@@ -121,25 +125,19 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
             }
         }
 
-        for (m in interferenceGraph.moves) {
-            // TODO: why are the move-lists conditions in original code?
-//            if (m.src !in precolored)
-                m.src.moveList += m
-
-//            if (m.dst !in precolored)
-                m.dst.moveList += m
-
-            worklistMoves += m
-        }
+        worklistMoves += interferenceGraph.moves
 
         for (v in precolored)
             for (u in precolored)
                 interferenceGraph.addEdge(v, u)
 
-        for (i in flowGraph.nodes)
-            for (d in i.def)
-                for (l in i.liveOut)
-                    interferenceGraph.addEdge(interferenceGraph.nodeForTemp(l), interferenceGraph.nodeForTemp(d))
+        println(flowGraph)
+        println()
+
+        println("K = $K\n")
+
+        println(interferenceGraph)
+        println()
     }
 
     fun makeWorklist() {
@@ -340,6 +338,7 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
             val v = if (getAlias(dst) == getAlias(u)) getAlias(src) else getAlias(dst)
 
             activeMoves -= m
+
             frozenMoves += m
 
             if (v.nodeMoves.isEmpty() && v.degree < K) { // && v !in precolored) { // TODO the precolored test is added
@@ -491,6 +490,10 @@ private class MoveSet : Iterable<Move> {
 
     operator fun plusAssign(move: Move) {
         moves += move
+    }
+
+    operator fun plusAssign(ms: Iterable<Move>) {
+        moves += ms
     }
 
     operator fun minusAssign(move: Move) {

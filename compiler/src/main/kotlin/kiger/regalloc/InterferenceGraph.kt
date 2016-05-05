@@ -27,6 +27,8 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
 
     fun contains(u: INode, v: INode) = Pair(u, v) in adjSet
 
+    operator fun get(t: Temp): INode = nodeForTemp(t)
+
     fun nodeForTemp(t: Temp): INode =
         nodes.find { it.temp == t } ?: error("could not find node for $t")
 
