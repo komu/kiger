@@ -269,8 +269,6 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
 //                emit(Oper("MOVE M['s0] <- M['s1]", src = listOf(munchExp(dst.exp), munchExp(src.exp))))
 //            dst is Mem && dst.exp is Const ->
 //                emit(Oper("STORE M[${dst.exp.value}] <- 's0", src = listOf(munchExp(src))))
-            dst is Mem && src is Const ->
-                emit(Oper("li 's0, ${src.value}", src = listOf(munchExp(src))))
             dst is Mem ->
                 emit(Oper("sw 's1, 0('s0)", src = listOf(munchExp(dst.exp), munchExp(src))))
             dst is Temporary ->
