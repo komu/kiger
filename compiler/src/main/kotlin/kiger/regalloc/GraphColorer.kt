@@ -223,14 +223,11 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
         // only decrement those non-precolored nodes - for
         // precolored nodes, we treat as if they have infinite
         // degree, since we shouldn't reassign them to different registers
-//        if (m in precolored) return // TODO: not in book
+        if (m in precolored) return // TODO: not in book
 
-        val d = m.degree
+        m.degree -= 1
 
-        if (!m.precolored) // TODO
-            m.degree = d - 1
-
-        if (d == K) {
+        if (m.degree == K) {
             enableMoves(m.adjacent + m)
             spillWorklist -= m
             if (m.isMoveRelated)
