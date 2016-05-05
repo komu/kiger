@@ -335,8 +335,9 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
 
     private fun freezeMoves(u: INode) {
         for (m in u.nodeMoves) {
-            val (x, y) = m
-            val v = if (getAlias(y) == getAlias(u)) getAlias(x) else getAlias(y)
+            val src = m.src
+            val dst = m.dst
+            val v = if (getAlias(dst) == getAlias(u)) getAlias(src) else getAlias(dst)
 
             activeMoves -= m
             frozenMoves += m

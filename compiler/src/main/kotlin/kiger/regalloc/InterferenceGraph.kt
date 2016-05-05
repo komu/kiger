@@ -1,6 +1,7 @@
 package kiger.regalloc
 
 import kiger.temp.Temp
+import java.util.Objects.hash
 
 data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
 
@@ -29,7 +30,9 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
     fun nodeForTemp(t: Temp): INode =
         nodes.find { it.temp == t } ?: error("could not find node for $t")
 
-    fun check(precolored: Set<INode>) {
+    @Suppress("unused")
+    fun check() {
+        val precolored = nodes.filter { it.precolored }
         check(precolored.all { it.adjList.isEmpty() }) { "precolored nodes with adj-lists" }
         check(precolored.all { v -> precolored.all { u -> v == u || contains(u, v) }}) { "no edges for precolored" }
         check(nodes.all { v -> v.adjList.all { u -> contains(v,u) && contains(u, v) }}) { "no set for adjList item" }
@@ -78,7 +81,7 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
 
     class Move(val src: INode, val dst: INode) {
         override fun toString() = "${src.temp} -> ${dst.temp}"
-        operator fun component1() = src
-        operator fun component2() = dst
+        override fun equals(other: Any?) = other is Move && src == other.src && dst == other.dst
+        override fun hashCode() = hash(src, dst)
     }
 }
