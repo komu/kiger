@@ -7,18 +7,18 @@ class SourceLocationTest {
 
     @Test
     fun defaultToStringProvidesBasicInfo() {
-        val location = SourceLocation("dummy.sk", 42, 14, "    if (foo) bar() else baz()")
+        val location = SourceLocation("dummy.tig", 42, 14, "    if foo then bar() else baz")
 
-        assertEquals("[dummy.sk:42:14]", location.toString())
+        assertEquals("[dummy.tig:42:14]", location.toString())
     }
 
     @Test
     fun stringRepresentationProvidesInformationAboutCurrentLine() {
-        val location = SourceLocation("dummy.sk", 42, 14, "    if (foo) bar() else baz()")
+        val location = SourceLocation("dummy.tig", 42, 17, "    if foo then bar() else baz()")
 
         assertEquals("""
-            |[dummy.sk:42:14]     if (foo) bar() else baz()
-            |                              ^
+            |[dummy.tig:42:17]     if foo then bar() else baz()
+            |                                  ^
             |
         """.trimMargin(), location.toLongString())
     }
