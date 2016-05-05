@@ -7,8 +7,22 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
     private val adjSet = mutableSetOf<Pair<INode,INode>>() // TODO: use bitset
 
     fun addEdge(u: INode, v: INode) {
-        adjSet += Pair(u, v)
+        if (!contains(u, v) && u != v) {
+            adjSet += Pair(v, u)
+            adjSet += Pair(u, v)
+
+            if (!u.precolored) {
+                u.adjList += v
+                u.degree += 1
+            }
+
+            if (!v.precolored) {
+                v.adjList += u
+                v.degree += 1
+            }
+        }
     }
+
 
     fun contains(u: INode, v: INode) = Pair(u, v) in adjSet
 
@@ -45,6 +59,13 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
 
         val adjList = mutableSetOf<INode>()
         var degree = 0
+            get() = field
+            set(v) {
+                check(!precolored)
+                field = v
+            }
+
+        var precolored = false
 
         /** Mapping from node to moves it's associated with */
         val moveList = mutableListOf<Move>()

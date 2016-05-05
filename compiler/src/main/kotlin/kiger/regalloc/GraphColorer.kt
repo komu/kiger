@@ -47,31 +47,31 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
     //
 
     /** Machine registers, preassigned a color */
-    private val precolored = mutableSetOf<INode>()
+    private val precolored = NodeSet() { it.precolored }
 
     /** Temporary registers, not [precolored] and not yet processed */
-    private val initial = mutableSetOf<INode>()
+    private val initial = NodeSet() { !it.precolored }
 
     /** List of low-degree non-move-related nodes */
-    private val simplifyWorklist = Worklist()
+    private val simplifyWorklist = Worklist() { !it.precolored }
 
     /** Low-degree move-related nodes */
-    private val freezeWorklist = Worklist()
+    private val freezeWorklist = Worklist() { !it.precolored }
 
     /** High-degree nodes */
-    private val spillWorklist = Worklist()
+    private val spillWorklist = Worklist() { !it.precolored }
 
     /** Nodes marked for spilling during this round; initially empty */
-    private val spilledNodes = mutableSetOf<INode>()
+    private val spilledNodes = NodeSet() { !it.precolored }
 
     /**
      * Registers that have been coalesced; when `u <- v` is coalesced,
      * `v` is added to this set and `u` is put back on some work-list (or vice versa).
      */
-    private val coalescedNodes = mutableSetOf<INode>()
+    private val coalescedNodes = NodeSet() { !it.precolored }
 
     /** Nodes successfully colored */
-    private val coloredNodes = mutableSetOf<INode>()
+    private val coloredNodes = NodeSet() { !it.precolored }
 
     /** Stack containing temporaries removed from the graph */
     private val selectStack = NodeStack()
@@ -112,7 +112,10 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
             val color = preallocatedColors[node.temp]
             if (color != null) {
                 node.color = color
+                node.degree = Int.MAX_VALUE
+                node.precolored = true
                 precolored += node
+
             } else {
                 initial += node
             }
@@ -121,28 +124,22 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
         for (m in interferenceGraph.moves) {
             // TODO: why are the move-lists conditions in original code?
 //            if (m.src !in precolored)
-                m.src.moveList.add(m)
+                m.src.moveList += m
 
 //            if (m.dst !in precolored)
-                m.dst.moveList.add(m)
+                m.dst.moveList += m
 
             worklistMoves += m
         }
 
-        // TODO: where is this coming from if not here?
-        for (v in precolored) {
-            v.degree = K
+        for (v in precolored)
             for (u in precolored)
-                addEdge(v, u)
-        }
+                interferenceGraph.addEdge(v, u)
 
-        for (i in flowGraph.nodes) {
-            for (d in i.def) {
-                for (l in i.liveOut) {
-                    addEdge(interferenceGraph.nodes.find { it.temp == l }!!, interferenceGraph.nodes.find { it.temp == d }!!)
-                }
-            }
-        }
+        for (i in flowGraph.nodes)
+            for (d in i.def)
+                for (l in i.liveOut)
+                    interferenceGraph.addEdge(interferenceGraph.nodeForTemp(l), interferenceGraph.nodeForTemp(d))
     }
 
     private fun addEdge(u: INode, v: INode) {
@@ -150,12 +147,12 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
             interferenceGraph.addEdge(v, u)
             interferenceGraph.addEdge(u, v)
 
-            if (u !in precolored) {
+            if (!u.precolored) {
                 u.adjList += v
                 u.degree += 1
             }
 
-            if (v !in precolored) {
+            if (!v.precolored) {
                 v.adjList += u
                 v.degree += 1
             }
@@ -226,10 +223,12 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
         // only decrement those non-precolored nodes - for
         // precolored nodes, we treat as if they have infinite
         // degree, since we shouldn't reassign them to different registers
-        if (m in precolored) return // TODO: not in book
+//        if (m in precolored) return // TODO: not in book
 
         val d = m.degree
-        m.degree = d - 1
+
+        if (!m.precolored) // TODO
+            m.degree = d - 1
 
         if (d == K) {
             enableMoves(m.adjacent + m)
@@ -319,7 +318,7 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
         enableMoves(setOf(v))
 
         for (t in v.adjacent) {
-            addEdge(t, u)
+            interferenceGraph.addEdge(t, u)
             decrementDegree(t)
         }
 
@@ -376,7 +375,7 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
      * After initialization the following invariants always hold.
      */
     fun checkInvariants() {
-        interferenceGraph.check(precolored)
+//        interferenceGraph.check(precolored)
         checkWorkListsAreDistinct()
         checkDegreeInvariant()
         checkSimplifyWorklistInvariant()
@@ -456,11 +455,12 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
         get() = adjList - (selectStack + coalescedNodes) // TODO: optimize
 }
 
-private class Worklist : Iterable<INode> {
+private class Worklist(val predicate: (INode) -> Boolean) : Iterable<INode> {
 
     private val nodes = mutableSetOf<INode>()
 
     operator fun plusAssign(node: INode) {
+        require(predicate(node))
         nodes += node
     }
 
@@ -483,6 +483,7 @@ private class NodeStack : Iterable<INode> {
     private val stack = ArrayList<INode>()
 
     fun push(node: INode) {
+        check(!node.precolored)
         stack.add(node)
     }
 
@@ -525,4 +526,29 @@ private class MoveSet : Iterable<Move> {
 
     val size: Int
         get() = moves.size
+}
+
+private class NodeSet(val predicate: (INode) -> Boolean) : Iterable<INode> {
+
+    private val nodes = mutableSetOf<INode>()
+
+    operator fun plusAssign(node: INode) {
+        require(predicate(node))
+        nodes += node
+    }
+
+    operator fun minusAssign(node: INode) {
+        nodes -= node
+    }
+
+    override fun iterator() = nodes.iterator()
+
+    val size: Int
+        get() = nodes.size
+
+    override fun toString() = nodes.toString()
+
+    fun clear() {
+        nodes.clear()
+    }
 }
