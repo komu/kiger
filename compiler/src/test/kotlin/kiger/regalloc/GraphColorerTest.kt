@@ -54,10 +54,10 @@ class GraphColorerTest {
 
     private fun assertValidColoring(igraph: InterferenceGraph, coloring: Coloring) {
         for ((reg, nodes) in igraph.nodes.groupBy { coloring[it.temp] })
-            assertFalse(igraph.interfere(nodes), "tried to assign interfering nodes to same reg $reg: $nodes")
+            assertFalse(igraph.anyPairInterferes(nodes), "tried to assign interfering nodes to same reg $reg: $nodes")
     }
 
-    private fun InterferenceGraph.interfere(nodes: List<InterferenceGraph.INode>): Boolean {
+    private fun InterferenceGraph.anyPairInterferes(nodes: List<InterferenceGraph.INode>): Boolean {
         for (i in nodes.indices)
             for (j in i + 1..nodes.lastIndex)
                 if (contains(nodes[i], nodes[j]))
