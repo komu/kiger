@@ -45,11 +45,12 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
     override fun toString(): String {
         val nodes = nodes.sortedBy { if (it.precolored) "z${it.temp.name}" else it.temp.name }
 
+        // dump interference graph but don't include precolored <-> precolored edges
         val sb = StringBuilder()
         for (row in nodes) {
             sb.append(row.temp.name.padStart(10) + " [${row.degree}/${row.adjList.size}]: ")
             for (col in nodes) {
-                if (contains(row, col))
+                if (contains(row, col) && (!row.precolored || !col.precolored))
                     sb.append("${col.temp} ")
             }
             sb.appendln()
