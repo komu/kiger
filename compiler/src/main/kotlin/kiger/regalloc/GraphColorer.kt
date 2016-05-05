@@ -131,14 +131,6 @@ class GraphColorer(val flowGraph: FlowGraph, val preallocatedColors: Map<Temp, R
         for (v in precolored)
             for (u in precolored)
                 interferenceGraph.addEdge(v, u)
-
-        println(flowGraph)
-        println()
-
-        println("K = $K\n")
-
-        println(interferenceGraph)
-        println()
     }
 
     fun makeWorklist() {
@@ -173,13 +165,13 @@ class GraphColorer(val flowGraph: FlowGraph, val preallocatedColors: Map<Temp, R
                 val wa = getAlias(w)
                 if (wa in (coloredNodes + precolored)) // TODO: optimize
                     okColors -= wa.color
+            }
 
-                if (okColors.isEmpty()) {
-                    spilledNodes += n
-                } else {
-                    coloredNodes += n
-                    n.color = okColors.removeAny()
-                }
+            if (okColors.isEmpty()) {
+                spilledNodes += n
+            } else {
+                coloredNodes += n
+                n.color = okColors.removeAny()
             }
         }
 
@@ -205,9 +197,10 @@ class GraphColorer(val flowGraph: FlowGraph, val preallocatedColors: Map<Temp, R
         // Precolored nodes have infinite degree so we just ignore those.
         if (m.precolored) return
 
+        val oldDegree = m.degree
         m.degree -= 1
 
-        if (m.degree == K) {
+        if (oldDegree == K) {
             enableMoves(m.adjacent + m)
             spillWorklist -= m
             if (m.isMoveRelated)
@@ -237,6 +230,7 @@ class GraphColorer(val flowGraph: FlowGraph, val preallocatedColors: Map<Temp, R
      */
     private fun coalesce() {
         val m = worklistMoves.removeAny()
+
         val x = getAlias(m.src)
         val y = getAlias(m.dst)
 
@@ -342,8 +336,7 @@ class GraphColorer(val flowGraph: FlowGraph, val preallocatedColors: Map<Temp, R
 
             frozenMoves += m
 
-            if (v.nodeMoves.isEmpty() && v.degree < K) { // && v !in precolored) { // TODO the precolored test is added
-                check(v !in precolored) // TODO: added
+            if (v.nodeMoves.isEmpty() && v.degree < K) {
                 freezeWorklist -= v
                 simplifyWorklist += v
             }
