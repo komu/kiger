@@ -11,16 +11,13 @@ import kiger.parser.parseExpression
 import kiger.regalloc.allocateRegisters
 import kiger.translate.SemanticAnalyzer
 import java.io.File
+import java.io.OutputStreamWriter
 import java.io.Writer
 
 private fun compile(code: String): List<Fragment> {
     val exp = parseExpression(code)
     exp.analyzeEscapes()
     return SemanticAnalyzer.transProg(exp)
-}
-
-fun File.emitFragments(fragments: List<Fragment>) {
-    writer().use { it.emitFragments(fragments) }
 }
 
 fun Writer.emitFragments(fragments: List<Fragment>) {
@@ -68,9 +65,19 @@ private fun Writer.writeLine(line: String) {
 }
 
 fun main(args: Array<String>) {
-//    val fragments = compile("let function square(n: int): int = n * n in square(4)")
-    val fragments = compile("let function fib(n: int): int = if n < 2 then n else fib(n - 1) + fib(n - 2) in fib(20)")
-//    val fragments = compile("let function fib(n: int): int = if n < 2 then n else fib(n - 1) in fib(4)")
+    if (args.size != 2) {
+        System.err?.println("usage: tiger FILE.tig [OUTPUT.s]")
+        System.exit(1)
+    }
 
-    File("output.s").emitFragments(fragments)
+    val input = File(args[0])
+    val output = args.getOrNull(1)?.let { File(it) }
+    val fragments = compile(input.readText())
+
+    if (output != null) {
+        output.parentFile.mkdirs()
+        output.writer().use { it.emitFragments(fragments) }
+    } else {
+        OutputStreamWriter(System.out).emitFragments(fragments)
+    }
 }

@@ -1,9 +1,9 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="compiler" type="JetRunConfigurationType" factoryName="Kotlin" singleton="true">
+  <configuration default="false" name="compile fib" type="JetRunConfigurationType" factoryName="Kotlin">
     <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea" />
-    <option name="MAIN_CLASS_NAME" value="kiger.KigerKt" />
+    <option name="MAIN_CLASS_NAME" value="kiger.CompilerKt" />
     <option name="VM_PARAMETERS" value="" />
-    <option name="PROGRAM_PARAMETERS" value="" />
+    <option name="PROGRAM_PARAMETERS" value="samples/fib.tig out/fib.s" />
     <option name="WORKING_DIRECTORY" value="" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
     <option name="ALTERNATIVE_JRE_PATH" />
