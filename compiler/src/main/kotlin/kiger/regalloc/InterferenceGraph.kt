@@ -42,8 +42,8 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
     }
 
     @Suppress("unused")
-    fun dump(precolored: Set<INode>) {
-        val nodes = nodes.sortedBy { if (it in precolored) "z${it.temp.name}" else it.temp.name }
+    fun dump() {
+        val nodes = nodes.sortedBy { if (it.precolored) "z${it.temp.name}" else it.temp.name }
 
         for (row in nodes) {
             print(row.temp.name.padStart(10) + " [${row.degree}/${row.adjList.size}]: ")
