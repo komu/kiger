@@ -30,15 +30,22 @@ sealed class Expression {
         override fun toString() = "$variable := $exp"
     }
     class If(val test: Expression, val then: Expression, val alt: Expression?, val pos: SourceLocation) : Expression() {
-        override fun toString() = "if $test then $then" + (alt?.let { " else $alt" } ?: "")
+        override fun toString() = "(if $test then $then" + (alt?.let { " else $alt" } ?: "") + ")"
     }
     class While(val test: Expression, val body: Expression, val pos: SourceLocation) : Expression() {
-        override fun toString() = "while ($test) $body"
+        override fun toString() = "(while ($test) $body)"
     }
     class For(val variable: Symbol, val lo: Expression, val hi: Expression, val body: Expression, val pos: SourceLocation) : Expression() {
+        override fun toString() = "(for $variable := $lo to $hi do $body)"
         var escape = true
     }
-    class Break(val pos: SourceLocation) : Expression()
-    class Let(val declarations: List<Declaration>, val body: Expression, val pos: SourceLocation) : Expression()
-    class Array(val typ: Symbol, val size: Expression, val init: Expression, val pos: SourceLocation) : Expression()
+    class Break(val pos: SourceLocation) : Expression() {
+        override fun toString() = "break"
+    }
+    class Let(val declarations: List<Declaration>, val body: Expression, val pos: SourceLocation) : Expression() {
+        override fun toString() = "let ${declarations.joinToString("\n")} in $body end"
+    }
+    class Array(val typ: Symbol, val size: Expression, val init: Expression, val pos: SourceLocation) : Expression() {
+        override fun toString() = "($typ [$size] of $init)"
+    }
 }

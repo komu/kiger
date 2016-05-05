@@ -16,6 +16,7 @@ import java.io.Writer
 
 private fun compile(code: String, filename: String): List<Fragment> {
     val exp = parseExpression(code, filename)
+    println(exp)
     exp.analyzeEscapes()
     return SemanticAnalyzer.transProg(exp)
 }
