@@ -142,23 +142,6 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
                     interferenceGraph.addEdge(interferenceGraph.nodeForTemp(l), interferenceGraph.nodeForTemp(d))
     }
 
-    private fun addEdge(u: INode, v: INode) {
-        if (!interferenceGraph.contains(u, v) && u != v) {
-            interferenceGraph.addEdge(v, u)
-            interferenceGraph.addEdge(u, v)
-
-            if (!u.precolored) {
-                u.adjList += v
-                u.degree += 1
-            }
-
-            if (!v.precolored) {
-                v.adjList += u
-                v.degree += 1
-            }
-        }
-    }
-
     fun makeWorklist() {
         for (n in initial) {
             when {
