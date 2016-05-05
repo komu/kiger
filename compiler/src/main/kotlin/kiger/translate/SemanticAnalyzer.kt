@@ -25,7 +25,7 @@ private fun Token.Operator.classify(): Kind = when (this) {
     Operator.GreaterThan -> Kind.COMP
     Operator.LessThanOrEqual -> Kind.COMP
     Operator.GreaterThanOrEqual -> Kind.COMP
-    Operator.EqualEqual -> Kind.EQ
+    Operator.Equal -> Kind.EQ
     Operator.NotEqual -> Kind.EQ
 }
 

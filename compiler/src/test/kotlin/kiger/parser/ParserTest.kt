@@ -33,7 +33,7 @@ class ParserTest {
 
     @Test
     fun assignment() {
-        assertParseExpression("foo = bar", "foo = bar")
+        assertParseExpression("foo := bar", "foo := bar")
     }
 
     @Test
@@ -58,7 +58,7 @@ class ParserTest {
     fun binaryOperators() {
         assertParseExpression("1 + 2", "(1 + 2)")
         assertParseExpression("1 - 2", "(1 - 2)")
-        assertParseExpression("1 == 2", "(1 == 2)")
+        assertParseExpression("1 = 2", "(1 = 2)")
         assertParseExpression("1 != 2", "(1 != 2)")
         assertParseExpression("1 < 2", "(1 < 2)")
         assertParseExpression("1 > 2", "(1 > 2)")
@@ -68,10 +68,10 @@ class ParserTest {
 
     @Test
     fun operatorPrecedence() {
-        assertParseExpression("a + b == c + d", "((a + b) == (c + d))")
-        assertParseExpression("a + (b == c) + d", "((a + (b == c)) + d)")
+        assertParseExpression("a + b = c + d", "((a + b) = (c + d))")
+        assertParseExpression("a + (b = c) + d", "((a + (b = c)) + d)")
         assertParseExpression("a + b * c + d", "((a + (b * c)) + d)")
-        assertParseExpression("a == b < c", "(a == (b < c))")
+        assertParseExpression("a = b < c", "(a = (b < c))")
         //assertParseExpression("a == b || c == d && e == f", "((a == b) || ((c == d) && (e == f)))")
     }
 

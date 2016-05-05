@@ -6,6 +6,7 @@ import kiger.lexer.Token.Keyword.*
 import kiger.lexer.Token.Keyword.Array
 import kiger.lexer.Token.Keyword.Function
 import kiger.lexer.Token.Operator
+import kiger.lexer.Token.Operator.Equal
 import kiger.lexer.Token.Punctuation.*
 import kiger.lexer.Token.Sym
 import java.util.*
@@ -82,7 +83,7 @@ private class Parser(lexer: Lexer) {
         val pos = lexer.expect(Var)
         val name = parseName().first
         val type = parseOptionalType()
-        lexer.expect(Equal)
+        lexer.expect(Assign)
         val init = parseTopLevelExpression()
 
         return Declaration.Var(name, type, init, pos)
@@ -112,7 +113,7 @@ private class Parser(lexer: Lexer) {
     fun parseExpression0() = when (lexer.peekToken().token) {
         is Token.Sym -> {
             val exp = parseExpression1();
-            if (exp is Expression.Var && lexer.nextTokenIs(Equal))
+            if (exp is Expression.Var && lexer.nextTokenIs(Assign))
                 parseAssignTo(exp.variable)
             else
                 exp
@@ -165,7 +166,7 @@ private class Parser(lexer: Lexer) {
 
     /**
      * ```
-     * expression3 ::= expression4 (("==" | "!=") expression4)*
+     * expression3 ::= expression4 (("=" | "!=") expression4)*
      * ```
      */
     fun parseExpression3(): Expression {
@@ -174,8 +175,8 @@ private class Parser(lexer: Lexer) {
         while (lexer.hasMore) {
             val location = lexer.nextTokenLocation()
             when {
-                lexer.readNextIf(Operator.EqualEqual) ->
-                    exp = Expression.Op(exp, Operator.EqualEqual, parseExpression4(), location)
+                lexer.readNextIf(Equal) ->
+                    exp = Expression.Op(exp, Equal, parseExpression4(), location)
                 lexer.readNextIf(Operator.NotEqual) ->
                     exp = Expression.Op(exp, Operator.NotEqual, parseExpression4(), location)
                 else ->
@@ -310,7 +311,7 @@ private class Parser(lexer: Lexer) {
     }
 
     private fun parseAssignTo(variable: Variable): Expression {
-        val location = lexer.expect(Equal)
+        val location = lexer.expect(Assign)
         val rhs = parseTopLevelExpression()
 
         return Expression.Assign(variable, rhs, location)

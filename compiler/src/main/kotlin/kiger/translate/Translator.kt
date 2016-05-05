@@ -59,7 +59,7 @@ class Translator {
         val right = e2.asEx()
 
         val treeOp = when (op) {
-            Token.Operator.EqualEqual           -> RelOp.EQ
+            Token.Operator.Equal -> RelOp.EQ
             Token.Operator.NotEqual             -> RelOp.NE
             Token.Operator.LessThan             -> RelOp.LT
             Token.Operator.LessThanOrEqual      -> RelOp.LE

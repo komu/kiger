@@ -39,7 +39,7 @@ class LexerTest {
         assertTokens("-", Operator.Minus)
         assertTokens("*", Operator.Multiply)
         assertTokens("/", Operator.Divide)
-        assertTokens("==", Operator.EqualEqual)
+        assertTokens("=", Operator.Equal)
         assertTokens("!=", Operator.NotEqual)
 //        assertTokens("!", Operator.Not)
         assertTokens("<", Operator.LessThan)
@@ -52,11 +52,11 @@ class LexerTest {
 
     @Test
     fun punctuation() {
+        assertTokens(":=", Punctuation.Assign)
         assertTokens("(", Punctuation.LeftParen)
         assertTokens(")", Punctuation.RightParen)
         assertTokens("{", Punctuation.LeftBrace)
         assertTokens("}", Punctuation.RightBrace)
-        assertTokens("=", Punctuation.Equal)
         assertTokens(":", Punctuation.Colon)
         assertTokens(";", Punctuation.Semicolon)
         assertTokens(",", Punctuation.Comma)

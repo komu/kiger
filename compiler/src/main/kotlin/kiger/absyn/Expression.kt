@@ -27,7 +27,7 @@ sealed class Expression {
         override fun toString() = exps.joinToString("; ") { it.first.toString() }
     }
     class Assign(val variable: Variable, val exp: Expression, val pos: SourceLocation) : Expression() {
-        override fun toString() = "$variable = $exp"
+        override fun toString() = "$variable := $exp"
     }
     class If(val test: Expression, val then: Expression, val alt: Expression?, val pos: SourceLocation) : Expression() {
         override fun toString() = "if $test then $then" + (alt?.let { " else $alt" } ?: "")
