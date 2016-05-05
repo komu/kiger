@@ -13,7 +13,7 @@ import kiger.types.Type
 import kiger.utils.tailFrom
 
 private enum class Kind {
-    ARITH, COMP, EQ
+    ARITH, COMP, EQ, LOGICAL
 }
 
 private fun Token.Operator.classify(): Kind = when (this) {
@@ -27,6 +27,8 @@ private fun Token.Operator.classify(): Kind = when (this) {
     Operator.GreaterThanOrEqual -> Kind.COMP
     Operator.Equal -> Kind.EQ
     Operator.NotEqual -> Kind.EQ
+    Operator.And -> Kind.LOGICAL
+    Operator.Or -> Kind.LOGICAL
 }
 
 data class TranslationResult(val exp: TrExp, val type: Type)
@@ -116,6 +118,11 @@ class SemanticAnalyzer {
                     Kind.EQ -> {
                         checkEquality()
                         TranslationResult(translate.relop(exp.op, le, re), Type.Int)
+                    }
+                    Kind.LOGICAL -> {
+                        checkType(Type.Int, lt, exp.pos)
+                        checkType(Type.Int, rt, exp.pos)
+                        TranslationResult(translate.logicalOp(exp.op, le, re), Type.Int)
                     }
                 }
             }

@@ -71,6 +71,12 @@ class Translator {
         return TrExp.Cx { t, f -> TreeStm.Branch.CJump(treeOp, left, right, t, f) }
     }
 
+    fun logicalOp(op: Token.Operator, le: TrExp, re: TrExp): TrExp = when (op) {
+        Token.Operator.And -> ifElse(le, re, TrExp.Ex(TreeExp.Const(0)))
+        Token.Operator.Or  -> ifElse(le, TrExp.Ex(TreeExp.Const(1)), re)
+        else               -> error("unexpected op: $op")
+    }
+
     /**
      * fetch static links between the level of use (the
      * level passed to simpleVar) and the level of definition

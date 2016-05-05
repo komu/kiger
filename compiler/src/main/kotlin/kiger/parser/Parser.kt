@@ -138,15 +138,15 @@ private class Parser(lexer: Lexer) {
     private fun parseExpression1(): Expression {
         var exp = parseExpression2()
 
-//        while (lexer.hasMore) {
-//            val location = lexer.nextTokenLocation()
-//            when {
-//                lexer.readNextIf(Operator.Or) ->
-//                    exp = Expression.Op(exp, Operator.Or, parseExpression2(), location)
-//                else ->
-//                    return exp
-//            }
-//        }
+        while (lexer.hasMore) {
+            val location = lexer.nextTokenLocation()
+            when {
+                lexer.readNextIf(Operator.Or) ->
+                    exp = Expression.Op(exp, Operator.Or, parseExpression2(), location)
+                else ->
+                    return exp
+            }
+        }
 
         return exp
     }
@@ -159,15 +159,15 @@ private class Parser(lexer: Lexer) {
     private fun parseExpression2(): Expression {
         var exp = parseExpression3()
 
-//        while (lexer.hasMore) {
-//            val location = lexer.nextTokenLocation()
-//            when {
-//                lexer.readNextIf(Operator.And) ->
-//                    exp = Expression.Op(exp, Operator.And, parseExpression3(), location)
-//                else ->
-//                    return exp
-//            }
-//        }
+        while (lexer.hasMore) {
+            val location = lexer.nextTokenLocation()
+            when {
+                lexer.readNextIf(Operator.And) ->
+                    exp = Expression.Op(exp, Operator.And, parseExpression3(), location)
+                else ->
+                    return exp
+            }
+        }
 
         return exp
     }
@@ -298,6 +298,7 @@ private class Parser(lexer: Lexer) {
             LeftParen           -> inParens { parseTopLevelExpression() }
             If                  -> parseIf()
             While               -> parseWhile()
+            For                 -> parseFor()
             Let                 -> parseLet()
             else                -> fail(location, "unexpected token $token")
         }
@@ -340,6 +341,7 @@ private class Parser(lexer: Lexer) {
         val decls = parseDeclarations()
         lexer.expect(In)
         val body = parseTopLevelExpression()
+        lexer.expect(End)
 
         return Expression.Let(decls, body, location)
     }
@@ -352,14 +354,48 @@ private class Parser(lexer: Lexer) {
         return Expression.While(condition, body, location)
     }
 
+    private fun parseFor(): Expression {
+        val location = lexer.expect(For)
+        val variable = parseName().first
+        lexer.expect(Assign)
+        val lo = parseTopLevelExpression()
+        lexer.expect(To)
+        val hi = parseTopLevelExpression()
+        lexer.expect(Do)
+        val body = parseTopLevelExpression()
+
+        return Expression.For(variable, lo, hi, body, location)
+    }
+
     private fun parseIdentifierOrCall(): Expression {
         val (name, location) = parseName()
 
         if (lexer.nextTokenIs(LeftParen)) {
             val args = parseArgumentList()
             return Expression.Call(name, args, location)
-        } else
+        }
+
+        val subscripts = mutableListOf<Expression>()
+        while (lexer.nextTokenIs(LeftBracket))
+            subscripts += inBrackets { parseTopLevelExpression() }
+
+        if (subscripts.isEmpty()) {
             return Expression.Var(Variable.Simple(name, location))
+        } else {
+            if (lexer.readNextIf(Of)) {
+                val init = parseTopLevelExpression()
+                if (subscripts.size == 1)
+                    return Expression.Array(name, subscripts[0], init, location)
+                else
+                    error("multidimensional arrays are not supported")
+            } else {
+                var v: Variable = Variable.Simple(name, location)
+                for (sub in subscripts)
+                    v = Variable.Subscript(v, sub, location) // TODO: use location of subscript
+
+                return Expression.Var(v)
+            }
+        }
     }
 
     private fun parseArgumentList(): List<Expression> =
@@ -423,6 +459,9 @@ private class Parser(lexer: Lexer) {
     private inline fun <T> inBraces(parser: () -> T): T =
         between(LeftBrace, RightBrace, parser)
 
+    private inline fun <T> inBrackets(parser: () -> T): T =
+        between(LeftBracket, RightBracket, parser)
+
     private inline fun <T> between(left: Token, right: Token, parser: () -> T): T {
         lexer.expect(left)
         val value = parser()
@@ -446,7 +485,7 @@ private class Parser(lexer: Lexer) {
     fun expectEnd() {
         if (lexer.hasMore) {
             val (token, location) = lexer.peekToken()
-            fail(location, "expected end, but got $token")
+            fail(location, "expected <eof>, but got $token")
         }
     }
 }

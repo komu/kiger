@@ -56,7 +56,11 @@ sealed class Token {
         object Let : Keyword("let")
         object Nil : Keyword("nil")
         object While : Keyword("while")
+        object End : Keyword("end")
+        object For : Keyword("for")
         object In : Keyword("in")
+        object To : Keyword("to")
+        object Do : Keyword("do")
     }
 
     /**
@@ -76,6 +80,8 @@ sealed class Token {
         object GreaterThan : Operator(">")
         object LessThanOrEqual : Operator("<=")
         object GreaterThanOrEqual : Operator(">=")
+        object And : Operator("&")
+        object Or : Operator("|")
     }
 
     /**
@@ -89,6 +95,8 @@ sealed class Token {
         object RightParen : Punctuation(")")
         object LeftBrace : Punctuation("{")
         object RightBrace : Punctuation("}")
+        object LeftBracket: Punctuation("[")
+        object RightBracket : Punctuation("]")
         object Assign : Punctuation(":=")
         object Colon : Punctuation(":")
         object Semicolon : Punctuation(";")

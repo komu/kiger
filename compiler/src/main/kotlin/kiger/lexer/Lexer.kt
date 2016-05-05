@@ -62,6 +62,8 @@ class Lexer(private val source: String, private val file: String = "<unknown>") 
             readIf(')')     -> Punctuation.RightParen
             readIf('{')     -> Punctuation.LeftBrace
             readIf('}')     -> Punctuation.RightBrace
+            readIf('[')     -> Punctuation.LeftBracket
+            readIf(']')     -> Punctuation.RightBracket
             readIf(':')     -> if (readIf('=')) Punctuation.Assign else Punctuation.Colon
             readIf(';')     -> Punctuation.Semicolon
             readIf(',')     -> Punctuation.Comma
@@ -69,8 +71,8 @@ class Lexer(private val source: String, private val file: String = "<unknown>") 
             readIf('!')     -> if (readIf('=')) Operator.NotEqual else fail("unexpected character")
             readIf('<')     -> if (readIf('=')) Operator.LessThanOrEqual else Operator.LessThan
             readIf('>')     -> if (readIf('=')) Operator.GreaterThanOrEqual else Operator.GreaterThan
-//            readIf('&')     -> if (readIf('&')) Operator.And else fail("got '&', did you mean '&&'?")
-//            readIf('|')     -> if (readIf('|')) Operator.Or else fail("got '|', did you mean '||'?")
+            readIf('&')     -> Operator.And
+            readIf('|')     -> Operator.Or
             else            -> fail("unexpected character '$ch'")
         }
 
@@ -86,17 +88,22 @@ class Lexer(private val source: String, private val file: String = "<unknown>") 
      * [identifiers][Symbol].
      */
     private fun readSymbol(): Token {
-        val str = readWhile { it.isLetter() }
+        assert(peekChar().isLetter())
+        val str = readWhile { it.isLetterOrDigit() }
 
         return when (str) {
             "type"      -> Keyword.Type
             "array"     -> Keyword.Array
             "of"        -> Keyword.Of
             "function"  -> Keyword.Function
+            "for"       -> Keyword.For
             "if"        -> Keyword.If
             "in"        -> Keyword.In
+            "to"        -> Keyword.To
+            "do"        -> Keyword.Do
             "then"      -> Keyword.Then
             "else"      -> Keyword.Else
+            "end"       -> Keyword.End
             "let"       -> Keyword.Let
             "while"     -> Keyword.While
             "nil"       -> Keyword.Nil
@@ -212,8 +219,41 @@ class Lexer(private val source: String, private val file: String = "<unknown>") 
      * Skips all whitespace.
      */
     private fun skipWhitespace() {
-        skipWhile { it.isWhitespace() }
+        while (hasMore) {
+            if (lookingAt("/*")) {
+                skipChars(2)
+                var level = 1
+                while (hasMore && level > 0) {
+                    if (lookingAt("/*")) {
+                        skipChars(2)
+                        level++
+                    } else if (lookingAt("*/")) {
+                        skipChars(2)
+                        level--
+                    } else {
+                        skipChars(1)
+                    }
+                }
+
+            } else if (source[position].isWhitespace()) {
+                skipChars(1)
+            } else {
+                break
+            }
+        }
     }
+
+    private fun skipChars(count: Int) {
+        repeat(count) {
+            readChar()
+        }
+    }
+
+    /**
+     * Does the rest of the input start with [s]?
+     */
+    private fun lookingAt(s: String): Boolean =
+        source.regionMatches(position, s, 0, s.length)
 
     /**
      * Returns current source location.

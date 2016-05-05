@@ -22,6 +22,8 @@ class LexerTest {
         assertTokens("function", Keyword.Function)
         assertTokens("let", Keyword.Let)
         assertTokens("while", Keyword.While)
+        assertTokens("end", Keyword.End)
+        assertTokens("for", Keyword.For)
         assertTokens("nil", Keyword.Nil)
         assertTokens("var", Keyword.Var)
         assertTokens("of", Keyword.Of)
@@ -31,6 +33,7 @@ class LexerTest {
     fun identifiers() {
         assertTokens("foo", Sym("foo"))
         assertTokens("bar", Sym("bar"))
+        assertTokens("bar1", Sym("bar1"))
     }
 
     @Test
