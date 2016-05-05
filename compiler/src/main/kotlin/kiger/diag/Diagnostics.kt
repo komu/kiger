@@ -4,7 +4,6 @@ import kiger.lexer.SourceLocation
 
 class Diagnostics {
     fun error(error: String, pos: SourceLocation) {
-        println("$error\n$pos")
+        println("$error\n${pos.toLongString()}")
     }
-
 }

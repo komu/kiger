@@ -20,6 +20,8 @@ class Evaluator(allInstructions: List<Inst>) {
 
     val mem = Array(1024 * 1024) { 0 }
 
+    var mallocPointer = 0
+
     init {
         for (inst in allInstructions) {
             if (inst is Inst.Label) {
@@ -31,7 +33,7 @@ class Evaluator(allInstructions: List<Inst>) {
                     is Op1 -> inst.analyze(regs)
                     is Op2 -> inst.analyze(regs)
                     is Op3 -> inst.analyze(regs)
-                    else   -> error("unknown instruction: $inst")
+                    else   -> Instruction(inst) { error("can't execute $inst")}
                 }
             }
         }
@@ -72,8 +74,9 @@ class Evaluator(allInstructions: List<Inst>) {
     fun syscall() {
         val call = regs.v0.value
         when (call) {
-            1   -> System.out.print(regs.a1.value)
-            4   -> System.out.print((originalInstructions[regs.a1.value] as Inst.Data).text)
+            1   -> System.out.print(regs.a0.value)
+            4   -> System.out.print((originalInstructions[regs.a0.value] as Inst.Data).text)
+            9   -> { regs.v0.value = mallocPointer; mallocPointer += regs.a0.value }
             10  -> pc = PC_EXIT
             else -> error("unknown syscall $call")
         }
@@ -129,6 +132,7 @@ private fun Op3.analyze(regs: Registers): Instruction =
         "addi",
         "addiu" -> { val d = regs[o1.reg]; val l = regs[o2.reg]; Instruction(this) { d.value = l.value + o3.immediate } }
         "mul"   -> { val d = regs[o1.reg]; val l = regs[o2.reg]; val r = regs[o3.reg]; Instruction(this) { d.value = l.value * r.value } }
+        "sub"   -> { val d = regs[o1.reg]; val l = regs[o2.reg]; val r = regs[o3.reg]; Instruction(this) { d.value = l.value - r.value } }
         "beq"   -> { val r1 = regs[o1.reg]; val r2 = regs[o2.reg]; Instruction(this) { if (r1.value == r2.value) pc = o3.immediate } }
         "bne"   -> { val r1 = regs[o1.reg]; val r2 = regs[o2.reg]; Instruction(this) { if (r1.value != r2.value) pc = o3.immediate } }
         else -> error("Unsupported op: $this")
@@ -152,7 +156,7 @@ class Registers {
 
     val ra = this["\$ra"]
     val v0 = this["\$v0"]
-    val a1 = this["\$a0"]
+    val a0 = this["\$a0"]
     val fp = this["\$fp"]
     val sp = this["\$sp"]
 

@@ -213,11 +213,11 @@ class Translator {
     }
 
     fun array(size: TrExp, init: TrExp): TrExp =
-        TrExp.Ex(frameType.externalCall("initArray", listOf(size.asEx(), init.asEx())))
+        TrExp.Ex(frameType.externalCall("rt_initArray", listOf(size.asEx(), init.asEx())))
 
     fun call(useLevel: Level, defLevel: Level, label: Label, args: List<TrExp>, isProcedure: Boolean): TrExp {
         val argExps = args.map { it.asEx() }
-        val call = if (defLevel.parent == Level.Top) {
+        val call = if (defLevel == Level.Top) {
             frameType.externalCall(label.name, argExps)
 
         } else {

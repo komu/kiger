@@ -16,8 +16,8 @@ import java.util.*
  *
  * @throws SyntaxErrorException if parsing fails
  */
-fun parseExpression(code: String): Expression =
-        parseComplete(Lexer(code)) { it.parseTopLevelExpression() }
+fun parseExpression(code: String, fileName: String = "<unknown>"): Expression =
+        parseComplete(Lexer(code, fileName)) { it.parseExpression0() }
 
 /**
  * Parses a function definition.
@@ -72,7 +72,7 @@ private class Parser(lexer: Lexer) {
         val params = parseArgumentDefinitionList()
         val returnType = parseOptionalType()
         lexer.expect(Equal)
-        val body = parseTopLevelExpression()
+        val body = parseExpression0()
 
         val func = FunctionDeclaration(name, params, returnType, body, pos)
         return Declaration.Functions(listOf(func))
@@ -321,17 +321,17 @@ private class Parser(lexer: Lexer) {
 
     private fun parseAssignTo(variable: Variable): Expression {
         val location = lexer.expect(Assign)
-        val rhs = parseTopLevelExpression()
+        val rhs = parseExpression0()
 
         return Expression.Assign(variable, rhs, location)
     }
 
     private fun parseIf(): Expression {
         val location = lexer.expect(If)
-        val condition = parseTopLevelExpression()
+        val condition = parseExpression0()
         lexer.expect(Then)
-        val consequent = parseTopLevelExpression()
-        val alternative = if (lexer.readNextIf(Else)) parseTopLevelExpression() else null
+        val consequent = parseExpression0()
+        val alternative = if (lexer.readNextIf(Else)) parseExpression0() else null
 
         return Expression.If(condition, consequent, alternative, location)
     }
@@ -349,7 +349,7 @@ private class Parser(lexer: Lexer) {
     private fun parseWhile(): Expression {
         val location = lexer.expect(While)
         val condition = inParens { parseTopLevelExpression() }
-        val body = parseTopLevelExpression()
+        val body = parseExpression0()
 
         return Expression.While(condition, body, location)
     }
@@ -358,11 +358,11 @@ private class Parser(lexer: Lexer) {
         val location = lexer.expect(For)
         val variable = parseName().first
         lexer.expect(Assign)
-        val lo = parseTopLevelExpression()
+        val lo = parseExpression0()
         lexer.expect(To)
-        val hi = parseTopLevelExpression()
+        val hi = parseExpression0()
         lexer.expect(Do)
-        val body = parseTopLevelExpression()
+        val body = parseExpression0()
 
         return Expression.For(variable, lo, hi, body, location)
     }
@@ -383,7 +383,7 @@ private class Parser(lexer: Lexer) {
             return Expression.Var(Variable.Simple(name, location))
         } else {
             if (lexer.readNextIf(Of)) {
-                val init = parseTopLevelExpression()
+                val init = parseExpression0()
                 if (subscripts.size == 1)
                     return Expression.Array(name, subscripts[0], init, location)
                 else

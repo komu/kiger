@@ -14,8 +14,8 @@ import java.io.File
 import java.io.OutputStreamWriter
 import java.io.Writer
 
-private fun compile(code: String): List<Fragment> {
-    val exp = parseExpression(code)
+private fun compile(code: String, filename: String): List<Fragment> {
+    val exp = parseExpression(code, filename)
     exp.analyzeEscapes()
     return SemanticAnalyzer.transProg(exp)
 }
@@ -56,7 +56,7 @@ private fun Writer.emitProc(fragment: Fragment.Proc) {
 }
 
 private fun Writer.emitStr(fragment: Fragment.Str) {
-    writeLine("${fragment.label}: .asciiz \"${fragment.value.replace("\"", "\\\"")}\"")
+    writeLine("${fragment.label}:\n    .asciiz \"${fragment.value.replace("\"", "\\\"")}\"")
 }
 
 private fun Writer.writeLine(line: String) {
@@ -72,12 +72,19 @@ fun main(args: Array<String>) {
 
     val input = File(args[0])
     val output = args.getOrNull(1)?.let { File(it) }
-    val fragments = compile(input.readText())
+    val fragments = compile(input.readText(), input.toString())
+    val runtime = Fragment::class.java.classLoader.getResourceAsStream("runtime.s")?.use { it.reader().readText() } ?: error("could not load runtime.s")
 
     if (output != null) {
         output.parentFile.mkdirs()
-        output.writer().use { it.emitFragments(fragments) }
+        output.writer().use {
+            it.emitFragments(fragments)
+            it.write(runtime)
+        }
+
     } else {
-        OutputStreamWriter(System.out).emitFragments(fragments)
+        val writer = OutputStreamWriter(System.out)
+        writer.emitFragments(fragments)
+        writer.write(runtime)
     }
 }

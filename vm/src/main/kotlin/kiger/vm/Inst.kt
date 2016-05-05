@@ -69,7 +69,7 @@ fun List<String>.parseInstructions(): List<Inst> =
 
 private fun String.stripComments(): String {
     val i = indexOf('#')
-    return if (i != -1) substring(0, i - 1).trim() else trim()
+    return if (i != -1) substring(0, i).trim() else trim()
 }
 
 private val labelNameRegex = Regex("""[a-zA-Z_][a-zA-Z_0-9]*""")
@@ -79,9 +79,9 @@ private val immediateRegex = Regex("""-?\d+""")
 private val offsetRegex = Regex("""($immediateRegex)\(($registerRegex)\)""")
 private val operandRegex = Regex("""$registerRegex|$offsetRegex|$labelNameRegex|$immediateRegex""")
 private val opNameRegex = Regex("""\w+""")
-private val op1Regex = Regex("""($opNameRegex) ($operandRegex)""")
-private val op2Regex = Regex("""($opNameRegex) ($operandRegex), ($operandRegex)""")
-private val op3Regex = Regex("""($opNameRegex) ($operandRegex), ($operandRegex), ($operandRegex)""")
+private val op1Regex = Regex("""($opNameRegex)\s+($operandRegex)""")
+private val op2Regex = Regex("""($opNameRegex)\s+($operandRegex),\s*($operandRegex)""")
+private val op3Regex = Regex("""($opNameRegex)\s+($operandRegex),\s*($operandRegex),\s*($operandRegex)""")
 private val asciiZRegex = Regex("""\.asciiz "(.+)"""")
 
 private fun parseInstruction(ss: String): Inst? {

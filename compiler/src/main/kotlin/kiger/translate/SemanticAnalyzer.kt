@@ -44,7 +44,11 @@ class SemanticAnalyzer {
     private val translate = Translator()
     private val errorResult = TranslationResult(translate.errorExp, Type.Nil)
 
-    var baseVenv = SymbolTable<EnvEntry>()
+    var baseVenv = run {
+        var env = SymbolTable<EnvEntry>()
+        env = env.enter(Symbol("print"), EnvEntry.Function(Level.Top, Label("rt_print"), listOf(Symbol("s") to Type.String), Type.Unit))
+        env
+    }
     var baseTenv = run {
         var env = SymbolTable<Type>()
         env = env.enter(Symbol("int"), Type.Int)
@@ -165,7 +169,9 @@ class SemanticAnalyzer {
                 val (vexp, vty) = transVar(exp.variable, tenv, venv, level, breakLabel)
                 val (eexp, ety) = trexp(exp.exp)
 
-                checkType(vty, ety, exp.pos)
+                if (vty != ety)
+                    diagnostics.error("Assignment failed. Type of ${exp.variable} is $vty, but type of expression ${exp.exp} was $ety", exp.pos)
+//                    typeMismatch(ety.toString(), vty, exp.pos)
 
                 TranslationResult(translate.assign(vexp, eexp), Type.Unit)
             }

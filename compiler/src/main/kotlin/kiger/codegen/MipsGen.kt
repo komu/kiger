@@ -9,7 +9,7 @@ import kiger.temp.Temp
 import kiger.tree.BinaryOp
 import kiger.tree.BinaryOp.*
 import kiger.tree.RelOp
-import kiger.tree.RelOp.LT
+import kiger.tree.RelOp.*
 import kiger.tree.TreeExp
 import kiger.tree.TreeExp.*
 import kiger.tree.TreeStm
@@ -264,10 +264,15 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
                 emit(Oper("sw 's1, ${dst.exp.rhs.value}('s0)", src = listOf(munchExp(dst.exp.lhs), munchExp(src))))
             dst is Mem && dst.exp is BinOp && dst.exp.binop == PLUS && dst.exp.lhs is Const ->
                 emit(Oper("sw 's1, ${dst.exp.lhs.value}('s0)", src = listOf(munchExp(dst.exp.rhs), munchExp(src))))
-//            dst is Mem && src is Mem ->
+
+        //            dst is Mem && src is Mem ->
 //                emit(Oper("MOVE M['s0] <- M['s1]", src = listOf(munchExp(dst.exp), munchExp(src.exp))))
 //            dst is Mem && dst.exp is Const ->
 //                emit(Oper("STORE M[${dst.exp.value}] <- 's0", src = listOf(munchExp(src))))
+            dst is Mem && src is Const ->
+                emit(Oper("li 's0, ${src.value}", src = listOf(munchExp(src))))
+            dst is Mem ->
+                emit(Oper("sw 's1, 0('s0)", src = listOf(munchExp(dst.exp), munchExp(src))))
             dst is Temporary ->
                 emit(Instr.Move("move 'd0, 's0", src = munchExp(src), dst = dst.temp))
             else ->
@@ -354,65 +359,14 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
     private fun munchCJump(relop: RelOp, lhs: TreeExp, rhs: TreeExp, trueLabel: Label, falseLabel: Label) {
         // TODO: add special cases for comparison to 0
         when (relop) {
+            EQ      -> emit(Oper("bne 's0, 's1, 'j1", src=listOf(munchExp(lhs), munchExp(rhs)), jump=listOf(trueLabel, falseLabel)))
+            NE      -> emit(Oper("beq 's0, 's1, 'j1", src=listOf(munchExp(lhs), munchExp(rhs)), jump=listOf(trueLabel, falseLabel)))
+            GE      -> emit(Oper("bltz 's0, 'j1", src=listOf(munchExp(TreeExp.BinOp(BinaryOp.MINUS, lhs, rhs))), jump=listOf(trueLabel, falseLabel)))
+            GT      -> emit(Oper("blez 's0, 'j1", src=listOf(munchExp(TreeExp.BinOp(BinaryOp.MINUS, lhs, rhs))), jump=listOf(trueLabel, falseLabel)))
+            LE      -> emit(Oper("bgtz 's0, 'j1", src=listOf(munchExp(TreeExp.BinOp(BinaryOp.MINUS, lhs, rhs))), jump=listOf(trueLabel, falseLabel)))
             LT      -> emit(Oper("bgez 's0, 'j1", src=listOf(munchExp(TreeExp.BinOp(BinaryOp.MINUS, lhs, rhs))), jump=listOf(trueLabel, falseLabel)))
             else    -> TODO("cjump $relop $lhs $rhs $trueLabel $falseLabel")
         }
-
-        /*
-
-          (* more general cases *)
-
-          | munchStm (T.CJUMP(T.GE, e1, e2, l1, l2)) =
-            emit(A.OPER{assem="bge 's0, 's1, 'j0\nb 'j1",
-                        dst=[],src=[munchExp e1, munchExp e2],
-                        jump=SOME [l1,l2]})
-
-          | munchStm (T.CJUMP(T.UGE, e1, e2, l1, l2)) =
-            emit(A.OPER{assem="bgeu 's0, 's1, 'j0\nb 'j1",
-                        dst=[],src=[munchExp e1, munchExp e2],
-                        jump=SOME [l1,l2]})
-
-          | munchStm (T.CJUMP(T.GT, e1, e2, l1, l2)) =
-            emit(A.OPER{assem="bgt 's0, 's1, 'j0\nb 'j1",
-                        dst=[],src=[munchExp e1, munchExp e2],
-                        jump=SOME [l1,l2]})
-
-          | munchStm (T.CJUMP(T.UGT, e1, e2, l1, l2)) =
-            emit(A.OPER{assem="bgtu 's0, 's1, 'j0\nb 'j1",
-                        dst=[],src=[munchExp e1, munchExp e2],
-                        jump=SOME [l1,l2]})
-
-          | munchStm (T.CJUMP(T.LT, e1, e2, l1, l2)) =
-            emit(A.OPER{assem="blt 's0, 's1, 'j0\nb 'j1",
-                        dst=[],src=[munchExp e1, munchExp e2],
-                        jump=SOME [l1,l2]})
-
-          | munchStm (T.CJUMP(T.ULT, e1, e2, l1, l2)) =
-            emit(A.OPER{assem="bltu 's0, 's1, 'j0\nb 'j1",
-                        dst=[],src=[munchExp e1, munchExp e2],
-                        jump=SOME [l1,l2]})
-
-          | munchStm (T.CJUMP(T.LE, e1, e2, l1, l2)) =
-            emit(A.OPER{assem="ble 's0, 's1, 'j0\nb 'j1",
-                        dst=[],src=[munchExp e1, munchExp e2],
-                        jump=SOME [l1,l2]})
-
-          | munchStm (T.CJUMP(T.ULE, e1, e2, l1, l2)) =
-            emit(A.OPER{assem="bleu 's0, 's1, 'j0\nb 'j1",
-                        dst=[],src=[munchExp e1, munchExp e2],
-                        jump=SOME [l1,l2]})
-
-          | munchStm (T.CJUMP(T.EQ, e1, e2, l1, l2)) =
-            emit(A.OPER{assem="beq 's0, 's1, 'j0\nb 'j1",
-                        dst=[],src=[munchExp e1, munchExp e2],
-                        jump=SOME [l1,l2]})
-
-          | munchStm (T.CJUMP(T.NE, e1, e2, l1, l2)) =
-            emit(A.OPER{assem="bne 's0, 's1, 'j0\nb 'j1",
-                        dst=[],src=[munchExp e1, munchExp e2],
-                        jump=SOME [l1,l2]})
-
-         */
     }
 
 }
