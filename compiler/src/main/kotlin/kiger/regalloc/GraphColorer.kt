@@ -220,10 +220,8 @@ class GraphColorer(val flowGraph: FlowGraph, val interferenceGraph: Interference
     }
 
     private fun decrementDegree(m: INode) {
-        // only decrement those non-precolored nodes - for
-        // precolored nodes, we treat as if they have infinite
-        // degree, since we shouldn't reassign them to different registers
-        if (m in precolored) return // TODO: not in book
+        // Precolored nodes have infinite degree so we just ignore those.
+        if (m.precolored) return
 
         m.degree -= 1
 
