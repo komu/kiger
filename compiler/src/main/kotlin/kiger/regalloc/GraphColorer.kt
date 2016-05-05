@@ -11,29 +11,17 @@ import java.util.*
 
 fun color(instrs: List<Instr>, frameType: FrameType): Pair<Coloring, List<Temp>> {
     val preallocatedColors = frameType.tempMap
-    val registers = frameType.registers
 
-    check(preallocatedColors.size == registers.size)
-
-    val flowGraph = instrs.createFlowGraph()
-
-    val colorer = GraphColorer(flowGraph, registers)
-
-    colorer.build(preallocatedColors)
-    colorer.checkInvariants()
-    colorer.makeWorklist()
-    colorer.checkInvariants()
-    colorer.mainLoop()
-    colorer.checkInvariants()
-    colorer.assignColors()
-
-    return colorer.result()
+    return GraphColorer(instrs.createFlowGraph(), preallocatedColors).color()
 }
 
 /**
  * Graph coloring as described in pages 241-249 of Modern Compiler Implementation in ML.
  */
-class GraphColorer(val flowGraph: FlowGraph, val registers: Collection<Register>) {
+class GraphColorer(val flowGraph: FlowGraph, val preallocatedColors: Map<Temp, Register>) {
+
+    /** All registers */
+    private val registers = preallocatedColors.values.toList()
 
     /** The number of colors available */
     private val K = registers.size
@@ -105,12 +93,25 @@ class GraphColorer(val flowGraph: FlowGraph, val registers: Collection<Register>
     /** Mapping from nodes to their selected colors */
     private val coloring = Coloring()
 
+
+    fun color(): Pair<Coloring, List<Temp>> {
+        build()
+        checkInvariants()
+        makeWorklist()
+        checkInvariants()
+        mainLoop()
+        checkInvariants()
+        assignColors()
+
+        return result()
+    }
+
     /**
      * Construct the interference graph and categorize each node as either move-related
      * or non-move-related. A move-related node is one that is either the source or
      * destination of a move-instruction.
      */
-    fun build(preallocatedColors: Map<Temp, Register>) {
+    fun build() {
         // initialize colored and precolored
         for (node in interferenceGraph.nodes) {
             val color = preallocatedColors[node.temp]

@@ -15,4 +15,6 @@ class Coloring {
     operator fun set(t: Temp, r: Register) {
         colorMapping[t] = r
     }
+
+    override fun toString() = colorMapping.toString()
 }
