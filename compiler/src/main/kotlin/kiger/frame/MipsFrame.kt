@@ -45,14 +45,16 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
     }
 
     override fun procEntryExit2(body: List<Instr>): List<Instr> {
-//        val enter = Instr.Oper("", src = listOf(ZERO, RA, SP, FP) + calleeSaves + argumentRegisters)
+        // TODO book does not have enter
+//        val enter = Instr.Oper("", dst = listOf(ZERO, RA, SP, FP) + calleeSaves + argumentRegisters)
+        val enter = Instr.Oper("", dst = listOf(RA, SP, FP) + calleeSaves + argumentRegisters)
 
         // Dummy instruction that simply tells register allocator what registers are live at the end
 //        val sink = Instr.Oper("", src = listOf(ZERO, RA, SP, FP, RV) + calleeSaves, jump = emptyList())
         // TODO: book does not keep RV live
         val sink = Instr.Oper("", src = listOf(RA, SP, FP) + calleeSaves, jump = emptyList())
 
-        return body + sink
+        return listOf(enter) + body + sink
     }
 
     override fun procEntryExit3(body: List<Instr>): Triple<String, List<Instr>, String> {
@@ -94,7 +96,7 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         val a2 = Temp("\$a2")
         val a3 = Temp("\$a3")
 
-        // temporary - not preserved across call
+        // temporary - not preserved across call (caller save)
         val t0 = Temp("\$t0")
         val t1 = Temp("\$t1")
         val t2 = Temp("\$t2")
@@ -106,7 +108,7 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         val t8 = Temp("\$t8")
         val t9 = Temp("\$t9")
 
-        // saved temporary - preserved across call
+        // saved temporary - preserved across call (callee save)
         val s0 = Temp("\$s0")
         val s1 = Temp("\$s1")
         val s2 = Temp("\$s2")
