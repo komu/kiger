@@ -59,13 +59,12 @@ private class Parser(lexer: Lexer) {
         return result
     }
 
-    fun parseDeclaration(): Declaration =
-        if (lexer.nextTokenIs(Function))
-            parseFunctionDeclaration()
-        else if (lexer.nextTokenIs(Var))
-            parseVarDeclaration()
-        else
-            fail(lexer.nextTokenLocation(), "expected function or var declaration")
+    fun parseDeclaration(): Declaration = when {
+        lexer.nextTokenIs(Function) -> parseFunctionDeclaration()
+        lexer.nextTokenIs(Var) -> parseVarDeclaration()
+        lexer.nextTokenIs(Type) -> parseTypeDeclaration()
+        else -> fail(lexer.nextTokenLocation(), "expected function or var declaration")
+    }
 
     fun parseFunctionDeclaration(): Declaration.Functions {
         val pos = lexer.expect(Function)
@@ -87,6 +86,15 @@ private class Parser(lexer: Lexer) {
         val init = parseTopLevelExpression()
 
         return Declaration.Var(name, type, init, pos)
+    }
+
+    private fun parseTypeDeclaration(): Declaration.Types {
+        val pos = lexer.expect(Type)
+        val name = parseName().first
+        lexer.expect(Equal)
+        val type = parseType()
+
+        return Declaration.Types(listOf(TypeDeclaration(name, type, pos)))
     }
 
     private fun parseOptionalType() = if (lexer.readNextIf(Colon)) parseName() else null
@@ -389,17 +397,19 @@ private class Parser(lexer: Lexer) {
         return Pair(token.name, location)
     }
 
-    private fun parseType(): TypeRef {
-        if (lexer.nextTokenIs(Array)) {
+    private fun parseType(): TypeRef = when {
+        lexer.readNextIf(Array) -> {
             lexer.expect(Of)
 
             val (token, location) = lexer.readExpected<Sym>()
-            return TypeRef.Array(token.name, location)
-        } else if (lexer.nextTokenIs(LeftBrace)) {
-            return TypeRef.Record(inBraces { parseFields() })
-        } else {
+            TypeRef.Array(token.name, location)
+        }
+        lexer.nextTokenIs(LeftBrace) -> {
+            TypeRef.Record(inBraces { parseFields() })
+        }
+        else -> {
             val (token, location) = lexer.readExpected<Sym>()
-            return TypeRef.Name(token.name, location)
+            TypeRef.Name(token.name, location)
         }
     }
 
