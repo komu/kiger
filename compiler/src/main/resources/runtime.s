@@ -1,6 +1,8 @@
 
 # runtime starts here
 
+# a0 = size of array
+# a1 = initial value
 rt_initArray:
     li $a2, 4
     mul $a0, $a0, $a2
@@ -96,9 +98,9 @@ rt_flush:
 #     sb $zero, 1($v0)
 #     jr $ra
 
-# rt_exit:
-#     li $v0, 10
-#     syscall
+rt_exit:
+     li $v0, 10
+     syscall
 
 # rt_substring:
 #     add $a1, $a0, $a1
