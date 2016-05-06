@@ -107,7 +107,7 @@ class Translator {
 
     fun record(fields: List<TrExp>): TrExp {
         val r = Temp.gen()
-        val init = TreeStm.Move(TreeExp.Temporary(r), frameType.externalCall("allocRecord", listOf(TreeExp.Const(fields.size * frameType.wordSize))))
+        val init = TreeStm.Move(TreeExp.Temporary(r), frameType.externalCall("rt_allocRecord", listOf(TreeExp.Const(fields.size * frameType.wordSize))))
 
         val inits = fields.mapIndexed { i, e ->
             TreeStm.Move(memPlus(TreeExp.Temporary(r), TreeExp.Const(i * frameType.wordSize)), e.asEx())

@@ -1,5 +1,11 @@
-let function fib(n: int): int =
-    if n < 2 then n else fib(n - 1) + fib(n - 2)
+let
+    function fib(n: int): int =
+        if n < 2 then n else fib(n - 1) + fib(n - 2)
+    var i := 20
 in
-    fib(20)
+    print("fib(");
+    printi(i);
+    print(") = ");
+    printi(fib(i));
+    print("\n")
 end

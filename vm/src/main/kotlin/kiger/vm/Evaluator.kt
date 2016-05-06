@@ -49,8 +49,6 @@ class Evaluator(allInstructions: List<Inst>) {
         while (pc != PC_EXIT) {
             step()
         }
-
-        println("v0: ${regs.v0.value}")
     }
 
     fun step() {

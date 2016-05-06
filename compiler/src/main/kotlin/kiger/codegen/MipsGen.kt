@@ -264,8 +264,6 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
                 emit(Oper("sw 's1, ${dst.exp.rhs.value}('s0)", src = listOf(munchExp(dst.exp.lhs), munchExp(src))))
             dst is Mem && dst.exp is BinOp && dst.exp.binop == PLUS && dst.exp.lhs is Const ->
                 emit(Oper("sw 's1, ${dst.exp.lhs.value}('s0)", src = listOf(munchExp(dst.exp.rhs), munchExp(src))))
-
-        //            dst is Mem && src is Mem ->
 //                emit(Oper("MOVE M['s0] <- M['s1]", src = listOf(munchExp(dst.exp), munchExp(src.exp))))
 //            dst is Mem && dst.exp is Const ->
 //                emit(Oper("STORE M[${dst.exp.value}] <- 's0", src = listOf(munchExp(src))))

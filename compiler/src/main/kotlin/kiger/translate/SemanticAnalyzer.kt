@@ -45,8 +45,25 @@ class SemanticAnalyzer {
     private val errorResult = TranslationResult(translate.errorExp, Type.Nil)
 
     var baseVenv = run {
+        val baseFuns: List<Triple<String, List<Type>, Type>> = listOf(
+                Triple("print", listOf(Type.String), Type.Unit),
+                Triple("printi", listOf(Type.Int), Type.Unit),
+                Triple("flush", listOf(), Type.Unit),
+                Triple("getchar", listOf(), Type.String),
+                Triple("ord", listOf(Type.String), Type.Int),
+                Triple("chr", listOf(Type.Int), Type.String),
+                Triple("size", listOf(Type.String), Type.Int),
+                Triple("substring", listOf(Type.String, Type.Int, Type.Int), Type.Int),
+                Triple("concat", listOf(Type.String, Type.String), Type.String),
+                Triple("not", listOf(Type.Int), Type.Int),
+                Triple("exit", listOf(Type.Int), Type.Unit))
+
         var env = SymbolTable<EnvEntry>()
-        env = env.enter(Symbol("print"), EnvEntry.Function(Level.Top, Label("rt_print"), listOf(Type.String), Type.Unit))
+
+        for ((name, args, returnType) in baseFuns) {
+            env = env.enter(Symbol(name), EnvEntry.Function(Level.Top, Label("rt_$name"), args, returnType))
+        }
+
         env
     }
     var baseTenv = run {
