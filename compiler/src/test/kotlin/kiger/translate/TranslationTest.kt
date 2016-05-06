@@ -31,12 +31,12 @@ class TranslationTest {
 
     @Test
     fun simpleDefinition() {
-        dump("let function square(x: int): int = x * x in square(4)")
+        dump("let function square(x: int): int = x * x in square(4) end")
     }
 
     @Test
     fun simpleDefinitions() {
-        dump("let function fib(n: int): int = if n < 2 then n else fix(n-1) + fib(n-2) in fib(4)")
+        dump("let function fib(n: int): int = if n < 2 then n else fix(n-1) + fib(n-2) in fib(4) end")
     }
 
     private fun assertTranslation(code: String, expectedType: Type, expectedExp: TrExp) {

@@ -28,7 +28,7 @@ class ParserTest {
 
     @Test
     fun whileStatements() {
-        assertParseExpression("while (x) y", "while (x) y")
+        assertParseExpression("while x do y", "while x do y")
     }
 
     @Test
@@ -46,7 +46,7 @@ class ParserTest {
 
     @Test
     fun expressionList() {
-        assertParseExpression("x; y; z", "x; y; z")
+        assertParseExpression("(x; y; z)", "x; y; z")
     }
 
     @Test
