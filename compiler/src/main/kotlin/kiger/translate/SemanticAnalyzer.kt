@@ -46,7 +46,7 @@ class SemanticAnalyzer {
 
     var baseVenv = run {
         var env = SymbolTable<EnvEntry>()
-        env = env.enter(Symbol("print"), EnvEntry.Function(Level.Top, Label("rt_print"), listOf(Symbol("s") to Type.String), Type.Unit))
+        env = env.enter(Symbol("print"), EnvEntry.Function(Level.Top, Label("rt_print"), listOf(Type.String), Type.Unit))
         env
     }
     var baseTenv = run {
@@ -413,7 +413,7 @@ class SemanticAnalyzer {
         // First pass: check formal types and store header info into venv
         fun transFun(f: FunctionDeclaration, env: SymbolTable<EnvEntry>): SymbolTable<EnvEntry> {
             val returnType = f.result?.let { tenv.lookupType(it.first, it.second) } ?: Type.Unit
-            val formals = f.params.map { Pair(it.name, tenv.lookupType(it.type, it.pos)) }
+            val formals = f.params.map { tenv.lookupType(it.type, it.pos) }
             val escapes = f.params.map { it.escape }
             val label = Label.gen(f.name.name)
 
@@ -518,12 +518,12 @@ class SemanticAnalyzer {
         }
     }
 
-    private fun checkFormals(ts: List<Pair<Symbol, Type>>, es: List<TranslationResult>, pos: SourceLocation) {
+    private fun checkFormals(ts: List<Type>, es: List<TranslationResult>, pos: SourceLocation) {
         if (es.size != ts.size) {
             diagnostics.error("${ts.size} args needed, but got ${es.size}", pos)
         } else {
             for ((t, e) in ts.zip(es)) {
-                checkType(t.second, e.type, pos)
+                checkType(t, e.type, pos)
             }
         }
     }
