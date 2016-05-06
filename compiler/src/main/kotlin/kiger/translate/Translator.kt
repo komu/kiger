@@ -59,7 +59,7 @@ class Translator {
         val right = e2.asEx()
 
         val treeOp = when (op) {
-            Token.Operator.Equal -> RelOp.EQ
+            Token.Operator.Equal                -> RelOp.EQ
             Token.Operator.NotEqual             -> RelOp.NE
             Token.Operator.LessThan             -> RelOp.LT
             Token.Operator.LessThanOrEqual      -> RelOp.LE
@@ -83,7 +83,7 @@ class Translator {
      * (the level within the variable's access)
      */
     fun simpleVar(access: Access, level: Level): TrExp {
-        fun iter(currentLevel: Level, acc: TreeExp): TreeExp =
+        tailrec fun iter(currentLevel: Level, acc: TreeExp): TreeExp =
             if (access.level === currentLevel) {
                 frameType.exp(access.frameAccess, acc)
             } else {
@@ -169,8 +169,8 @@ class Translator {
                     TrExp.Nx(seq(
                             testFun(t, f),
                             TreeStm.Labeled(t),
-                            TreeStm.Branch.Jump(TreeExp.Name(finish), listOf(finish)),
                             thenExp.stm,
+                            TreeStm.Branch.Jump(TreeExp.Name(finish), listOf(finish)),
                             TreeStm.Labeled(f),
                             elseExp.asNx(),
                             TreeStm.Labeled(finish)))

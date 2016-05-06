@@ -61,7 +61,9 @@ class SemanticAnalyzer {
         var env = SymbolTable<EnvEntry>()
 
         for ((name, args, returnType) in baseFuns) {
-            env = env.enter(Symbol(name), EnvEntry.Function(Level.Top, Label("rt_$name"), args, returnType))
+            val label = Label("rt_$name")
+            val level = Level.Top // Level.Lev(Level.Top, MipsFrame.newFrame(label, args.map { false }))
+            env = env.enter(Symbol(name), EnvEntry.Function(level, label, args, returnType))
         }
 
         env
@@ -398,7 +400,7 @@ class SemanticAnalyzer {
             }
         }
 
-        val acc = translate.allocLocal(level, !dec.escape)
+        val acc = translate.allocLocal(level, dec.escape)
         val varExp = translate.simpleVar(acc, level)
         val venv2 = venv.enter(dec.name, EnvEntry.Var(acc, type))
 
@@ -452,7 +454,7 @@ class SemanticAnalyzer {
             val params2 = f.params.zip(translate.formals(newLevel)).map { transParam(it.first, it.second) }
 
             val venv3 = params2.fold(venv2) { env, p ->
-                venv2.enter(p.first, EnvEntry.Var(p.third, p.second))
+                env.enter(p.first, EnvEntry.Var(p.third, p.second))
             }
 
             val (exp, ty) = transExp(f.body, venv3, tenv, newLevel, null)

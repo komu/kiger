@@ -12,9 +12,7 @@ sealed class Declaration {
         override fun toString() = declarations.joinToString("\n")
     }
 
-    class Var(val name: Symbol, val type: Pair<Symbol, SourceLocation>?, val init: Expression, val pos: SourceLocation, escape: Boolean = true) : Declaration() {
-        var escape = escape
-
+    class Var(val name: Symbol, val type: Pair<Symbol, SourceLocation>?, val init: Expression, val pos: SourceLocation, var escape: Boolean = true) : Declaration() {
         override fun toString() =
             if (type != null)
                 "var $name: $type := $init"
