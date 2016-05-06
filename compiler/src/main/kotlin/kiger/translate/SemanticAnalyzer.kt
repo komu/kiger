@@ -39,7 +39,9 @@ data class DeclTranslationResult(val venv: SymbolTable<EnvEntry>, val tenv: Symb
 
 class SemanticAnalyzer {
 
-    private val diagnostics = Diagnostics()
+    val diagnostics = Diagnostics()
+
+    private val mainLabel = Label("main")
 
     private val translate = Translator()
     private val errorResult = TranslationResult(translate.errorExp, Type.Nil)
@@ -75,19 +77,19 @@ class SemanticAnalyzer {
         env
     }
 
+    fun transProg(ex: Expression): List<Fragment> {
+        val translator = SemanticAnalyzer()
+        val translate = translator.translate
+        val mainLevel = translate.newLevel(translate.outermost, mainLabel, emptyList())
+
+        val exp = translator.transExp(ex, translator.baseVenv, translator.baseTenv, mainLevel, null).exp
+
+        translate.procEntryExit(mainLevel, exp)
+        return translate.fragments
+    }
+
     companion object {
-        val mainLabel = Label("main")
 
-        fun transProg(ex: Expression): List<Fragment> {
-            val translator = SemanticAnalyzer()
-            val translate = translator.translate
-            val mainLevel = translate.newLevel(translate.outermost, mainLabel, emptyList())
-
-            val exp = translator.transExp(ex, translator.baseVenv, translator.baseTenv, mainLevel, null).exp
-
-            translate.procEntryExit(mainLevel, exp)
-            return translate.fragments
-        }
     }
 
     fun transTopLevelExp(e: Expression): TranslationResult {

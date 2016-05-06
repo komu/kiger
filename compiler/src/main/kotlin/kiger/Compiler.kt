@@ -14,10 +14,12 @@ import java.io.File
 import java.io.OutputStreamWriter
 import java.io.Writer
 
-private fun compile(code: String, filename: String): List<Fragment> {
+private fun compile(code: String, filename: String): List<Fragment>? {
     val exp = parseExpression(code, filename)
     exp.analyzeEscapes()
-    return SemanticAnalyzer.transProg(exp)
+    val analyzer = SemanticAnalyzer()
+    val result = analyzer.transProg(exp)
+    return if (analyzer.diagnostics.errorCount == 0) result else null
 }
 
 fun Writer.emitFragments(fragments: List<Fragment>) {
@@ -73,6 +75,11 @@ fun main(args: Array<String>) {
     val input = File(args[0])
     val output = args.getOrNull(1)?.let { File(it) }
     val fragments = compile(input.readText(), input.toString())
+    if (fragments == null) {
+        System.exit(1)
+        return
+    }
+
     val runtime = Fragment::class.java.classLoader.getResourceAsStream("runtime.s")?.use { it.reader().readText() } ?: error("could not load runtime.s")
 
     if (output != null) {
