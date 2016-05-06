@@ -135,7 +135,10 @@ class Lexer(private val source: String, private val file: String = "<unknown>") 
         while (hasMore) {
             val ch = readChar()
             when {
-                escape      -> { sb.append(ch); escape = false }
+                escape      -> {
+                    sb.append(if (ch == 'n') '\n' else ch)
+                    escape = false
+                }
                 ch == '\\'  -> escape = true
                 ch == '"'   -> return Token.Str(sb.toString())
                 else        -> sb.append(ch)
