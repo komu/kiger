@@ -57,7 +57,7 @@ private fun Writer.emitProc(fragment: Fragment.Proc) {
 }
 
 private fun Writer.emitStr(fragment: Fragment.Str) {
-    writeLine("${fragment.label}:\n    .asciiz \"${fragment.value.replace("\"", "\\\"")}\"")
+    writeLine("${fragment.label}:\n    .asciiz \"${fragment.value.replace("\"", "\\\"").replace("\n", "\\n")}\"")
 }
 
 private fun Writer.writeLine(line: String) {
