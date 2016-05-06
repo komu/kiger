@@ -1,4 +1,4 @@
-package kiger.codegen
+package kiger.target
 
 import kiger.assem.Instr
 import kiger.frame.Frame

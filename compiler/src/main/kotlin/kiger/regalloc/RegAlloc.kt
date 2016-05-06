@@ -1,8 +1,8 @@
 package kiger.regalloc
 
 import kiger.assem.Instr
-import kiger.codegen.MipsGen
 import kiger.frame.Frame
+import kiger.target.CodeGen
 import kiger.temp.Temp
 import kiger.tree.TreeExp.Temporary
 import kiger.tree.TreeStm.Move
@@ -12,7 +12,7 @@ import kiger.tree.TreeStm.Move
  * rewritten list of instructions and a coloring that maps [Temp]-values
  * to registers.
  */
-tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Coloring> {
+tailrec fun List<Instr>.allocateRegisters(codeGen: CodeGen, frame: Frame): Pair<List<Instr>, Coloring> {
     val (colors, spills) = color(this, frame.type)
 
     fun Instr.isRedundant() =
@@ -21,26 +21,26 @@ tailrec fun List<Instr>.allocateRegisters(frame: Frame): Pair<List<Instr>, Color
     return if (spills.isEmpty())
         Pair(filterNot { it.isRedundant() }, colors)
     else
-        rewrite(this, frame, spills).allocateRegisters(frame)
+        rewrite(codeGen, this, frame, spills).allocateRegisters(codeGen, frame)
 }
 
 /**
  * Rewrite instructions to spill of temporaries defined in [spills].
  */
-private fun rewrite(instrs: List<Instr>, frame: Frame, spills: Collection<Temp>): List<Instr> =
-    spills.fold(instrs) { i, t -> rewrite1(i, frame, t) }
+private fun rewrite(codeGen: CodeGen, instrs: List<Instr>, frame: Frame, spills: Collection<Temp>): List<Instr> =
+    spills.fold(instrs) { i, t -> rewrite1(codeGen, i, frame, t) }
 
 /**
  * Rewrite instructions to spill [spill].
  */
-private fun rewrite1(instrs: List<Instr>, frame: Frame, spill: Temp): List<Instr> {
+private fun rewrite1(codeGen: CodeGen, instrs: List<Instr>, frame: Frame, spill: Temp): List<Instr> {
     val varInFrame = frame.type.exp(frame.allocLocal(true), Temporary(frame.type.FP))
 
     /**
      * Generate instruction for load/store between frame and given temp.
      */
     fun genInstrs(store: Boolean, t: Temp) =
-        MipsGen.codeGen(frame, if (store) Move(varInFrame, Temporary(t)) else Move(Temporary(t), varInFrame))
+        codeGen.codeGen(frame, if (store) Move(varInFrame, Temporary(t)) else Move(Temporary(t), varInFrame))
 
     /**
      * If spilled register is in given def/use set, allocate a new temp and

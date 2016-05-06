@@ -1,12 +1,11 @@
-package kiger.codegen
+package kiger.target.mips
 
 import kiger.assem.Instr
 import kiger.assem.Instr.Oper
 import kiger.frame.Frame
-import kiger.frame.MipsFrame
+import kiger.target.CodeGen
 import kiger.temp.Label
 import kiger.temp.Temp
-import kiger.tree.BinaryOp
 import kiger.tree.BinaryOp.*
 import kiger.tree.RelOp
 import kiger.tree.RelOp.*
@@ -66,16 +65,16 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
                 emit(Instr.Lbl("${stm.label.name}:", stm.label))
 
             // data movement
-            is TreeStm.Move ->
+            is Move ->
                 munchMove(stm.target, stm.source)
 
             is TreeStm.Branch -> when (stm) {
-                is Jump  -> munchJump(stm.exp, stm.labels)
+                is Jump -> munchJump(stm.exp, stm.labels)
                 is CJump -> munchCJump(stm.relop, stm.lhs, stm.rhs, stm.trueLabel, stm.falseLabel)
             }
 
             is TreeStm.Exp ->
-                if (stm.exp is TreeExp.Call) {
+                if (stm.exp is Call) {
                     munchCall(stm.exp)
                 } else {
                     munchExp(stm.exp)
@@ -83,7 +82,7 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
         }
     }
 
-    private fun munchCall(exp: TreeExp.Call): Temp {
+    private fun munchCall(exp: Call): Temp {
         if (exp.func is Name) {
             emit(Oper("jal ${exp.func.label}", src = munchArgs(0, exp.args), dst = callDefs))
         } else {
@@ -110,7 +109,7 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
             val src = munchExp(exp)
             munchStm(Move(Temporary(dst), Temporary(src)))
 
-            return cons(dst, munchArgs(i+1, rest))
+            return cons(dst, munchArgs(i + 1, rest))
         } else {
             throw TooManyArgsException("support only ${argumentRegisters.size} arguments, but got more")
         }
@@ -118,11 +117,11 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
 
     private fun munchExp(exp: TreeExp): Temp {
         return when (exp) {
-            is Temporary    -> exp.temp
-            is Const        -> if (exp.value == 0) MipsFrame.ZERO else emitResult { r -> Oper("li 'd0, ${exp.value}", dst = listOf(r)) }
-            is Name         -> emitResult { r -> Oper("la 'd0, ${exp.label}", dst = listOf(r)) }
-            is Call         -> munchCall(exp)
-            is Mem          -> when {
+            is Temporary -> exp.temp
+            is Const -> if (exp.value == 0) MipsFrame.ZERO else emitResult { r -> Oper("li 'd0, ${exp.value}", dst = listOf(r)) }
+            is Name -> emitResult { r -> Oper("la 'd0, ${exp.label}", dst = listOf(r)) }
+            is Call -> munchCall(exp)
+            is Mem -> when {
                 // constant binary operations
                 exp.exp is BinOp && exp.exp.binop == PLUS && exp.exp.rhs is Const ->
                     emitResult { r -> Oper("lw 'd0, ${exp.exp.rhs.value}('s0)", src = listOf(munchExp(exp.exp.lhs)), dst = listOf(r)) }
@@ -345,21 +344,21 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
 
     private fun munchJump(target: TreeExp, labels: List<Label>) {
         if (target is Name) {
-            emit(Oper("j 'j0", jump=listOf(target.label)))
+            emit(Oper("j 'j0", jump = listOf(target.label)))
         } else {
-            emit(Oper("jr 's0", src=listOf(munchExp(target)), jump = labels))
+            emit(Oper("jr 's0", src = listOf(munchExp(target)), jump = labels))
         }
     }
 
     private fun munchCJump(relop: RelOp, lhs: TreeExp, rhs: TreeExp, trueLabel: Label, falseLabel: Label) {
         // TODO: add special cases for comparison to 0
         when (relop) {
-            EQ      -> emit(Oper("bne 's0, 's1, 'j1", src=listOf(munchExp(lhs), munchExp(rhs)), jump=listOf(trueLabel, falseLabel)))
-            NE      -> emit(Oper("beq 's0, 's1, 'j1", src=listOf(munchExp(lhs), munchExp(rhs)), jump=listOf(trueLabel, falseLabel)))
-            GE      -> emit(Oper("bltz 's0, 'j1", src=listOf(munchExp(TreeExp.BinOp(BinaryOp.MINUS, lhs, rhs))), jump=listOf(trueLabel, falseLabel)))
-            GT      -> emit(Oper("blez 's0, 'j1", src=listOf(munchExp(TreeExp.BinOp(BinaryOp.MINUS, lhs, rhs))), jump=listOf(trueLabel, falseLabel)))
-            LE      -> emit(Oper("bgtz 's0, 'j1", src=listOf(munchExp(TreeExp.BinOp(BinaryOp.MINUS, lhs, rhs))), jump=listOf(trueLabel, falseLabel)))
-            LT      -> emit(Oper("bgez 's0, 'j1", src=listOf(munchExp(TreeExp.BinOp(BinaryOp.MINUS, lhs, rhs))), jump=listOf(trueLabel, falseLabel)))
+            EQ -> emit(Oper("bne 's0, 's1, 'j1", src = listOf(munchExp(lhs), munchExp(rhs)), jump = listOf(trueLabel, falseLabel)))
+            NE -> emit(Oper("beq 's0, 's1, 'j1", src = listOf(munchExp(lhs), munchExp(rhs)), jump = listOf(trueLabel, falseLabel)))
+            GE -> emit(Oper("bltz 's0, 'j1", src = listOf(munchExp(BinOp(MINUS, lhs, rhs))), jump = listOf(trueLabel, falseLabel)))
+            GT -> emit(Oper("blez 's0, 'j1", src = listOf(munchExp(BinOp(MINUS, lhs, rhs))), jump = listOf(trueLabel, falseLabel)))
+            LE -> emit(Oper("bgtz 's0, 'j1", src = listOf(munchExp(BinOp(MINUS, lhs, rhs))), jump = listOf(trueLabel, falseLabel)))
+            LT -> emit(Oper("bgez 's0, 'j1", src = listOf(munchExp(BinOp(MINUS, lhs, rhs))), jump = listOf(trueLabel, falseLabel)))
             else    -> TODO("cjump $relop $lhs $rhs $trueLabel $falseLabel")
         }
     }

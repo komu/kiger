@@ -21,5 +21,5 @@ interface FrameType {
     fun externalCall(name: String, args: List<TreeExp>): TreeExp
 
     val tempMap: Map<Temp, Register>
-    val registers: List<Register>
+    val assignableRegisters: List<Register>
 }

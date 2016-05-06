@@ -5,6 +5,8 @@ import kiger.canon.linearize
 import kiger.canon.traceSchedule
 import kiger.frame.Fragment
 import kiger.parser.parseExpression
+import kiger.target.mips.MipsGen
+import kiger.target.mips.MipsTarget
 import kiger.translate.SemanticAnalyzer
 import org.junit.Test
 
@@ -17,7 +19,7 @@ class CodeGenTest {
 
     private fun dumpCode(code: String) {
         val exp = parseExpression(code)
-        val fragments = SemanticAnalyzer.transProg(exp)
+        val fragments = SemanticAnalyzer(MipsTarget).transProg(exp)
 
         for (fragment in fragments) {
             when (fragment) {

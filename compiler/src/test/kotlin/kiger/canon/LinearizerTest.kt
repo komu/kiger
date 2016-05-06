@@ -3,6 +3,7 @@ package kiger.canon
 import kiger.absyn.Symbol
 import kiger.env.EnvEntry
 import kiger.parser.parseExpression
+import kiger.target.mips.MipsTarget
 import kiger.temp.Label
 import kiger.temp.resetLabelSequence
 import kiger.temp.resetTempSequence
@@ -32,7 +33,7 @@ class LinearizerTest {
     }
 
     private fun linearize(code: String): List<TreeStm> {
-        val translator = SemanticAnalyzer()
+        val translator = SemanticAnalyzer(MipsTarget)
         translator.baseVenv = translator.baseVenv.enter(Symbol("f"), EnvEntry.Function(Level.Top, Label("f"), listOf(Type.Int, Type.Int), Type.Int))
 
         resetLabelSequence()

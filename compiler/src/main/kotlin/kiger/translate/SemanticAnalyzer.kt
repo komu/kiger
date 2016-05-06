@@ -8,6 +8,7 @@ import kiger.frame.Fragment
 import kiger.lexer.SourceLocation
 import kiger.lexer.Token
 import kiger.lexer.Token.Operator
+import kiger.target.TargetArch
 import kiger.temp.Label
 import kiger.types.Type
 import kiger.utils.tailFrom
@@ -37,13 +38,13 @@ data class DeclTranslationResult(val venv: SymbolTable<EnvEntry>, val tenv: Symb
     constructor(venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, vararg exps: TrExp): this(venv, tenv, exps.asList())
 }
 
-class SemanticAnalyzer {
+class SemanticAnalyzer(target: TargetArch) {
 
     val diagnostics = Diagnostics()
 
     private val mainLabel = Label("main")
 
-    private val translate = Translator()
+    private val translate = Translator(target.frameType)
     private val errorResult = TranslationResult(translate.errorExp, Type.Nil)
 
     var baseVenv = run {
@@ -78,11 +79,9 @@ class SemanticAnalyzer {
     }
 
     fun transProg(ex: Expression): List<Fragment> {
-        val translator = SemanticAnalyzer()
-        val translate = translator.translate
         val mainLevel = translate.newLevel(translate.outermost, mainLabel, emptyList())
 
-        val exp = translator.transExp(ex, translator.baseVenv, translator.baseTenv, mainLevel, null).exp
+        val exp = transExp(ex, baseVenv, baseTenv, mainLevel, null).exp
 
         translate.procEntryExit(mainLevel, exp)
         return translate.fragments

@@ -1,7 +1,8 @@
 package kiger.translate
 
-import kiger.frame.MipsFrame
 import kiger.parser.parseExpression
+import kiger.target.mips.MipsFrame
+import kiger.target.mips.MipsTarget
 import kiger.temp.Label
 import kiger.temp.resetLabelSequence
 import kiger.temp.resetTempSequence
@@ -13,7 +14,7 @@ import kotlin.test.assertEquals
 
 class TranslationTest {
 
-    val translator = SemanticAnalyzer()
+    val translator = SemanticAnalyzer(MipsTarget)
 
     @Test
     fun translateLiterals() {
@@ -65,7 +66,7 @@ class TranslationTest {
         val exp = parseExpression(code)
         resetTempSequence()
         resetLabelSequence()
-        val fragments = SemanticAnalyzer.transProg(exp)
+        val fragments = SemanticAnalyzer(MipsTarget).transProg(exp)
         println(fragments.joinToString("\n"))
     }
 }

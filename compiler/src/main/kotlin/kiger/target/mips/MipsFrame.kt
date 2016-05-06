@@ -1,6 +1,10 @@
-package kiger.frame
+package kiger.target.mips
 
 import kiger.assem.Instr
+import kiger.frame.Frame
+import kiger.frame.FrameAccess
+import kiger.frame.FrameType
+import kiger.frame.Register
 import kiger.temp.Label
 import kiger.temp.Temp
 import kiger.translate.seq
@@ -31,7 +35,7 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
 
     override fun allocLocal(escape: Boolean): FrameAccess =
         if (escape)
-            FrameAccess.InFrame(- (locals++ * wordSize + firstLocalOffset))
+            FrameAccess.InFrame(-(locals++ * wordSize + firstLocalOffset))
         else
             FrameAccess.InReg(Temp.gen())
 
@@ -144,6 +148,6 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
 
         override val tempMap: Map<Temp, Register> = registerList.map { it -> Pair(it, Register(it.name)) }.toMap()
 
-        override val registers: List<Register> = tempMap.values.toList()
+        override val assignableRegisters: List<Register> = tempMap.values.toList() - tempMap[ZERO]!!
     }
 }

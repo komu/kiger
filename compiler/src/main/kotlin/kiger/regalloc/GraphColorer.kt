@@ -2,7 +2,6 @@ package kiger.regalloc
 
 import kiger.assem.Instr
 import kiger.frame.FrameType
-import kiger.frame.MipsFrame
 import kiger.frame.Register
 import kiger.regalloc.InterferenceGraph.INode
 import kiger.regalloc.InterferenceGraph.Move
@@ -11,21 +10,27 @@ import kiger.utils.removeAny
 import java.util.*
 
 fun color(instrs: List<Instr>, frameType: FrameType): Pair<Coloring, List<Temp>> {
-    val preallocatedColors = frameType.tempMap
 
-    return GraphColorer(instrs.createFlowGraph(), preallocatedColors).color()
+    return GraphColorer(instrs.createFlowGraph(), frameType.tempMap, frameType.assignableRegisters).color()
 }
 
 /**
  * Graph coloring as described in pages 241-249 of Modern Compiler Implementation in ML.
  */
-class GraphColorer(val flowGraph: FlowGraph, val preallocatedColors: Map<Temp, Register>) {
+class GraphColorer(
+        val flowGraph: FlowGraph,
 
-    /** All registers */
-    private val registers = preallocatedColors.values.toList()
+        /** Mapping from temps to preallocated registers */
+        val preallocatedColors: Map<Temp, Register>,
+
+        /**
+         * Registers that may be assigned. Might not contain all registers in [preallocatedColors].
+         * (e.g. on MIPS `$zero` is preallocated, but may not be used for coloring anything.
+         */
+        val assignableRegisters: List<Register>) {
 
     /** The number of colors available */
-    private val K = registers.size
+    private val K = assignableRegisters.size
 
     /**
      * Interference graph.
@@ -161,10 +166,7 @@ class GraphColorer(val flowGraph: FlowGraph, val preallocatedColors: Map<Temp, R
     fun assignColors() {
         while (selectStack.isNotEmpty()) {
             val n = selectStack.pop()
-            val okColors = registers.toMutableSet()
-
-            // While the zero register is precolored, it will not be considered for coloring.
-            okColors -= MipsFrame.tempMap[MipsFrame.ZERO]!! // TODO remove dependency to MipsFrame
+            val okColors = assignableRegisters.toMutableSet()
 
             for (w in n.adjList) {
                 val wa = getAlias(w)

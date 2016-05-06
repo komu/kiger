@@ -2,7 +2,6 @@ package kiger.translate
 
 import kiger.frame.Fragment
 import kiger.frame.FrameType
-import kiger.frame.MipsFrame
 import kiger.lexer.Token
 import kiger.temp.Label
 import kiger.temp.Temp
@@ -14,7 +13,7 @@ import kiger.utils.cons
 import kiger.utils.splitLast
 import kiger.utils.tail
 
-class Translator {
+class Translator(val frameType: FrameType) {
     val fragments = mutableListOf<Fragment>()
 
     val outermost = Level.Top
@@ -22,8 +21,6 @@ class Translator {
     val nilExp: TrExp = TrExp.Ex(TreeExp.Const(0))
 
     val errorExp: TrExp = TrExp.Ex(TreeExp.Const(999))
-
-    val frameType: FrameType = MipsFrame
 
     fun newLevel(parent: Level, name: Label, formalEscapes: List<Boolean>) =
         Level.Lev(parent, frameType.newFrame(name, cons(true, formalEscapes)))
