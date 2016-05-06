@@ -2,6 +2,7 @@ package kiger.regalloc
 
 import kiger.assem.Instr
 import kiger.frame.FrameType
+import kiger.frame.MipsFrame
 import kiger.frame.Register
 import kiger.regalloc.InterferenceGraph.INode
 import kiger.regalloc.InterferenceGraph.Move
@@ -161,6 +162,10 @@ class GraphColorer(val flowGraph: FlowGraph, val preallocatedColors: Map<Temp, R
         while (selectStack.isNotEmpty()) {
             val n = selectStack.pop()
             val okColors = registers.toMutableSet()
+
+            // While the zero register is precolored, it will not be considered for coloring.
+            okColors -= MipsFrame.tempMap[MipsFrame.ZERO]!! // TODO remove dependency to MipsFrame
+
             for (w in n.adjList) {
                 val wa = getAlias(w)
                 if (wa in (coloredNodes + precolored)) // TODO: optimize

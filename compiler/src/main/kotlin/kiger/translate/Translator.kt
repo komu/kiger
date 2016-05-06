@@ -71,6 +71,16 @@ class Translator {
         return TrExp.Cx { t, f -> TreeStm.Branch.CJump(treeOp, left, right, t, f) }
     }
 
+    fun stringEq(e1: TrExp, e2: TrExp, negate: Boolean): TrExp {
+        val left = e1.asEx()
+        val right = e2.asEx()
+
+        if (negate)
+            return TrExp.Ex(frameType.externalCall("rt_strne", listOf(left, right)))
+        else
+            return TrExp.Ex(frameType.externalCall("rt_streq", listOf(left, right)))
+    }
+
     fun logicalOp(op: Token.Operator, le: TrExp, re: TrExp): TrExp = when (op) {
         Token.Operator.And -> ifElse(le, re, TrExp.Ex(TreeExp.Const(0)))
         Token.Operator.Or  -> ifElse(le, TrExp.Ex(TreeExp.Const(1)), re)

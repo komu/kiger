@@ -74,6 +74,15 @@ class Evaluator(allInstructions: List<Inst>) {
         when (call) {
             1   -> System.out.print(regs.a0.value)
             4   -> System.out.print((originalInstructions[regs.a0.value] as Inst.Data).text)
+            8   -> {
+                val bufAddress = regs.a0.value;
+                val len = regs.a1.value;
+                val bytes = ByteArray(len) { 0}
+                System.`in`.read(bytes)
+                for (i in bytes.indices) {
+                    mem[bufAddress+i] = bytes[i].toInt() // TODO: combine
+                }
+            }
             9   -> { regs.v0.value = mallocPointer; mallocPointer += regs.a0.value }
             10  -> pc = PC_EXIT
             else -> error("unknown syscall $call")
@@ -114,6 +123,7 @@ private fun Op2.analyze(regs: Registers): Instruction =
         "lw"        -> { val d = regs[o1.reg]; val b = regs[o2.baseReg]; val o = o2.offset; Instruction(this) { d.value = mem[b.value + o] } }
         "sw"        -> { val b = regs[o2.baseReg]; val o = o2.offset; val s = regs[o1.reg]; Instruction(this) { mem[b.value + o] = s.value } }
         "li"        -> { val d = regs[o1.reg]; Instruction(this) { d.value = o2.immediate } }
+        "lb"        -> { val d = regs[o1.reg]; Instruction(this) { TODO() } }
         "la"        -> { val d = regs[o1.reg]; Instruction(this) { d.value = o2.immediate } }
         "bgez"      -> { val r = regs[o1.reg]; Instruction(this) { if (r.value >= 0) pc = o2.immediate } }
         "bgezal"    -> { val r = regs[o1.reg]; Instruction(this) { if (r.value >= 0) { regs.ra.value = pc; pc = o2.immediate } } }
@@ -130,6 +140,7 @@ private fun Op3.analyze(regs: Registers): Instruction =
         "addi",
         "addiu" -> { val d = regs[o1.reg]; val l = regs[o2.reg]; Instruction(this) { d.value = l.value + o3.immediate } }
         "mul"   -> { val d = regs[o1.reg]; val l = regs[o2.reg]; val r = regs[o3.reg]; Instruction(this) { d.value = l.value * r.value } }
+        "div"   -> { val d = regs[o1.reg]; val l = regs[o2.reg]; val r = regs[o3.reg]; Instruction(this) { d.value = l.value / r.value } }
         "sub"   -> { val d = regs[o1.reg]; val l = regs[o2.reg]; val r = regs[o3.reg]; Instruction(this) { d.value = l.value - r.value } }
         "beq"   -> { val r1 = regs[o1.reg]; val r2 = regs[o2.reg]; Instruction(this) { if (r1.value == r2.value) pc = o3.immediate } }
         "bne"   -> { val r1 = regs[o1.reg]; val r2 = regs[o2.reg]; Instruction(this) { if (r1.value != r2.value) pc = o3.immediate } }
@@ -155,6 +166,7 @@ class Registers {
     val ra = this["\$ra"]
     val v0 = this["\$v0"]
     val a0 = this["\$a0"]
+    val a1 = this["\$a1"]
     val fp = this["\$fp"]
     val sp = this["\$sp"]
 

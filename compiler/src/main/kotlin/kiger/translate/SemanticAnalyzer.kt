@@ -88,10 +88,6 @@ class SemanticAnalyzer {
         return translate.fragments
     }
 
-    companion object {
-
-    }
-
     fun transTopLevelExp(e: Expression): TranslationResult {
         val mainLevel = translate.newLevel(translate.outermost, mainLabel, emptyList())
         return transExp(e, baseVenv, baseTenv, mainLevel, null)
@@ -118,7 +114,7 @@ class SemanticAnalyzer {
                     is Type.Array,
                     is Type.Record -> checkType(lt, rt, exp.pos)
                     else -> {
-                        diagnostics.error("can only check equality on int, string, array of record types, found $rt", exp.pos)
+                        diagnostics.error("can only check equality on int, string, array or record types, found $rt", exp.pos)
                     }
                 }
 
@@ -142,7 +138,10 @@ class SemanticAnalyzer {
                     }
                     Kind.EQ -> {
                         checkEquality()
-                        TranslationResult(translate.relop(exp.op, le, re), Type.Int)
+                        TranslationResult(when (lt) {
+                            Type.String -> translate.stringEq(le, re, negate=exp.op == Operator.NotEqual)
+                            else        -> translate.relop(exp.op, le, re)
+                        }, Type.Int)
                     }
                     Kind.LOGICAL -> {
                         checkType(Type.Int, lt, exp.pos)

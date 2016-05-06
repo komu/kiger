@@ -119,7 +119,7 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
     private fun munchExp(exp: TreeExp): Temp {
         return when (exp) {
             is Temporary    -> exp.temp
-            is Const        -> emitResult { r -> Oper("li 'd0, ${exp.value}", dst = listOf(r)) }
+            is Const        -> if (exp.value == 0) MipsFrame.ZERO else emitResult { r -> Oper("li 'd0, ${exp.value}", dst = listOf(r)) }
             is Name         -> emitResult { r -> Oper("la 'd0, ${exp.label}", dst = listOf(r)) }
             is Call         -> munchCall(exp)
             is Mem          -> when {

@@ -1,8 +1,15 @@
 
 # runtime starts here
 
-# a0 = size of array
-# a1 = initial value
+#
+# Allocate an array.
+#
+# in:
+#   a0 - size of array
+#   a1 - initial value
+# out:
+#   v0 - pointer to start of array
+#
 rt_initArray:
     li $a2, 4
     mul $a0, $a0, $a2
@@ -16,6 +23,15 @@ rt_initArray:
     bne $v1, $a0, _initArray_0
     jr $ra
 
+#
+# Allocate a record.
+#
+# in:
+#   a0 - amount of fields
+# out:
+#   v0 - pointer to the record
+#
+
 rt_allocRecord:
     li $a2, 4
     mul $a0, $a0, $a2
@@ -23,11 +39,23 @@ rt_allocRecord:
     syscall
     jr $ra
 
+#
+# Print a string.
+#
+# in:
+#   a0 - pointer to zero-terminated string to print
+#
 rt_print:
     li $v0, 4
     syscall
     jr $ra
 
+#
+# Print an integer
+#
+# in:
+#   a0 - integer to print
+#
 rt_printi:
     li $v0, 1
     syscall
@@ -36,28 +64,53 @@ rt_printi:
 rt_flush:
     jr $ra
 
-# rt_strcmp:
-#     strcmptest:
-#     lb $a2, 0($a0)
-#     lb $a3, 0($a1)
-#     beq $a2, $zero, strcmpend
-#     beq $a3, $zero, strcmpend
-#     bgt $a2, $a3, strcmpgreat
-#     blt $a2, $a3, strcmpless
-#     add $a0, $a0, 1
-#     add $a1, $a1, 1
-#     j strcmptest
-#     strcmpgreat:
-#     li $v0, 1
-#     jr $ra
-#     strcmpless:
-#     li $v0, -1
-#     jr $ra
-#     strcmpend:
-#     bne $a2, $zero, strcmpgreat
-#     bne $a3, $zero, strcmpless
-#     li $v0, 0
-#     jr $ra
+rt_streq:
+    li $a2, 0
+  streq_start:
+    lb $t1, 0($a0)
+    lb $t2, 0($a1)
+    beq $t1, $zero, streq_end_t1
+    beq $t2, $zero, streq_fail
+    bne $t1, $t2, streq_fail
+    addi $a0, $a0, 1
+    addi $a1, $a1, 1
+    j streq_start
+  streq_fail:
+    li $v0, 0
+    xor $v0, $v0, $a2
+    jr $ra
+  streq_end_t1:
+    bne $t2, $zero, streq_fail
+    li $v0, 1
+    xor $v0, $v0, $a2
+    jr $ra
+
+rt_strne:
+    li $a2, 1           # pass argument to invert the result
+    j streq_start       # ... and jump into rt_streq skipping setting default value of $a2
+
+rt_strcmp:
+    strcmptest:
+    lb $a2, 0($a0)
+    lb $a3, 0($a1)
+    beq $a2, $zero, strcmpend
+    beq $a3, $zero, strcmpend
+    bgt $a2, $a3, strcmpgreat
+    blt $a2, $a3, strcmpless
+    add $a0, $a0, 1
+    add $a1, $a1, 1
+    j strcmptest
+    strcmpgreat:
+    li $v0, 1
+    jr $ra
+    strcmpless:
+    li $v0, -1
+    jr $ra
+    strcmpend:
+    bne $a2, $zero, strcmpgreat
+    bne $a3, $zero, strcmpless
+    li $v0, 0
+    jr $ra
 
 # rt_size:
 #     move $v0, $zero
@@ -70,33 +123,33 @@ rt_flush:
 #     sizeexit:
 #     jr $ra
 
-# rt_ord:
-#     lb $a1, 0($a0)
-#     li $v0,-1
-#     beqz $a1,Lrunt5
-#     lb $v0, 0($a0)
-#     Lrunt5:
-#     jr $ra
+rt_ord:
+    lb $a1, 0($a0)
+    li $v0,-1
+    beqz $a1,Lrunt5
+    lb $v0, 0($a0)
+    Lrunt5:
+    jr $ra
 
-# rt_getchar:
-#     li $v0, 9
-#     li $a0, 2
-#     syscall
-#     move $a0, $v0
-#     li $a1, 2
-#     li $v0, 8
-#     syscall
-#     move $v0, $a0
-#     jr $ra
+rt_getchar:
+    li $v0, 9
+    li $a0, 2
+    syscall
+    move $a0, $v0
+    li $a1, 2
+    li $v0, 8
+    syscall
+    move $v0, $a0
+    jr $ra
 
-# rt_chr:
-#     move $a1, $a0
-#     li $v0, 9
-#     li $a0, 2
-#     syscall
-#     sb $a1, 0($v0)
-#     sb $zero, 1($v0)
-#     jr $ra
+rt_chr:
+    move $a1, $a0
+    li $v0, 9
+    li $a0, 2
+    syscall
+    sb $a1, 0($v0)
+    sb $zero, 1($v0)
+    jr $ra
 
 rt_exit:
      li $v0, 10

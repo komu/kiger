@@ -29,6 +29,11 @@ in
     assertInt("4 > 3",  1, 4 > 3);
     assertInt("4 >= 3", 1, 4 >= 3);
 
+    assertInt("string eq 1", 0, "foo" = "bar");
+    assertInt("string eq 2", 1, "foo" = "foo");
+    assertInt("string ne 1", 1, "foo" != "bar");
+    assertInt("string ne 2", 0, "foo" != "foo");
+
     if failed = 0 then
         (print("all "); printi(total); print(" tests passed!\n"))
     else

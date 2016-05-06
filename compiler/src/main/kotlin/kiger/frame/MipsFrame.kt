@@ -47,12 +47,12 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
     override fun procEntryExit2(body: List<Instr>): List<Instr> {
         // TODO book does not have enter
 //        val enter = Instr.Oper("", dst = listOf(ZERO, RA, SP, FP) + calleeSaves + argumentRegisters)
-        val enter = Instr.Oper("", dst = listOf(RA, SP, FP) + calleeSaves + argumentRegisters)
+        val enter = Instr.Oper("", dst = listOf(ZERO, RA, SP, FP) + calleeSaves + argumentRegisters)
 
         // Dummy instruction that simply tells register allocator what registers are live at the end
 //        val sink = Instr.Oper("", src = listOf(ZERO, RA, SP, FP, RV) + calleeSaves, jump = emptyList())
         // TODO: book does not keep RV live
-        val sink = Instr.Oper("", src = listOf(RA, SP, FP) + calleeSaves, jump = emptyList())
+        val sink = Instr.Oper("", src = listOf(ZERO, RA, SP, FP) + calleeSaves, jump = emptyList())
 
         return listOf(enter) + body + sink
     }
@@ -118,7 +118,7 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         val s6 = Temp("\$s6")
         val s7 = Temp("\$s7")
 
-//        val ZERO = Temp("\$zero") // constant 0
+        val ZERO = Temp("\$zero") // constant 0
         //val GP = Temp("\$gp") // pointer for global area
         override val FP = Temp("\$fp") // frame pointer
         override val SP = Temp("\$sp") // stack pointer
@@ -134,7 +134,7 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
                 TreeExp.Call(TreeExp.Name(Label(name)), args) // TODO
 
 //        private val specialRegisters = listOf(RV, FP, SP, RA, ZERO)
-        private val specialRegisters = listOf(RV, FP, SP, RA)
+        private val specialRegisters = listOf(RV, FP, SP, RA, ZERO)
         override val argumentRegisters = listOf(a0, a1, a2, a3)
         override val calleeSaves = listOf(s0, s1, s2, s3, s4, s5, s6, s7)
         override val callerSaves = listOf(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9)
