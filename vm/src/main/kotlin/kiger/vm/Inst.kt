@@ -82,7 +82,7 @@ private val opNameRegex = Regex("""\w+""")
 private val op1Regex = Regex("""($opNameRegex)\s+($operandRegex)""")
 private val op2Regex = Regex("""($opNameRegex)\s+($operandRegex),\s*($operandRegex)""")
 private val op3Regex = Regex("""($opNameRegex)\s+($operandRegex),\s*($operandRegex),\s*($operandRegex)""")
-private val asciiZRegex = Regex("""\.asciiz "(.+)"""")
+private val asciiZRegex = Regex("""\.asciiz "(.*)"""")
 
 private fun parseInstruction(ss: String): Inst? {
     val s = ss.stripComments()
