@@ -348,7 +348,8 @@ private class Parser(lexer: Lexer) {
 
     private fun parseWhile(): Expression {
         val location = lexer.expect(While)
-        val condition = inParens { parseTopLevelExpression() }
+        val condition = parseTopLevelExpression()
+        lexer.expect(Do)
         val body = parseExpression0()
 
         return Expression.While(condition, body, location)
