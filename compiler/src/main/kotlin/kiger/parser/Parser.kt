@@ -449,8 +449,11 @@ private class Parser(lexer: Lexer) {
         }
     }
 
-    private fun parseFields(): List<Field> {
-        TODO()
+    private fun parseFields(): List<Field> = separatedBy(Token.Punctuation.Comma) {
+        val (name, pos) = parseName()
+        lexer.expect(Colon)
+        val type = parseName().first
+        Field(name, type, pos)
     }
 
     private inline fun <T> inParens(parser: () -> T): T =
