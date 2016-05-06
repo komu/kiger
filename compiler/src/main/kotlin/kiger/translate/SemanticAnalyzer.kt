@@ -524,8 +524,11 @@ class SemanticAnalyzer {
     }
 
     private fun checkType(expected: Type, type: Type, pos: SourceLocation) {
-        if (type != expected)
-            typeMismatch(expected.toString(), type, pos)
+        if (expected is Type.Record && type == Type.Nil) return // Ok
+        val t = type.actualType(pos)
+        val e = expected.actualType(pos)
+        if (t != e)
+            typeMismatch(e.toString(), t, pos)
     }
 
     private fun checkRecord(ts: List<Pair<Symbol, Type>>, fs: List<Pair<Type, SourceLocation>>, pos: SourceLocation) {
