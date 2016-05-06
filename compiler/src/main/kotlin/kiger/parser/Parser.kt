@@ -374,29 +374,48 @@ private class Parser(lexer: Lexer) {
         if (lexer.nextTokenIs(LeftParen)) {
             val args = parseArgumentList()
             return Expression.Call(name, args, location)
+        } else if (lexer.nextTokenIs(LeftBrace)) {
+            val fields = inBraces { separatedBy(Comma) { parseFieldDef() }}
+            return Expression.Record(fields, name, location)
         }
 
-        val subscripts = mutableListOf<Expression>()
-        while (lexer.nextTokenIs(LeftBracket))
-            subscripts += inBrackets { parseTopLevelExpression() }
+        val base: Variable = Variable.Simple(name, location)
 
-        if (subscripts.isEmpty()) {
-            return Expression.Var(Variable.Simple(name, location))
+        // TODO: generalize this to handle chains
+        if (lexer.readNextIf(Period)) {
+            val (field, pos) = parseName()
+            return Expression.Var(Variable.Field(base, field, pos))
         } else {
-            if (lexer.readNextIf(Of)) {
-                val init = parseExpression0()
-                if (subscripts.size == 1)
-                    return Expression.Array(name, subscripts[0], init, location)
-                else
-                    error("multidimensional arrays are not supported")
-            } else {
-                var v: Variable = Variable.Simple(name, location)
-                for (sub in subscripts)
-                    v = Variable.Subscript(v, sub, location) // TODO: use location of subscript
 
-                return Expression.Var(v)
+            val subscripts = mutableListOf<Expression>()
+            while (lexer.nextTokenIs(LeftBracket))
+                subscripts += inBrackets { parseTopLevelExpression() }
+
+            if (subscripts.isEmpty()) {
+                return Expression.Var(base)
+            } else {
+                if (lexer.readNextIf(Of)) {
+                    val init = parseExpression0()
+                    if (subscripts.size == 1)
+                        return Expression.Array(name, subscripts[0], init, location)
+                    else
+                        error("multidimensional arrays are not supported")
+                } else {
+                    var v = base
+                    for (sub in subscripts)
+                        v = Variable.Subscript(v, sub, location) // TODO: use location of subscript
+
+                    return Expression.Var(v)
+                }
             }
         }
+    }
+
+    private fun parseFieldDef(): FieldDef {
+        val (name, pos) = parseName()
+        lexer.expect(Equal)
+        val exp = parseExpression0()
+        return FieldDef(name, exp, pos)
     }
 
     private fun parseArgumentList(): List<Expression> =

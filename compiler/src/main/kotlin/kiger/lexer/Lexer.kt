@@ -67,6 +67,7 @@ class Lexer(private val source: String, private val file: String = "<unknown>") 
             readIf(':')     -> if (readIf('=')) Punctuation.Assign else Punctuation.Colon
             readIf(';')     -> Punctuation.Semicolon
             readIf(',')     -> Punctuation.Comma
+            readIf('.')     -> Punctuation.Period
             readIf('=')     -> Operator.Equal
             readIf('!')     -> if (readIf('=')) Operator.NotEqual else fail("unexpected character")
             readIf('<')     -> if (readIf('=')) Operator.LessThanOrEqual else Operator.LessThan

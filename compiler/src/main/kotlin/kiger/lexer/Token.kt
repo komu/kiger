@@ -101,5 +101,6 @@ sealed class Token {
         object Colon : Punctuation(":")
         object Semicolon : Punctuation(";")
         object Comma : Punctuation(",")
+        object Period : Punctuation(".")
     }
 }
