@@ -300,8 +300,17 @@ private class Parser(lexer: Lexer) {
             While               -> parseWhile()
             For                 -> parseFor()
             Let                 -> parseLet()
+            Operator.Minus      -> parseUnaryMinus()
             else                -> fail(location, "unexpected token $token")
         }
+    }
+
+    private fun parseUnaryMinus(): Expression {
+        val pos = lexer.expect(Operator.Minus)
+
+        val exp = parseExpression0()
+
+        return Expression.Op(Expression.Int(0), Operator.Minus, exp, pos)
     }
 
     private fun parseNil(): Expression {
