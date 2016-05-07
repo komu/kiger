@@ -38,12 +38,18 @@ private fun Expression.traverseExp(env: SymbolTable<EscapeInfo>, depth: Int) {
         is If           -> { test.traverseExp(env, depth); then.traverseExp(env, depth); alt?.traverseExp(env, depth) }
         is While        -> { test.traverseExp(env, depth); body.traverseExp(env, depth) }
         is ArrayExp     -> { size.traverseExp(env, depth); init.traverseExp(env, depth) }
-        is Let          -> body.traverseExp(declarations.fold(env) { e, d -> d.traverseDeclaration(e, depth) }, depth)
+        is Let          -> {
+            val env2 = env.child()
+            declarations.forEach { it.traverseDeclaration(env2, depth) }
+            body.traverseExp(env2, depth)
+        }
         is For          -> {
             lo.traverseExp(env, depth)
             hi.traverseExp(env, depth)
             escape = false
-            body.traverseExp(env.enter(variable, EscapeInfo(depth) { escape = true }), depth)
+            var newEnv = env.child()
+            newEnv[variable] = EscapeInfo(depth) { escape = true }
+            body.traverseExp(newEnv, depth)
         }
         is Nil,
         is IntExp,
@@ -64,20 +70,23 @@ private fun Variable.traverseVar(env: SymbolTable<EscapeInfo>, depth: Int) {
     }
 }
 
-private fun Declaration.traverseDeclaration(env: SymbolTable<EscapeInfo>, depth: Int): SymbolTable<EscapeInfo> = when (this) {
-    is Declaration.Functions -> declarations.fold(env) { e, d -> d.traverseFundec(e, depth) }
-    is Declaration.Types -> env
-    is Declaration.Var -> {
-        init.traverseExp(env, depth)
-        escape = false
-        env.enter(name, EscapeInfo(depth) { escape = true})
+private fun Declaration.traverseDeclaration(env: SymbolTable<EscapeInfo>, depth: Int) {
+    when (this) {
+        is Declaration.Functions -> declarations.forEach { it.traverseFundec(env, depth) }
+        is Declaration.Types -> { }
+        is Declaration.Var -> {
+            init.traverseExp(env, depth)
+            escape = false
+            env[name] = EscapeInfo(depth) { escape = true}
+        }
     }
 }
 
 private fun FunctionDeclaration.traverseFundec(env: SymbolTable<EscapeInfo>, depth: Int): SymbolTable<EscapeInfo> {
-    val newEnv = params.fold(env) { e, p ->
+    val newEnv = env.child()
+    for (p in params) {
         p.escape = false
-        e.enter(p.name, EscapeInfo(depth + 1) { p.escape = true })
+        newEnv[p.name] = EscapeInfo(depth + 1) { p.escape = true }
     }
 
     body.traverseExp(newEnv, depth + 1)

@@ -2,19 +2,23 @@ package kiger.env
 
 import kiger.absyn.Symbol
 
-open class SymbolTable<T> {
+class SymbolTable<T> private constructor(private val parent: SymbolTable<T>?) {
 
-    open operator fun get(symbol: Symbol): T? = null
+    constructor(): this(null)
+
+    private val map = mutableMapOf<Symbol, T>()
+
+    operator fun get(symbol: Symbol): T? =
+        map[symbol] ?: parent?.get(symbol)
+
+    operator fun set(symbol: Symbol, value: T) {
+        map[symbol] = value
+    }
+
+    fun child() = SymbolTable(this)
 
     fun enter(name: Symbol, entry: T): SymbolTable<T> =
-        Nested(name, entry, this)
-
-    override fun toString() = "[]"
-
-    private class Nested<T>(val name: Symbol, val entry: T, val parent: SymbolTable<T>) : SymbolTable<T>() {
-        override fun get(symbol: Symbol): T? =
-            if (symbol == name) entry else parent[symbol]
-
-        override fun toString() = "$name: $entry :: $parent"
-    }
+        child().apply {
+            this[name] = entry
+        }
 }

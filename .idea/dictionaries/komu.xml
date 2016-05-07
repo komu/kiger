@@ -4,8 +4,11 @@
       <w>appel</w>
       <w>asciiz</w>
       <w>cjump</w>
+      <w>decl</w>
       <w>eseq</w>
       <w>fundec</w>
+      <w>funs</w>
+      <w>getchar</w>
       <w>insts</w>
       <w>joulette</w>
       <w>kiger</w>
@@ -13,6 +16,7 @@
       <w>linearize</w>
       <w>linearizer</w>
       <w>linearizes</w>
+      <w>printi</w>
       <w>procs</w>
       <w>relop</w>
       <w>stms</w>

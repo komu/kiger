@@ -34,7 +34,7 @@ class LinearizerTest {
 
     private fun linearize(code: String): List<TreeStm> {
         val translator = SemanticAnalyzer(MipsTarget)
-        translator.baseVenv = translator.baseVenv.enter(Symbol("f"), EnvEntry.Function(Level.Top, Label("f"), listOf(Type.Int, Type.Int), Type.Int))
+        translator.baseVenv[Symbol("f")] = EnvEntry.Function(Level.Top, Label("f"), listOf(Type.Int, Type.Int), Type.Int)
 
         resetLabelSequence()
         resetTempSequence()

@@ -47,8 +47,8 @@ class SemanticAnalyzer(target: TargetArch) {
     private val translate = Translator(target.frameType)
     private val errorResult = TranslationResult(translate.errorExp, Type.Nil)
 
-    var baseVenv = run {
-        val baseFuns: List<Triple<String, List<Type>, Type>> = listOf(
+    val baseVenv = SymbolTable<EnvEntry>().apply {
+        val baseFuns = listOf(
                 Triple("print", listOf(Type.String), Type.Unit),
                 Triple("printi", listOf(Type.Int), Type.Unit),
                 Triple("flush", listOf(), Type.Unit),
@@ -61,21 +61,13 @@ class SemanticAnalyzer(target: TargetArch) {
                 Triple("not", listOf(Type.Int), Type.Int),
                 Triple("exit", listOf(Type.Int), Type.Unit))
 
-        var env = SymbolTable<EnvEntry>()
-
-        for ((name, args, returnType) in baseFuns) {
-            val label = Label("rt_$name")
-            val level = Level.Top // Level.Lev(Level.Top, MipsFrame.newFrame(label, args.map { false }))
-            env = env.enter(Symbol(name), EnvEntry.Function(level, label, args, returnType))
-        }
-
-        env
+        for ((name, args, returnType) in baseFuns)
+            this[Symbol(name)] = EnvEntry.Function(Level.Top, Label("rt_$name"), args, returnType)
     }
-    var baseTenv = run {
-        var env = SymbolTable<Type>()
-        env = env.enter(Symbol("int"), Type.Int)
-        env = env.enter(Symbol("string"), Type.String)
-        env
+
+    val baseTenv = SymbolTable<Type>().apply {
+        this[Symbol("int")] = Type.Int
+        this[Symbol("string")] = Type.String
     }
 
     fun transProg(ex: Expression): List<Fragment> {
@@ -402,7 +394,9 @@ class SemanticAnalyzer(target: TargetArch) {
 
         val acc = translate.allocLocal(level, dec.escape)
         val varExp = translate.simpleVar(acc, level)
-        val venv2 = venv.enter(dec.name, EnvEntry.Var(acc, type))
+
+        val venv2 = venv.child()
+        venv2[dec.name] = EnvEntry.Var(acc, type)
 
         return DeclTranslationResult(venv2, tenv, translate.assign(varExp, exp))
     }
@@ -411,7 +405,9 @@ class SemanticAnalyzer(target: TargetArch) {
         // Type declarations may be recursive (or mutually recursive). Therefore we'll perform the translation
         // in two steps: first we'll fill tenv with empty headers, then translate the types.
 
-        val tenv2 = dec.declarations.fold(tenv) { env, d -> env.enter(d.name, Type.Name(d.name)) }
+        val tenv2 = tenv.child()
+        for (d in dec.declarations)
+            tenv2[d.name] = Type.Name(d.name)
 
         for (d in dec.declarations) {
             val type = tenv2[d.name] as Type.Name
@@ -419,9 +415,8 @@ class SemanticAnalyzer(target: TargetArch) {
         }
 
         // Now that all the types have been initialized, check for cycles
-        for (d in dec.declarations) {
+        for (d in dec.declarations)
             checkCycle(tenv2[d.name] as Type.Name, d.pos)
-        }
 
         checkDuplicates(dec.declarations.map { Pair(it.name, it.pos) })
 
@@ -430,7 +425,7 @@ class SemanticAnalyzer(target: TargetArch) {
 
     private fun transFunDec(dec: Declaration.Functions, venv: SymbolTable<EnvEntry>, tenv: SymbolTable<Type>, level: Level): DeclTranslationResult {
         // First pass: check formal types and store header info into venv
-        fun transFun(f: FunctionDeclaration, env: SymbolTable<EnvEntry>): SymbolTable<EnvEntry> {
+        fun transFun(f: FunctionDeclaration): EnvEntry.Function {
             val returnType = f.result?.let { tenv.lookupType(it.first, it.second) } ?: Type.Unit
             val formals = f.params.map { tenv.lookupType(it.type, it.pos) }
             val escapes = f.params.map { it.escape }
@@ -438,10 +433,12 @@ class SemanticAnalyzer(target: TargetArch) {
 
             checkDuplicates(f.params.map { Pair(it.name, it.pos) })
 
-            return env.enter(f.name, EnvEntry.Function(translate.newLevel(level, label, escapes), label, formals, returnType))
+            return EnvEntry.Function(translate.newLevel(level, label, escapes), label, formals, returnType)
         }
 
-        val venv2 = dec.declarations.fold(venv) { env, d -> transFun(d, env) }
+        val venv2 = venv.child()
+        for (d in dec.declarations)
+            venv2[d.name] = transFun(d)
 
         // second pass: do type checking, put VarEntry on venv and check body
         fun transBody(f: FunctionDeclaration) {
@@ -453,9 +450,9 @@ class SemanticAnalyzer(target: TargetArch) {
 
             val params2 = f.params.zip(translate.formals(newLevel)).map { transParam(it.first, it.second) }
 
-            val venv3 = params2.fold(venv2) { env, p ->
-                env.enter(p.first, EnvEntry.Var(p.third, p.second))
-            }
+            val venv3 = venv2.child()
+            for (p in params2)
+                venv3[p.first] = EnvEntry.Var(p.third, p.second)
 
             val (exp, ty) = transExp(f.body, venv3, tenv, newLevel, null)
 
