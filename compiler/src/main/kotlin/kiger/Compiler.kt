@@ -83,18 +83,13 @@ fun main(args: Array<String>) {
         return
     }
 
-    val runtime = Fragment::class.java.classLoader.getResourceAsStream("runtime.s")?.use { it.reader().readText() } ?: error("could not load runtime.s")
-
     if (output != null) {
         output.parentFile.mkdirs()
         output.writer().use {
-            it.emitFragments(target.codeGen, fragments)
-            it.write(runtime)
+            target.writeOutput(fragments, it)
         }
 
     } else {
-        val writer = OutputStreamWriter(System.out)
-        writer.emitFragments(target.codeGen, fragments)
-        writer.write(runtime)
+        target.writeOutput(fragments, OutputStreamWriter(System.out))
     }
 }
