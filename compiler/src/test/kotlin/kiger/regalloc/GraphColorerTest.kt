@@ -44,7 +44,7 @@ class GraphColorerTest {
 
         val flowGraph = inst.createFlowGraph()
         val igraph = flowGraph.interferenceGraph()
-        val colorer = GraphColorer(flowGraph, preallocated)
+        val colorer = GraphColorer(flowGraph, preallocated, preallocated.values.toList())
 
         val (coloring, spills) = colorer.color()
 
