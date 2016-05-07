@@ -16,9 +16,4 @@ class SymbolTable<T> private constructor(private val parent: SymbolTable<T>?) {
     }
 
     fun child() = SymbolTable(this)
-
-    fun enter(name: Symbol, entry: T): SymbolTable<T> =
-        child().apply {
-            this[name] = entry
-        }
 }
