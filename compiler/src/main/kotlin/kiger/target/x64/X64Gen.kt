@@ -84,9 +84,9 @@ private class X64CodeGenerator(val frame: X64Frame) {
 
     private fun munchCall(exp: Call): Temp {
         if (exp.func is Name) {
-            emit(Oper("jal ${exp.func.label}", src = munchArgs(0, exp.args), dst = callDefs))
+            emit(Oper("call ${exp.func.label}", src = munchArgs(0, exp.args), dst = callDefs))
         } else {
-            emit(Oper("jalr 's0", src = cons(munchExp(exp.func), munchArgs(0, exp.args)), dst = callDefs))
+            emit(Oper("call 's0", src = cons(munchExp(exp.func), munchArgs(0, exp.args)), dst = callDefs))
         }
 
         return frameType.RV
@@ -119,7 +119,7 @@ private class X64CodeGenerator(val frame: X64Frame) {
         return when (exp) {
             is Temporary -> exp.temp
             is Const -> emitResult { r -> Oper("movq \$${exp.value}, 'd0", dst = listOf(r)) }
-            is Name -> emitResult { r -> Oper("movq ${exp.label}, 'd0", dst = listOf(r)) }
+            is Name -> emitResult { r -> Oper("leaq ${exp.label}(%rip), 'd0", dst = listOf(r)) }
             is Call -> munchCall(exp)
             is Mem -> when {
                 // constant binary operations
@@ -350,21 +350,22 @@ private class X64CodeGenerator(val frame: X64Frame) {
 
     private fun munchJump(target: TreeExp, labels: List<Label>) {
         if (target is Name) {
-            emit(Oper("j 'j0", jump = listOf(target.label)))
+            emit(Oper("jmp 'j0", jump = listOf(target.label)))
         } else {
-            emit(Oper("jr 's0", src = listOf(munchExp(target)), jump = labels))
+            emit(Oper("jmp 's0", src = listOf(munchExp(target)), jump = labels))
         }
     }
 
     private fun munchCJump(relop: RelOp, lhs: TreeExp, rhs: TreeExp, trueLabel: Label, falseLabel: Label) {
         // TODO: add special cases for comparison to 0
+        emit(Oper("cmp 's0, 's1", src = listOf(munchExp(lhs), munchExp(rhs))))
         when (relop) {
-            EQ -> emit(Oper("bne 's0, 's1, 'j1", src = listOf(munchExp(lhs), munchExp(rhs)), jump = listOf(trueLabel, falseLabel)))
-            NE -> emit(Oper("beq 's0, 's1, 'j1", src = listOf(munchExp(lhs), munchExp(rhs)), jump = listOf(trueLabel, falseLabel)))
-            GE -> emit(Oper("bltz 's0, 'j1", src = listOf(munchExp(BinOp(MINUS, lhs, rhs))), jump = listOf(trueLabel, falseLabel)))
-            GT -> emit(Oper("blez 's0, 'j1", src = listOf(munchExp(BinOp(MINUS, lhs, rhs))), jump = listOf(trueLabel, falseLabel)))
-            LE -> emit(Oper("bgtz 's0, 'j1", src = listOf(munchExp(BinOp(MINUS, lhs, rhs))), jump = listOf(trueLabel, falseLabel)))
-            LT -> emit(Oper("bgez 's0, 'j1", src = listOf(munchExp(BinOp(MINUS, lhs, rhs))), jump = listOf(trueLabel, falseLabel)))
+            EQ -> emit(Oper("je 'j1", jump = listOf(trueLabel, falseLabel)))
+            NE -> emit(Oper("jne 'j1", jump = listOf(trueLabel, falseLabel)))
+            GE -> emit(Oper("jl 'j1", jump = listOf(trueLabel, falseLabel)))
+            GT -> emit(Oper("jle 'j1", jump = listOf(trueLabel, falseLabel)))
+            LE -> emit(Oper("jg 'j1", jump = listOf(trueLabel, falseLabel)))
+            LT -> emit(Oper("jge 'j1", jump = listOf(trueLabel, falseLabel)))
             else    -> TODO("cjump $relop $lhs $rhs $trueLabel $falseLabel")
         }
     }

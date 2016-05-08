@@ -1,3 +1,68 @@
+	.section	__TEXT,__text,regular,pure_instructions
+	.macosx_version_min 10, 11
+
+rt_print:                                 ## @print
+	.cfi_startproc
+## BB#0:
+	pushq	%rbp
+Ltmp3:
+	.cfi_def_cfa_offset 16
+Ltmp4:
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+Ltmp5:
+	.cfi_def_cfa_register %rbp
+	subq	$16, %rsp
+	leaq	L_.str(%rip), %rax
+	movq	%rdi, -8(%rbp)
+	movq	-8(%rbp), %rsi
+	movq	%rax, %rdi
+	movb	$0, %al
+	callq	_printf
+	movl	%eax, -12(%rbp)         ## 4-byte Spill
+	addq	$16, %rsp
+	popq	%rbp
+	retq
+	.cfi_endproc
+
+	.globl	_printi
+	.align	4, 0x90
+rt_printi:                                ## @printi
+	.cfi_startproc
+## BB#0:
+	pushq	%rbp
+Ltmp6:
+	.cfi_def_cfa_offset 16
+Ltmp7:
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+Ltmp8:
+	.cfi_def_cfa_register %rbp
+	subq	$16, %rsp
+	leaq	L_.str.1(%rip), %rax
+	movl	%edi, -4(%rbp)
+	movl	-4(%rbp), %esi
+	movq	%rax, %rdi
+	movb	$0, %al
+	callq	_printf
+	movl	%eax, -8(%rbp)          ## 4-byte Spill
+	addq	$16, %rsp
+	popq	%rbp
+	retq
+	.cfi_endproc
+
+	.globl	_main
+	.align	4, 0x90
+_main:                                  ## @main
+    jmp    main
+
+        .section        __TEXT,__cstring,cstring_literals
+L_.str:                                 ## @.str
+        .asciz  "%s"
+
+L_.str.1:                               ## @.str.1
+        .asciz  "%d"
+
 #
 ## runtime starts here
 #
