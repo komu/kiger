@@ -118,8 +118,8 @@ private class X64CodeGenerator(val frame: X64Frame) {
     private fun munchExp(exp: TreeExp): Temp {
         return when (exp) {
             is Temporary -> exp.temp
-            is Const -> emitResult { r -> Oper("li 'd0, ${exp.value}", dst = listOf(r)) }
-            is Name -> emitResult { r -> Oper("la 'd0, ${exp.label}", dst = listOf(r)) }
+            is Const -> emitResult { r -> Oper("movq \$${exp.value}, 'd0", dst = listOf(r)) }
+            is Name -> emitResult { r -> Oper("movq ${exp.label}, 'd0", dst = listOf(r)) }
             is Call -> munchCall(exp)
             is Mem -> when {
                 // constant binary operations
@@ -136,12 +136,12 @@ private class X64CodeGenerator(val frame: X64Frame) {
             }
             is BinOp -> when (exp.binop) {
                 PLUS -> when {
-                    exp.rhs is Const -> emitResult { r -> Oper("addi 'd0, 's0, ${exp.rhs.value}", dst = listOf(r), src = listOf(munchExp(exp.lhs))) }
-                    exp.lhs is Const -> emitResult { r -> Oper("addi 'd0, 's0, ${exp.lhs.value}", dst = listOf(r), src = listOf(munchExp(exp.rhs))) }
-                    else             -> emitResult { r -> Oper("add 'd0, 's0, 's1", dst = listOf(r), src = listOf(munchExp(exp.lhs), munchExp(exp.rhs))) }
+//                    exp.rhs is Const -> emitResult { r -> Oper("addi 'd0, 's0, ${exp.rhs.value}", dst = listOf(r), src = listOf(munchExp(exp.lhs))) }
+//                    exp.lhs is Const -> emitResult { r -> Oper("addi 'd0, 's0, ${exp.lhs.value}", dst = listOf(r), src = listOf(munchExp(exp.rhs))) }
+                    else             -> emitResult { r -> Oper("addq 's1, 'd0", dst = listOf(r), src = listOf(munchExp(exp.lhs), munchExpTo(r, exp.rhs))) }
                 }
                 MINUS -> when {
-                    exp.rhs is Const -> emitResult { r -> Oper("addi 'd0, 's0, ${-exp.rhs.value}", dst = listOf(r), src = listOf(munchExp(exp.lhs))) }
+                    exp.rhs is Const -> emitResult { r -> Oper("addq \$${-exp.rhs.value}, 'd0", dst = listOf(r), src = listOf(munchExpTo(r, exp.lhs))) }
                     else             -> emitResult { r -> Oper("sub 'd0, 's0, 's1", src = listOf(munchExp(exp.lhs), munchExp(exp.rhs)), dst = listOf(r)) }
                 }
                 DIV -> emitResult { r -> Oper("div 'd0, 's0, 's1", src = listOf(munchExp(exp.lhs), munchExp(exp.rhs)), dst = listOf(r)) }
@@ -255,6 +255,12 @@ private class X64CodeGenerator(val frame: X64Frame) {
             end
 
          */
+    }
+
+    private fun munchExpTo(t: Temp, exp: TreeExp): Temp {
+        val r = munchExp(exp)
+        emit(Instr.Move("movq 's0, 'd0", src=r, dst=t))
+        return t
     }
 
     private fun munchMove(dst: TreeExp, src: TreeExp) {
