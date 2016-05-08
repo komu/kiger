@@ -12,6 +12,9 @@ import kiger.tree.BinaryOp
 import kiger.tree.TreeExp
 import kiger.tree.TreeStm
 
+/**
+ * http://eli.thegreenplace.net/2011/09/06/stack-frame-layout-on-x86-64/
+ */
 class X64Frame private constructor(name: Label, formalEscapes: List<Boolean>) : Frame(name) {
 
     override val type: FrameType
@@ -51,12 +54,12 @@ class X64Frame private constructor(name: Label, formalEscapes: List<Boolean>) : 
     override fun procEntryExit2(body: List<Instr>): List<Instr> {
         // TODO book does not have enter
 //        val enter = Instr.Oper("", dst = listOf(ZERO, RA, SP, FP) + calleeSaves + argumentRegisters)
-        val enter = Instr.Oper("", dst = listOf(ZERO, RA, SP, FP) + calleeSaves + argumentRegisters)
+        val enter = Instr.Oper("", dst = listOf(RA, SP, FP) + calleeSaves + argumentRegisters)
 
         // Dummy instruction that simply tells register allocator what registers are live at the end
 //        val sink = Instr.Oper("", src = listOf(ZERO, RA, SP, FP, RV) + calleeSaves, jump = emptyList())
         // TODO: book does not keep RV live
-        val sink = Instr.Oper("", src = listOf(ZERO, RA, SP, FP) + calleeSaves, jump = emptyList())
+        val sink = Instr.Oper("", src = listOf(RA, SP, FP) + calleeSaves, jump = emptyList())
 
         return listOf(enter) + body + sink
     }
@@ -70,15 +73,15 @@ class X64Frame private constructor(name: Label, formalEscapes: List<Boolean>) : 
             val offset = frameSize + firstLocalOffset // add extra word for stored frame pointer
             val prologue = listOf(
                     "$name:",
-                    "    sw \$fp, 0(\$sp)", // save old fp
-                    "    move \$fp, \$sp", // make sp to be new fp
-                    "    addiu \$sp, \$sp, -$offset")     // make new sp
+                    "    pushq  %rbp",      // save old fp
+                    "    movq %rsp, %rbp",  // make sp to be new fp
+                    "    subq \$$offset, %rsp")     // make new sp
                     .joinToString("\n", postfix = "\n")
 
             val epilogue = listOf(
-                    "    move \$sp, \$fp", // restore old sp
-                    "    lw \$fp, 0(\$sp)", // restore old fp
-                    "    jr \$ra")                      // jump to return address
+                    "    addq \$$offset, %rsp", // restore old sp
+                    "    popq %rbp", // restore old fp
+                    "    retq")             // jump to return address
                     .joinToString("\n", postfix = "\n")
 
             return Triple(prologue, body, epilogue)
@@ -94,41 +97,28 @@ class X64Frame private constructor(name: Label, formalEscapes: List<Boolean>) : 
         val v0 = Temp("\$v0")
 //        val v1 = Temp("\$v1")
 
-        // arguments
-        val a0 = Temp("\$a0")
-        val a1 = Temp("\$a1")
-        val a2 = Temp("\$a2")
-        val a3 = Temp("\$a3")
+        val rax = Temp("%rax")
+        val rbx = Temp("%rbx")
+        val rcx = Temp("%rcx")
+        val rdx = Temp("%rdx")
+        val rbp = Temp("%rbp")
+        val rsp = Temp("%rsp")
+        val rsi = Temp("%rsi")
+        val rdi = Temp("%rdi")
+        val r8 = Temp("%r8")
+        val r9 = Temp("%r9")
+        val r10 = Temp("%r10")
+        val r11 = Temp("%r11")
+        val r12 = Temp("%r12")
+        val r13 = Temp("%r13")
+        val r14 = Temp("%r14")
+        val r15 = Temp("%r15")
 
-        // temporary - not preserved across call (caller save)
-        val t0 = Temp("\$t0")
-        val t1 = Temp("\$t1")
-        val t2 = Temp("\$t2")
-        val t3 = Temp("\$t3")
-        val t4 = Temp("\$t4")
-        val t5 = Temp("\$t5")
-        val t6 = Temp("\$t6")
-        val t7 = Temp("\$t7")
-        val t8 = Temp("\$t8")
-        val t9 = Temp("\$t9")
-
-        // saved temporary - preserved across call (callee save)
-        val s0 = Temp("\$s0")
-        val s1 = Temp("\$s1")
-        val s2 = Temp("\$s2")
-        val s3 = Temp("\$s3")
-        val s4 = Temp("\$s4")
-        val s5 = Temp("\$s5")
-        val s6 = Temp("\$s6")
-        val s7 = Temp("\$s7")
-
-        val ZERO = Temp("\$zero") // constant 0
-        //val GP = Temp("\$gp") // pointer for global area
-        override val FP = Temp("\$fp") // frame pointer
-        override val SP = Temp("\$sp") // stack pointer
-        override val RA = Temp("\$ra") // return address
-        override val RV = v0 // return value
-        override val wordSize = 4
+        override val FP = rbp
+        override val SP = rsp
+        val RA = Temp("\$ra") // TODO: unused
+        override val RV = rax
+        override val wordSize = 8
         override fun newFrame(name: Label, formalEscapes: List<Boolean>) = X64Frame(name, formalEscapes)
         override fun exp(access: FrameAccess, fp: TreeExp) = when (access) {
             is FrameAccess.InFrame -> TreeExp.Mem(TreeExp.BinOp(BinaryOp.PLUS, fp, TreeExp.Const(access.offset)))
@@ -137,17 +127,15 @@ class X64Frame private constructor(name: Label, formalEscapes: List<Boolean>) : 
         override fun externalCall(name: String, args: List<TreeExp>): TreeExp =
                 TreeExp.Call(TreeExp.Name(Label(name)), args) // TODO
 
-//        private val specialRegisters = listOf(RV, FP, SP, RA, ZERO)
-        private val specialRegisters = listOf(RV, FP, SP, RA, ZERO)
-        override val argumentRegisters = listOf(a0, a1, a2, a3)
-        override val calleeSaves = listOf(s0, s1, s2, s3, s4, s5, s6, s7)
-        override val callerSaves = listOf(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9)
+        override val argumentRegisters = listOf(rdi, rsi, rdx, rcx, r8, r9)
+        override val calleeSaves = listOf(rbp, rbx, r12, r13, r14, r15)
+        override val callerSaves = listOf(rax, rcx, rdx, rsp, rsi, rdi, r8, r9, r10, r11)
         private val firstLocalOffset = wordSize // fp is stored at 0, locals/params start at fp + wordSize
 
-        private val registerList = argumentRegisters + calleeSaves + callerSaves + specialRegisters
+        private val registerList = calleeSaves + callerSaves
 
         override val tempMap: Map<Temp, Register> = registerList.map { it -> Pair(it, Register(it.name)) }.toMap()
 
-        override val assignableRegisters: List<Register> = tempMap.values.toList() - tempMap[ZERO]!!
+        override val assignableRegisters: List<Register> = tempMap.values.toList()
     }
 }

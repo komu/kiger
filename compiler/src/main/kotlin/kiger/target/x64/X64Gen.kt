@@ -42,7 +42,7 @@ private class X64CodeGenerator(val frame: X64Frame) {
      *  - RA: it will be overwritten for function return.
      */
     // TODO: do we need to save args?
-    val callDefs = listOf(X64Frame.RV, X64Frame.RA) + X64Frame.callerSaves + X64Frame.argumentRegisters
+    val callDefs = X64Frame.callerSaves
 
     private fun emit(instr: Instr) {
         instructions += instr
@@ -118,21 +118,21 @@ private class X64CodeGenerator(val frame: X64Frame) {
     private fun munchExp(exp: TreeExp): Temp {
         return when (exp) {
             is Temporary -> exp.temp
-            is Const -> if (exp.value == 0) X64Frame.ZERO else emitResult { r -> Oper("li 'd0, ${exp.value}", dst = listOf(r)) }
+            is Const -> emitResult { r -> Oper("li 'd0, ${exp.value}", dst = listOf(r)) }
             is Name -> emitResult { r -> Oper("la 'd0, ${exp.label}", dst = listOf(r)) }
             is Call -> munchCall(exp)
             is Mem -> when {
                 // constant binary operations
-                exp.exp is BinOp && exp.exp.binop == PLUS && exp.exp.rhs is Const ->
-                    emitResult { r -> Oper("lw 'd0, ${exp.exp.rhs.value}('s0)", src = listOf(munchExp(exp.exp.lhs)), dst = listOf(r)) }
-                exp.exp is BinOp && exp.exp.binop == PLUS && exp.exp.lhs is Const ->
-                    emitResult { r -> Oper("lw 'd0, ${exp.exp.lhs.value}('so)", src = listOf(munchExp(exp.exp.rhs)), dst = listOf(r)) }
-                exp.exp is BinOp && exp.exp.binop == MINUS && exp.exp.rhs is Const ->
-                    emitResult { r -> Oper("lw 'd0, ${-exp.exp.rhs.value}('s0)", src = listOf(munchExp(exp.exp.lhs)), dst = listOf(r)) }
-                exp.exp is Const ->
-                    emitResult { r -> Oper("lw 'd0, ${exp.exp.value}(\$zero)", dst = listOf(r)) }
+//                exp.exp is BinOp && exp.exp.binop == PLUS && exp.exp.rhs is Const ->
+//                    emitResult { r -> Oper("lw 'd0, ${exp.exp.rhs.value}('s0)", src = listOf(munchExp(exp.exp.lhs)), dst = listOf(r)) }
+//                exp.exp is BinOp && exp.exp.binop == PLUS && exp.exp.lhs is Const ->
+//                    emitResult { r -> Oper("lw 'd0, ${exp.exp.lhs.value}('so)", src = listOf(munchExp(exp.exp.rhs)), dst = listOf(r)) }
+//                exp.exp is BinOp && exp.exp.binop == MINUS && exp.exp.rhs is Const ->
+//                    emitResult { r -> Oper("lw 'd0, ${-exp.exp.rhs.value}('s0)", src = listOf(munchExp(exp.exp.lhs)), dst = listOf(r)) }
+//                exp.exp is Const ->
+//                    emitResult { r -> Oper("lw 'd0, ${exp.exp.value}(\$zero)", dst = listOf(r)) }
                 else ->
-                    emitResult { r -> Oper("lw 'd0, 0('s0)", src = listOf(munchExp(exp.exp)), dst = listOf(r)) }
+                    emitResult { r -> Oper("movq 0('s0), 'd0", src = listOf(munchExp(exp.exp)), dst = listOf(r)) }
             }
             is BinOp -> when (exp.binop) {
                 PLUS -> when {
@@ -260,15 +260,15 @@ private class X64CodeGenerator(val frame: X64Frame) {
     private fun munchMove(dst: TreeExp, src: TreeExp) {
         when {
             dst is Mem && dst.exp is BinOp && dst.exp.binop == PLUS && dst.exp.rhs is Const ->
-                emit(Oper("sw 's1, ${dst.exp.rhs.value}('s0)", src = listOf(munchExp(dst.exp.lhs), munchExp(src))))
+                emit(Oper("movq 's1, ${dst.exp.rhs.value}('s0)", src = listOf(munchExp(dst.exp.lhs), munchExp(src))))
             dst is Mem && dst.exp is BinOp && dst.exp.binop == PLUS && dst.exp.lhs is Const ->
-                emit(Oper("sw 's1, ${dst.exp.lhs.value}('s0)", src = listOf(munchExp(dst.exp.rhs), munchExp(src))))
+                emit(Oper("movq 's1, ${dst.exp.lhs.value}('s0)", src = listOf(munchExp(dst.exp.rhs), munchExp(src))))
             dst is Mem ->
-                emit(Oper("sw 's1, 0('s0)", src = listOf(munchExp(dst.exp), munchExp(src))))
-            dst is Temporary && src is Const ->
-                emit(Oper("li 'd0, ${src.value}", dst = listOf(dst.temp)))
+                emit(Oper("movq 's1, 0('s0)", src = listOf(munchExp(dst.exp), munchExp(src))))
+//            dst is Temporary && src is Const ->
+//                emit(Oper("li 'd0, ${src.value}", dst = listOf(dst.temp)))
             dst is Temporary ->
-                emit(Instr.Move("move 'd0, 's0", src = munchExp(src), dst = dst.temp))
+                emit(Instr.Move("movq 'd0, 's0", src = munchExp(src), dst = dst.temp))
             else ->
                 TODO("move: $dst $src")
         }

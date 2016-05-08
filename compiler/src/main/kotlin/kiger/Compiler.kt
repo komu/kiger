@@ -11,6 +11,7 @@ import kiger.regalloc.allocateRegisters
 import kiger.target.CodeGen
 import kiger.target.TargetArch
 import kiger.target.mips.MipsTarget
+import kiger.target.x64.X64Target
 import kiger.translate.SemanticAnalyzer
 import java.io.File
 import java.io.OutputStreamWriter
@@ -24,24 +25,7 @@ private fun compile(targetArch: TargetArch, code: String, filename: String): Lis
     return if (analyzer.diagnostics.errorCount == 0) result else null
 }
 
-fun Writer.emitFragments(codeGen: CodeGen, fragments: List<Fragment>) {
-    val strs = fragments.filterIsInstance<Fragment.Str>()
-    val procs = fragments.filterIsInstance<Fragment.Proc>()
-
-    if (strs.any()) {
-        writeLine("    .data")
-        for (fragment in strs)
-            emitStr(fragment)
-    }
-
-    if (procs.any()) {
-        writeLine("    .text")
-        for (fragment in procs)
-            emitProc(codeGen, fragment)
-    }
-}
-
-private fun Writer.emitProc(codeGen: CodeGen, fragment: Fragment.Proc) {
+fun Writer.emitProc(codeGen: CodeGen, fragment: Fragment.Proc) {
     val frame = fragment.frame
     val traces = fragment.body.linearize().createControlFlowGraph().traceSchedule()
     val instructions = traces.flatMap { codeGen.codeGen(frame, it) }
@@ -59,11 +43,7 @@ private fun Writer.emitProc(codeGen: CodeGen, fragment: Fragment.Proc) {
     write(epilogue)
 }
 
-private fun Writer.emitStr(fragment: Fragment.Str) {
-    writeLine("${fragment.label}:\n    .asciiz \"${fragment.value.replace("\"", "\\\"").replace("\n", "\\n")}\"")
-}
-
-private fun Writer.writeLine(line: String) {
+fun Writer.writeLine(line: String) {
     write(line)
     write("\n")
 }
@@ -74,7 +54,7 @@ fun main(args: Array<String>) {
         System.exit(1)
     }
 
-    val target = MipsTarget
+    val target = if (System.getProperty("arch") == "x86_64") X64Target else MipsTarget
     val input = File(args[0])
     val output = args.getOrNull(1)?.let { File(it) }
     val fragments = compile(target, input.readText(), input.toString())

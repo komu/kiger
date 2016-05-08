@@ -9,7 +9,6 @@ interface FrameType {
     val FP: Temp
     val SP: Temp
     val RV: Temp
-    val RA: Temp
     val wordSize: Int
 
     val argumentRegisters: List<Temp>

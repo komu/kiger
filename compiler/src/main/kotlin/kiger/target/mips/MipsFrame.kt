@@ -126,7 +126,7 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         //val GP = Temp("\$gp") // pointer for global area
         override val FP = Temp("\$fp") // frame pointer
         override val SP = Temp("\$sp") // stack pointer
-        override val RA = Temp("\$ra") // return address
+        val RA = Temp("\$ra") // return address
         override val RV = v0 // return value
         override val wordSize = 4
         override fun newFrame(name: Label, formalEscapes: List<Boolean>) = MipsFrame(name, formalEscapes)
