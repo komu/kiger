@@ -2,12 +2,22 @@
 #include <stdlib.h>
 #include <string.h>
 
-long long ord(long long c) {
-  return c;
+long long ord(const char* s) {
+  return s[0];
 }
 
-long long chr(long long c) {
-  return c;
+const char* chr(char c) {
+    char*s = malloc(2);
+    s[0] = c;
+    s[1] = 0;
+    return s;
+}
+
+const char* getchar_s() {
+    char*s = malloc(2);
+    s[0] = getchar();
+    s[1] = 0;
+    return s;
 }
 
 void* initArray(long long len, long long initial) {

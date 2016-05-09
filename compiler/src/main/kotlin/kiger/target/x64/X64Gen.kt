@@ -142,7 +142,12 @@ private class X64CodeGenerator(val frame: X64Frame) {
                     else             -> emitResult { r -> Oper("subq 's0, 'd0", dst = listOf(r), src = listOf(munchExp(exp.rhs), munchExpTo(r, exp.lhs))) }
                 }
                 DIV -> {
-                    emit(Oper("divq 's1", src = listOf(munchExpTo(X64Frame.rax, exp.lhs), munchExp(exp.rhs)), dst = listOf(X64Frame.rax, X64Frame.rdx)))
+                    // TODO set rdx to 0
+
+                    val s1 = munchExpTo(X64Frame.rax, exp.lhs)
+                    val s2 = munchExp(exp.rhs)
+                    emit(Oper("xorq %rdx, %rdx", dst = listOf(X64Frame.rdx)))
+                    emit(Oper("idivq 's1", src = listOf(s1, s2), dst = listOf(X64Frame.rax, X64Frame.rdx)))
                     X64Frame.rax
                 }
                 MUL -> {

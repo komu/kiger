@@ -90,7 +90,7 @@ class Lexer(private val source: String, private val file: String = "<unknown>") 
      */
     private fun readSymbol(): Token {
         assert(peekChar().isLetter())
-        val str = readWhile { it.isLetterOrDigit() }
+        val str = readWhile { it.isLetterOrDigit() || it == '_' }
 
         return when (str) {
             "type"      -> Keyword.Type

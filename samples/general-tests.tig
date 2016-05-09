@@ -77,6 +77,13 @@ in
         assertInt("subtraction", 12, r + 7 - c)
     end;
 
+    let
+        var r := 7
+        var c := 2
+    in
+        assertInt("div", 3, r / c)
+    end;
+
     if failed = 0 then
         (print("all "); printi(total); print(" tests passed!\n"))
     else

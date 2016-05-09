@@ -131,7 +131,7 @@ ord:
     Lrunt5:
     jr $ra
 
-getchar:
+getchar_s:
     li $v0, 9
     li $a0, 2
     syscall
