@@ -25,6 +25,7 @@
       <w>linearizes</w>
       <w>movl</w>
       <w>movq</w>
+      <w>mulq</w>
       <w>popq</w>
       <w>printi</w>
       <w>procs</w>

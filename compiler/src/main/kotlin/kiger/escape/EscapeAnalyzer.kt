@@ -61,8 +61,8 @@ private fun Expression.traverseExp(env: SymbolTable<EscapeInfo>, depth: Int) {
 private fun Variable.traverseVar(env: SymbolTable<EscapeInfo>, depth: Int) {
     when (this) {
         is Variable.Simple      -> {
-            val b = env[name]!!
-            if (depth > b.depth)
+            val b = env[name]
+            if (b != null && depth > b.depth)
                 b.flagEscape()
         }
         is Variable.Field       -> variable.traverseVar(env, depth)

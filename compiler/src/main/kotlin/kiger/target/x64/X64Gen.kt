@@ -4,6 +4,7 @@ import kiger.assem.Instr
 import kiger.assem.Instr.Oper
 import kiger.frame.Frame
 import kiger.target.CodeGen
+import kiger.target.mips.TooManyArgsException
 import kiger.temp.Label
 import kiger.temp.Temp
 import kiger.tree.BinaryOp.*
@@ -54,7 +55,11 @@ private class X64CodeGenerator(val frame: X64Frame) {
         return t
     }
 
-    fun munchStm(stm: TreeStm): Unit {
+    // TODO: use lea where applicable [eax + edx*4 -4] -> -4(%eax, %edx, 4)
+
+    fun munchStm(stm: TreeStm) {
+        emit(Instr.Oper("# $stm"))
+
         when (stm) {
             is TreeStm.Seq -> {
                 munchStm(stm.lhs)
@@ -125,19 +130,7 @@ private class X64CodeGenerator(val frame: X64Frame) {
                     emitResult { r -> Oper("movq \$${exp.value}, 'd0", dst = listOf(r)) }
             is Name -> emitResult { r -> Oper("leaq ${exp.label}(%rip), 'd0", dst = listOf(r)) }
             is Call -> munchCall(exp)
-            is Mem -> when {
-                // constant binary operations
-                exp.exp is BinOp && exp.exp.binop == PLUS && exp.exp.rhs is Const ->
-                    emitResult { r -> Oper("movq ${exp.exp.rhs.value}('s0), 'd0", src = listOf(munchExp(exp.exp.lhs)), dst = listOf(r)) }
-                exp.exp is BinOp && exp.exp.binop == PLUS && exp.exp.lhs is Const ->
-                    emitResult { r -> Oper("movq ${exp.exp.lhs.value}('so), 'd0", src = listOf(munchExp(exp.exp.rhs)), dst = listOf(r)) }
-                exp.exp is BinOp && exp.exp.binop == MINUS && exp.exp.rhs is Const ->
-                    emitResult { r -> Oper("movq ${-exp.exp.rhs.value}('s0), 'd0", src = listOf(munchExp(exp.exp.lhs)), dst = listOf(r)) }
-                exp.exp is Const ->
-                    emitResult { r -> Oper("movq 0(${exp.exp.value}), 'd0", dst = listOf(r)) }
-                else ->
-                    emitResult { r -> Oper("movq 0('s0), 'd0", src = listOf(munchExp(exp.exp)), dst = listOf(r)) }
-            }
+            is Mem -> munchLoad(exp.exp)
             is BinOp -> when (exp.binop) {
                 PLUS -> when {
 //                    exp.rhs is Const -> emitResult { r -> Oper("addi 'd0, 's0, ${exp.rhs.value}", dst = listOf(r), src = listOf(munchExp(exp.lhs))) }
@@ -146,10 +139,13 @@ private class X64CodeGenerator(val frame: X64Frame) {
                 }
                 MINUS -> when {
                     exp.rhs is Const -> emitResult { r -> Oper("subq \$${exp.rhs.value}, 'd0", dst = listOf(r), src = listOf(munchExpTo(r, exp.lhs))) }
-                    else             -> emitResult { r -> Oper("subq 's0, 'd0", dst = listOf(r), src = listOf(munchExp(exp.lhs), munchExpTo(r, exp.rhs))) }
+                    else             -> emitResult { r -> Oper("subq 's0, 'd0", dst = listOf(r), src = listOf(munchExp(exp.rhs), munchExpTo(r, exp.lhs))) }
                 }
-                DIV -> emitResult { r -> Oper("div 'd0, 's0, 's1", src = listOf(munchExp(exp.lhs), munchExp(exp.rhs)), dst = listOf(r)) }
-                MUL -> emitResult { r -> Oper("mul 'd0, 's0, 's1", src = listOf(munchExp(exp.lhs), munchExp(exp.rhs)), dst = listOf(r)) }
+                //DIV -> emitResult { r -> Oper("div 'd0, 's0, 's1", src = listOf(munchExp(exp.lhs), munchExp(exp.rhs)), dst = listOf(r)) }
+                MUL -> {
+                    emit(Oper("mulq 's1", src = listOf(munchExpTo(X64Frame.rax, exp.lhs), munchExp(exp.rhs)), dst = listOf(X64Frame.rax, X64Frame.rdx)))
+                    X64Frame.rax
+                }
                 else -> TODO("unsupported binop ${exp.binop}")
             }
             else ->
@@ -269,12 +265,7 @@ private class X64CodeGenerator(val frame: X64Frame) {
 
     private fun munchMove(dst: TreeExp, src: TreeExp) {
         when {
-            dst is Mem && dst.exp is BinOp && dst.exp.binop == PLUS && dst.exp.rhs is Const ->
-                emit(Oper("movq 's1, ${dst.exp.rhs.value}('s0)", src = listOf(munchExp(dst.exp.lhs), munchExp(src))))
-            dst is Mem && dst.exp is BinOp && dst.exp.binop == PLUS && dst.exp.lhs is Const ->
-                emit(Oper("movq 's1, ${dst.exp.lhs.value}('s0)", src = listOf(munchExp(dst.exp.rhs), munchExp(src))))
-            dst is Mem ->
-                emit(Oper("movq 's1, 0('s0)", src = listOf(munchExp(dst.exp), munchExp(src))))
+            dst is Mem -> munchStore(dst.exp, src)
             dst is Temporary && src is Const && src.value == 0->
                 emit(Oper("xorq 'd0, 'd0", dst = listOf(dst.temp)))
             dst is Temporary && src is Const ->
@@ -284,75 +275,42 @@ private class X64CodeGenerator(val frame: X64Frame) {
             else ->
                 TODO("move: $dst $src")
         }
-
-        // 1 store to memory (sw)
-        /*
-                  (* 1, store to memory (sw) *)
-
-          (* e1+i <= e2 *)
-          | munchStm (T.MOVE(T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)), e2)) =
-            emit(A.OPER{assem="sw 's0, " ^ int2str i ^ "(`s1)",
-                        src=[munchExp e2, munchExp e1],
-                        dst=[],jump=NONE})
-
-          | munchStm (T.MOVE(T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)), e2)) =
-            emit(A.OPER{assem="sw 's0, " ^ int2str i ^ "(`s1)",
-                        src=[munchExp e2, munchExp e1],
-                        dst=[],jump=NONE})
-
-          (* e1-i <= e2 *)
-          | munchStm (T.MOVE(T.MEM(T.BINOP(T.MINUS, e1, T.CONST i)), e2)) =
-            emit(A.OPER{assem="sw 's0, " ^ int2str (~i) ^ "(`s1)",
-                        src=[munchExp e2, munchExp e1],
-                        dst=[],jump=NONE})
-
-          | munchStm (T.MOVE(T.MEM(T.BINOP(T.MINUS, T.CONST i, e1)), e2)) =
-            emit(A.OPER{assem="sw 's0, " ^ int2str (~i) ^ "(`s1)",
-                        src=[munchExp e2, munchExp e1],
-                        dst=[],jump=NONE})
-
-          (* i <= e2 *)
-          (* | munchStm (T.MOVE(T.MEM(T.CONST i), e2)) = *)
-          (*   emit(A.OPER{assem="sw 's0, " ^ int2str i ^ "($zero)", *)
-          (*               src=[munchExp e2],dst=[],jump=NONE}) *)
-
-          | munchStm (T.MOVE(T.MEM(e1), e2)) =
-            emit(A.OPER{assem="sw 's0, 0(`s1)",
-                        src=[munchExp e2, munchExp e1],
-                        dst=[],jump=NONE})
-
-          (* 2, load to register (lw) *)
-
-          | munchStm (T.MOVE((T.TEMP i, T.CONST n))) =
-            emit(A.OPER{assem="li 'd0, " ^ int2str n,
-                        src=[],dst=[i],jump=NONE})
-
-          | munchStm (T.MOVE(T.TEMP i,
-                             T.MEM(T.BINOP(T.PLUS, e1, T.CONST n)))) =
-            emit(A.OPER{assem="lw 'd0, " ^ int2str n ^ "(`s0)",
-                        src=[munchExp e1],dst=[i],jump=NONE})
-
-          | munchStm (T.MOVE(T.TEMP i,
-                             T.MEM(T.BINOP(T.PLUS, T.CONST n, e1)))) =
-            emit(A.OPER{assem="lw 'd0, " ^ int2str n ^ "(`s0)",
-                        src=[munchExp e1],dst=[i],jump=NONE})
-
-          | munchStm (T.MOVE(T.TEMP i,
-                             T.MEM(T.BINOP(T.MINUS, e1, T.CONST n)))) =
-            emit(A.OPER{assem="lw 'd0, " ^ int2str (~n) ^ "(`s0)",
-                        src=[munchExp e1],dst=[i],jump=NONE})
-
-          | munchStm (T.MOVE(T.TEMP i,
-                             T.MEM(T.BINOP(T.MINUS, T.CONST n, e1)))) =
-            emit(A.OPER{assem="lw 'd0, " ^ int2str (~n) ^ "(`s0)",
-                        src=[munchExp e1],dst=[i],jump=NONE})
-
-          (* 3, move from register to register *)
-          | munchStm (T.MOVE((T.TEMP i, e2))) =
-            emit(A.MOVE{assem="move 'd0, 's0",src=munchExp e2,dst=i})
-
-         */
     }
+
+    private fun munchStore(addr: TreeExp, src: TreeExp) = when {
+        src is Const && addr is BinOp && addr.binop == PLUS && addr.rhs is Const ->
+            emit(Oper("movq \$${src.value}, ${addr.rhs.value}('s0)", src = listOf(munchExp(addr.lhs))))
+        src is Const && addr is BinOp && addr.binop == PLUS && addr.lhs is Const ->
+            emit(Oper("movq \$${src.value}, ${addr.lhs.value}('s0)", src = listOf(munchExp(addr.rhs))))
+        addr is BinOp && addr.binop == PLUS && addr.rhs is Const ->
+            emit(Oper("movq 's1, ${addr.rhs.value}('s0)", src = listOf(munchExp(addr.lhs), munchExp(src))))
+        addr is BinOp && addr.binop == PLUS && addr.lhs is Const ->
+            emit(Oper("movq 's1, ${addr.lhs.value}('s0)", src = listOf(munchExp(addr.rhs), munchExp(src))))
+        src is Const ->
+            emit(Oper("movq \$${src.value}, ('s0)", src = listOf(munchExp(addr))))
+        else ->
+            emit(Oper("movq 's1, ('s0)", src = listOf(munchExp(addr), munchExp(src))))
+    }
+
+    private fun munchLoad(addr: TreeExp): Temp = when {
+    // constant binary operations
+        addr is BinOp && addr.binop == PLUS && addr.rhs is Const ->
+            emitResult { r -> Oper("movq ${addr.rhs.value}('s0), 'd0", src = listOf(munchExp(addr.lhs)), dst = listOf(r)) }
+        addr is BinOp && addr.binop == PLUS && addr.lhs is Const ->
+            emitResult { r -> Oper("movq ${addr.lhs.value}('so), 'd0", src = listOf(munchExp(addr.rhs)), dst = listOf(r)) }
+        addr is BinOp && addr.binop == PLUS && addr.rhs is BinOp && addr.rhs.binop == MUL && addr.rhs.rhs is Const ->
+            emitResult { r -> Oper("movq ('s0, 's1, ${addr.rhs.rhs.value}), 'd0", src = listOf(munchExp(addr.lhs), munchExp(addr.rhs.lhs)), dst = listOf(r)) }
+//        // TODO: add similar movqs for other constant loads
+//        addr is BinOp && addr.binop == PLUS ->
+//            emitResult { r -> Oper("movq ('s0, 's1), 'd0", src = listOf(munchExp(addr.lhs), munchExp(addr.rhs)), dst = listOf(r)) }
+//        addr is BinOp && addr.binop == MINUS && addr.rhs is Const ->
+//            emitResult { r -> Oper("movq ${-addr.rhs.value}('s0), 'd0", src = listOf(munchExp(addr.lhs)), dst = listOf(r)) }
+        addr is Const ->
+            emitResult { r -> Oper("movq (${addr.value}), 'd0", dst = listOf(r)) }
+        else ->
+            emitResult { r -> Oper("movq ('s0), 'd0", src = listOf(munchExp(addr)), dst = listOf(r)) }
+    }
+
 
     private fun munchJump(target: TreeExp, labels: List<Label>) {
         if (target is Name) {
@@ -365,14 +323,16 @@ private class X64CodeGenerator(val frame: X64Frame) {
     private fun munchCJump(relop: RelOp, lhs: TreeExp, rhs: TreeExp, trueLabel: Label, falseLabel: Label) {
         // TODO: add special cases for comparison to 0
         var op = relop
-        if (lhs is Const) {
-            emit(Oper("cmpq \$${lhs.value}, 's0", src = listOf(munchExp(rhs))))
-            op = relop.commute()
-        } else if (rhs is Const) {
+//        if (lhs is Const) {
+//            emit(Oper("cmpq \$${lhs.value}, 's0", src = listOf(munchExp(rhs))))
+//            op = relop.commute()
+//        } else if (rhs is Const) {
+//            emit(Oper("cmpq \$${rhs.value}, 's0", src = listOf(munchExp(lhs))))
+        if (rhs is Const) {
             emit(Oper("cmpq \$${rhs.value}, 's0", src = listOf(munchExp(lhs))))
         } else {
-            emit(Oper("cmpq 's0, 's1", src = listOf(munchExp(lhs), munchExp(rhs))))
-            op = relop.commute()
+            emit(Oper("cmpq 's0, 's1", src = listOf(munchExp(rhs), munchExp(lhs))))
+//            op = relop.commute()
         }
 
         when (op) {
@@ -387,5 +347,3 @@ private class X64CodeGenerator(val frame: X64Frame) {
     }
 
 }
-
-class TooManyArgsException(message: String): RuntimeException(message)

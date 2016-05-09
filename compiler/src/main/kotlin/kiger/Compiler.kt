@@ -6,6 +6,7 @@ import kiger.canon.linearize
 import kiger.canon.traceSchedule
 import kiger.escape.analyzeEscapes
 import kiger.frame.Fragment
+import kiger.lexer.SyntaxErrorException
 import kiger.parser.parseExpression
 import kiger.regalloc.allocateRegisters
 import kiger.target.CodeGen
@@ -17,11 +18,16 @@ import java.io.OutputStreamWriter
 import java.io.Writer
 
 private fun compile(targetArch: TargetArch, code: String, filename: String): List<Fragment>? {
-    val exp = parseExpression(code, filename)
-    exp.analyzeEscapes()
-    val analyzer = SemanticAnalyzer(targetArch)
-    val result = analyzer.transProg(exp)
-    return if (analyzer.diagnostics.errorCount == 0) result else null
+    try {
+        val exp = parseExpression(code, filename)
+        exp.analyzeEscapes()
+        val analyzer = SemanticAnalyzer(targetArch)
+        val result = analyzer.transProg(exp)
+        return if (analyzer.diagnostics.errorCount == 0) result else null
+    } catch (e: SyntaxErrorException) {
+        System.err.println(e)
+        return null
+    }
 }
 
 fun Writer.emitProc(codeGen: CodeGen, fragment: Fragment.Proc) {

@@ -1,0 +1,33 @@
+let
+    type intArray = array of int
+    var myArray := intArray[3] of 42
+    var failed := 0
+    var total := 0
+
+    function assertInt(name: string, expected: int, actual: int) =
+        (total := total +1;
+        if actual != expected then
+            (failed := failed + 1;
+             print(name); print(": FAILED: expected "); printi(expected); print(", but got "); printi(actual); print("\n")))
+in
+    assertInt("initial 0",  42, myArray[0]);
+    assertInt("initial 1",  42, myArray[1]);
+    assertInt("initial 2",  42, myArray[2]);
+
+    myArray[1] := 3;
+    myArray[2] := 52;
+
+    assertInt("after assign 0",  42, myArray[0]);
+    assertInt("after assign 1",  3, myArray[1]);
+    assertInt("after assign 2",  52, myArray[2]);
+
+    myArray[0] := myArray[myArray[1]-1];
+
+    assertInt("last",  52, myArray[0]);
+
+    if failed = 0 then
+        (print("all "); printi(total); print(" tests passed!\n"))
+    else
+        (printi(failed); print("/"); printi(total); print(" tests failed!\n"); exit(1))
+end
+

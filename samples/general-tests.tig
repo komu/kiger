@@ -29,10 +29,53 @@ in
     assertInt("4 > 3",  1, 4 > 3);
     assertInt("4 >= 3", 1, 4 >= 3);
 
+    let
+        var x := 4
+        var y := 3
+    in
+        assertInt("x = x",  1, x = x);
+        assertInt("x != x", 0, x != x);
+        assertInt("x < x",  0, x < x);
+        assertInt("x <= ",  1, x <= x);
+        assertInt("x > x",  0, x > x);
+        assertInt("x >= x", 1, x >= x);
+
+        assertInt("y = x",  0, y = x);
+        assertInt("y != x", 1, y != x);
+        assertInt("y < x",  1, y < x);
+        assertInt("x <= x", 1, y <= x);
+        assertInt("y > x",  0, y > x);
+        assertInt("y >= x", 0, y >= x);
+
+        assertInt("x = y",  0, x = y);
+        assertInt("x != y", 1, x != y);
+        assertInt("x < y",  0, x < y);
+        assertInt("x <= y", 0, x <= y);
+        assertInt("x > y",  1, x > y);
+        assertInt("x >= y", 1, x >= y)
+    end;
+
     assertInt("string eq 1", 0, "foo" = "bar");
     assertInt("string eq 2", 1, "foo" = "foo");
     assertInt("string ne 1", 1, "foo" != "bar");
     assertInt("string ne 2", 0, "foo" != "foo");
+
+    let
+        var n := 10
+        var sum := 0
+    in
+        for i := 0 to n do
+            sum := sum + i;
+
+        assertInt("sum of 0..10", 55, sum)
+    end;
+
+    let
+        var r := 7
+        var c := 2
+    in
+        assertInt("subtraction", 12, r + 7 - c)
+    end;
 
     if failed = 0 then
         (print("all "); printi(total); print(" tests passed!\n"))

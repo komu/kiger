@@ -36,6 +36,20 @@ rt_printi:                                ## @printi
 	popq	%rbp
 	retq
 
+	.align	4, 0x90
+rt_println:                                 ## @print
+	pushq	%rbp
+	movq	%rsp, %rbp
+	subq	$16, %rsp
+    movq    %rdi, %rsi
+    leaq    L_.str.2(%rip), %rdi
+	movb	$0, %al
+	callq	_printf
+	#movl	%eax, -12(%rbp)         ## 4-byte Spill
+	addq	$16, %rsp
+	popq	%rbp
+	retq
+
     .align  4, 0x90
 rt_exit:                               ## @rt_exit
     jmp    _exit
@@ -76,27 +90,50 @@ rt_strne:                              ## @rt_strne
     popq    %rbp
     retq
 
-#	.globl	_main
-#	.align	4, 0x90
-#_main:                                  ## @main
-#    jmp main
-#	pushq	%rbp
-#	movq	%rsp, %rbp
-#	subq	$16, %rsp
-#	leaq	L_.str.2(%rip), %rdi
-#	movl	$0, -4(%rbp)
-#	movq	$4, -16(%rbp)
-#	callq	_print
-#	movq	-16(%rbp), %rdi
-#	callq	_square
-#	movq	%rax, %rdi
-#	callq	_printi
-#	leaq	L_.str.3(%rip), %rdi
-#	callq	_print
-#	xorl	%eax, %eax
-#	addq	$16, %rsp
-#	popq	%rbp
-#	retq
+        .align  4, 0x90
+rt_initArray:                          ## @rt_initArray
+        .cfi_startproc
+## BB#0:
+        pushq   %rbp
+Ltmp3:
+        .cfi_def_cfa_offset 16
+Ltmp4:
+        .cfi_offset %rbp, -16
+        movq    %rsp, %rbp
+Ltmp5:
+        .cfi_def_cfa_register %rbp
+        subq    $48, %rsp
+        movq    %rdi, -8(%rbp)
+        movq    %rsi, -16(%rbp)
+        movq    -8(%rbp), %rsi
+        shlq    $3, %rsi
+        movq    %rsi, -24(%rbp)
+        movq    -24(%rbp), %rdi
+        callq   _malloc
+        movq    %rax, -32(%rbp)
+        movq    $0, -40(%rbp)
+LBB1_1:                                 ## =>This Inner Loop Header: Depth=1
+        movq    -40(%rbp), %rax
+        cmpq    -8(%rbp), %rax
+        jge     LBB1_4
+## BB#2:                                ##   in Loop: Header=BB1_1 Depth=1
+        movq    -16(%rbp), %rax
+        movq    -40(%rbp), %rcx
+        movq    -32(%rbp), %rdx
+        movq    %rax, (%rdx,%rcx,8)
+## BB#3:                                ##   in Loop: Header=BB1_1 Depth=1
+        movq    -40(%rbp), %rax
+        addq    $1, %rax
+        movq    %rax, -40(%rbp)
+        jmp     LBB1_1
+LBB1_4:
+        movq    -32(%rbp), %rax
+        addq    $48, %rsp
+        popq    %rbp
+        retq
+        .cfi_endproc
+
+
 
 	.section	__TEXT,__cstring,cstring_literals
 L_.str:                                 ## @.str
@@ -104,5 +141,8 @@ L_.str:                                 ## @.str
 
 L_.str.1:                               ## @.str.1
 	.asciz	"%lld"
+
+L_.str.2:                               ## @.str.1
+	.asciz	"\n"
 
 .subsections_via_symbols
