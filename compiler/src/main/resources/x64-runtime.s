@@ -5,13 +5,15 @@ rt_print:                                 ## @print
 	pushq	%rbp
 	movq	%rsp, %rbp
 	subq	$16, %rsp
-	leaq	L_.str(%rip), %rax
-	movq	%rdi, -8(%rbp)
-	movq	-8(%rbp), %rsi
-	movq	%rax, %rdi
+#	leaq	L_.str(%rip), %rax
+#	movq	%rdi, -8(%rbp)
+#	movq	-8(%rbp), %rsi
+#	movq	%rax, %rdi
+        movq %rdi, %rsi
+        leaq L_.str(%rip), %rdi
 	movb	$0, %al
 	callq	_printf
-	movl	%eax, -12(%rbp)         ## 4-byte Spill
+	#movl	%eax, -12(%rbp)         ## 4-byte Spill
 	addq	$16, %rsp
 	popq	%rbp
 	retq
@@ -21,16 +23,58 @@ rt_printi:                                ## @printi
 	pushq	%rbp
 	movq	%rsp, %rbp
 	subq	$16, %rsp
-	leaq	L_.str.1(%rip), %rax
-	movq	%rdi, -8(%rbp)
-	movq	-8(%rbp), %rsi
-	movq	%rax, %rdi
+#	leaq	L_.str.1(%rip), %rax
+#	movq	%rdi, -8(%rbp)
+#	movq	-8(%rbp), %rsi
+#	movq	%rax, %rdi
+        movq    %rdi, %rsi
+        leaq    L_.str.1(%rip), %rdi
 	movb	$0, %al
 	callq	_printf
-	movl	%eax, -12(%rbp)         ## 4-byte Spill
+#	movl	%eax, -12(%rbp)         ## 4-byte Spill
 	addq	$16, %rsp
 	popq	%rbp
 	retq
+
+    .align  4, 0x90
+rt_exit:                               ## @rt_exit
+    jmp    _exit
+
+    .align  4, 0x90
+rt_streq:                              ## @rt_streq
+    pushq   %rbp
+    movq    %rsp, %rbp
+    subq    $16, %rsp
+#    movq    %rdi, -8(%rbp)
+#    movq    %rsi, -16(%rbp)
+#    movq    -8(%rbp), %rdi
+#    movq    -16(%rbp), %rsi
+    callq   _strcmp
+    cmpl    $0, %eax
+    sete    %cl
+    andb    $1, %cl
+    movzbl  %cl, %eax
+    addq    $16, %rsp
+    popq    %rbp
+    retq
+
+    .align  4, 0x90
+rt_strne:                              ## @rt_strne
+    pushq   %rbp
+    movq    %rsp, %rbp
+    subq    $16, %rsp
+#    movq    %rdi, -8(%rbp)
+#    movq    %rsi, -16(%rbp)
+#    movq    -8(%rbp), %rdi
+#    movq    -16(%rbp), %rsi
+    callq   _strcmp
+    cmpl    $0, %eax
+    setne   %cl
+    andb    $1, %cl
+    movzbl  %cl, %eax
+    addq    $16, %rsp
+    popq    %rbp
+    retq
 
 #	.globl	_main
 #	.align	4, 0x90

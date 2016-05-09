@@ -63,23 +63,35 @@ class X64Frame private constructor(name: Label, formalEscapes: List<Boolean>) : 
         return listOf(enter) + body + sink
     }
 
+    fun align(num: Int, alignment: Int): Int =
+        if (num % alignment == 0)
+            num
+        else
+            num + alignment - num % alignment;
+
     override fun procEntryExit3(body: List<Instr>): Triple<String, List<Instr>, String> {
         // TODO: offset calculation is wrong since we still do "sw $a0, 4($fp)" at the start to save the link to frame
-        val frameSize = (1+locals) * wordSize
+        val stackAlign = 16
+        val frameSize = align((1+locals) * wordSize, stackAlign)
 
         // TODO: use virtual frame pointer
-        val offset = frameSize + firstLocalOffset // add extra word for stored frame pointer
+        val offset = frameSize// + firstLocalOffset // add extra word for stored frame pointer
         val prologue = listOf(
                 "$name:",
+                "    .cfi_startproc",
                 "    pushq %rbp",      // save old fp
+                "    .cfi_def_cfa_offset $offset",
+                "    .cfi_offset %rbp, -$offset",
                 "    movq %rsp, %rbp",  // make sp to be new fp
+                "    .cfi_def_cfa_register %rbp",
                 "    subq \$$offset, %rsp")     // make new sp
                 .joinToString("\n", postfix = "\n")
 
         val epilogue = listOf(
                 "    addq \$$offset, %rsp", // restore old sp
                 "    popq %rbp", // restore old fp
-                "    retq")             // jump to return address
+                "    retq",// jump to return address
+                "    .cfi_endproc")
                 .joinToString("\n", postfix = "\n")
 
         return Triple(prologue, body, epilogue)

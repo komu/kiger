@@ -10,7 +10,6 @@ import kiger.parser.parseExpression
 import kiger.regalloc.allocateRegisters
 import kiger.target.CodeGen
 import kiger.target.TargetArch
-import kiger.target.mips.MipsTarget
 import kiger.target.x64.X64Target
 import kiger.translate.SemanticAnalyzer
 import java.io.File
@@ -54,7 +53,8 @@ fun main(args: Array<String>) {
         System.exit(1)
     }
 
-    val target = if (System.getProperty("arch") == "x86_64") X64Target else MipsTarget
+    //val target = if (System.getProperty("arch") == "x86_64") X64Target else MipsTarget
+    val target = X64Target
     val input = File(args[0])
     val output = args.getOrNull(1)?.let { File(it) }
     val fragments = compile(target, input.readText(), input.toString())

@@ -370,15 +370,14 @@ private class X64CodeGenerator(val frame: X64Frame) {
             op = relop.commute()
         } else if (rhs is Const) {
             emit(Oper("cmpq \$${rhs.value}, 's0", src = listOf(munchExp(lhs))))
-
         } else {
             emit(Oper("cmpq 's0, 's1", src = listOf(munchExp(lhs), munchExp(rhs))))
             op = relop.commute()
         }
 
         when (op) {
-            EQ -> emit(Oper("je 'j1", jump = listOf(trueLabel, falseLabel)))
-            NE -> emit(Oper("jne 'j1", jump = listOf(trueLabel, falseLabel)))
+            EQ -> emit(Oper("jne 'j1", jump = listOf(trueLabel, falseLabel)))
+            NE -> emit(Oper("je 'j1", jump = listOf(trueLabel, falseLabel)))
             GE -> emit(Oper("jl 'j1", jump = listOf(trueLabel, falseLabel)))
             GT -> emit(Oper("jle 'j1", jump = listOf(trueLabel, falseLabel)))
             LE -> emit(Oper("jg 'j1", jump = listOf(trueLabel, falseLabel)))
