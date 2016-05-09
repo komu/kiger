@@ -10,7 +10,7 @@
 # out:
 #   v0 - pointer to start of array
 #
-rt_initArray:
+initArray:
     li $a2, 4
     mul $a0, $a0, $a2
     li $v0, 9
@@ -32,7 +32,7 @@ rt_initArray:
 #   v0 - pointer to the record
 #
 
-rt_allocRecord:
+allocRecord:
     li $a2, 4
     mul $a0, $a0, $a2
     li $v0, 9
@@ -45,7 +45,7 @@ rt_allocRecord:
 # in:
 #   a0 - pointer to zero-terminated string to print
 #
-rt_print:
+print:
     li $v0, 4
     syscall
     jr $ra
@@ -56,15 +56,15 @@ rt_print:
 # in:
 #   a0 - integer to print
 #
-rt_printi:
+printi:
     li $v0, 1
     syscall
     jr $ra
 
-rt_flush:
+flush:
     jr $ra
 
-rt_streq:
+streq:
     li $a2, 0
   streq_start:
     lb $t1, 0($a0)
@@ -85,11 +85,11 @@ rt_streq:
     xor $v0, $v0, $a2
     jr $ra
 
-rt_strne:
+strne:
     li $a2, 1           # pass argument to invert the result
-    j streq_start       # ... and jump into rt_streq skipping setting default value of $a2
+    j streq_start       # ... and jump into streq skipping setting default value of $a2
 
-rt_strcmp:
+strcmp:
     strcmptest:
     lb $a2, 0($a0)
     lb $a3, 0($a1)
@@ -112,7 +112,7 @@ rt_strcmp:
     li $v0, 0
     jr $ra
 
-# rt_size:
+# size:
 #     move $v0, $zero
 #     sizeloop:
 #     lb $a1, 0($a0)
@@ -123,7 +123,7 @@ rt_strcmp:
 #     sizeexit:
 #     jr $ra
 
-rt_ord:
+ord:
     lb $a1, 0($a0)
     li $v0,-1
     beqz $a1,Lrunt5
@@ -131,7 +131,7 @@ rt_ord:
     Lrunt5:
     jr $ra
 
-rt_getchar:
+getchar:
     li $v0, 9
     li $a0, 2
     syscall
@@ -142,7 +142,7 @@ rt_getchar:
     move $v0, $a0
     jr $ra
 
-rt_chr:
+chr:
     move $a1, $a0
     li $v0, 9
     li $a0, 2
@@ -151,11 +151,11 @@ rt_chr:
     sb $zero, 1($v0)
     jr $ra
 
-rt_exit:
+exit:
      li $v0, 10
      syscall
 
-# rt_substring:
+# substring:
 #     add $a1, $a0, $a1
 #     move $a3, $a1
 #     li $v0, 9
@@ -178,7 +178,7 @@ rt_exit:
 #     sb $zero, 0($a0)
 #     jr $ra
 
-# rt_copy:
+# copy:
 #     copyloop:
 #     lb $a2, 0($a1)
 #     beq $zero, $a2, copyexit
@@ -191,7 +191,7 @@ rt_exit:
 #     move $v0, $a0
 #     jr $ra
 
-# rt_concat:
+# concat:
 #     sw $a0, -4($sp)
 #     sw $a1, -8($sp)
 #     sw $ra, -12($sp)

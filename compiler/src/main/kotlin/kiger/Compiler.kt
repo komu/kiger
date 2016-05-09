@@ -74,6 +74,7 @@ fun main(args: Array<String>) {
         output.writer().use {
             target.writeOutput(fragments, it)
         }
+        println("compiled ${fragments.size} fragments")
 
     } else {
         target.writeOutput(fragments, OutputStreamWriter(System.out))

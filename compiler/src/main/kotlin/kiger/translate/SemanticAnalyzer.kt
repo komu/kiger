@@ -62,7 +62,7 @@ class SemanticAnalyzer(target: TargetArch) {
                 Triple("exit", listOf(Type.Int), Type.Unit))
 
         for ((name, args, returnType) in baseFuns)
-            this[Symbol(name)] = EnvEntry.Function(Level.Top, Label("rt_$name"), args, returnType)
+            this[Symbol(name)] = EnvEntry.Function(Level.Top, Label("$name"), args, returnType)
     }
 
     val baseTenv = SymbolTable<Type>().apply {

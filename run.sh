@@ -9,6 +9,6 @@ fi
 
 ./gradlew :compiler:shadowJar
 java -jar compiler/build/libs/compiler-all.jar samples/$1.tig out/$1.s
-cc out/$1.s -o out/$1
+cc out/$1.s runtime/runtime.c -o out/$1
 out/$1
 

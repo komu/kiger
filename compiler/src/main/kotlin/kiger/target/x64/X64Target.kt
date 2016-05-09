@@ -12,10 +12,7 @@ object X64Target : TargetArch {
     override val codeGen = X64Gen
 
     override fun writeOutput(fragments: List<Fragment>, it: Writer) {
-        val runtime = javaClass.classLoader.getResourceAsStream("x64-runtime.s")?.use { it.reader().readText() } ?: error("could not load x64-runtime.s")
-
         it.emitFragments(codeGen, fragments)
-        it.write(runtime)
     }
 
     private fun Writer.emitFragments(codeGen: CodeGen, fragments: List<Fragment>) {

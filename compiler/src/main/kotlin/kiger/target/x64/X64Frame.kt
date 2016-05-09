@@ -126,7 +126,7 @@ class X64Frame private constructor(name: Label, formalEscapes: List<Boolean>) : 
             is FrameAccess.InReg -> TreeExp.Temporary(access.reg)
         }
         override fun externalCall(name: String, args: List<TreeExp>): TreeExp =
-                TreeExp.Call(TreeExp.Name(Label(name)), args) // TODO
+                TreeExp.Call(TreeExp.Name(Label("_" + name)), args) // TODO
 
         val specialRegisters = listOf(FP, SP, RV)
         override val argumentRegisters = listOf(rdi, rsi, rdx, rcx, r8, r9)

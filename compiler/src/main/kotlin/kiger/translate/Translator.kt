@@ -73,9 +73,9 @@ class Translator(val frameType: FrameType) {
         val right = e2.asEx()
 
         if (negate)
-            return TrExp.Ex(frameType.externalCall("rt_strne", listOf(left, right)))
+            return TrExp.Ex(frameType.externalCall("strne", listOf(left, right)))
         else
-            return TrExp.Ex(frameType.externalCall("rt_streq", listOf(left, right)))
+            return TrExp.Ex(frameType.externalCall("streq", listOf(left, right)))
     }
 
     fun logicalOp(op: Token.Operator, le: TrExp, re: TrExp): TrExp = when (op) {
@@ -114,7 +114,7 @@ class Translator(val frameType: FrameType) {
 
     fun record(fields: List<TrExp>): TrExp {
         val r = Temp.gen()
-        val init = TreeStm.Move(TreeExp.Temporary(r), frameType.externalCall("rt_allocRecord", listOf(TreeExp.Const(fields.size * frameType.wordSize))))
+        val init = TreeStm.Move(TreeExp.Temporary(r), frameType.externalCall("allocRecord", listOf(TreeExp.Const(fields.size * frameType.wordSize))))
 
         val inits = fields.mapIndexed { i, e ->
             TreeStm.Move(memPlus(TreeExp.Temporary(r), TreeExp.Const(i * frameType.wordSize)), e.asEx())
@@ -220,7 +220,7 @@ class Translator(val frameType: FrameType) {
     }
 
     fun array(size: TrExp, init: TrExp): TrExp =
-        TrExp.Ex(frameType.externalCall("rt_initArray", listOf(size.asEx(), init.asEx())))
+        TrExp.Ex(frameType.externalCall("initArray", listOf(size.asEx(), init.asEx())))
 
     fun call(useLevel: Level, defLevel: Level, label: Label, args: List<TrExp>, isProcedure: Boolean): TrExp {
         val argExps = args.map { it.asEx() }
