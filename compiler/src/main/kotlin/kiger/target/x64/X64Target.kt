@@ -30,6 +30,7 @@ object X64Target : TargetArch {
 
         if (procs.any()) {
             writeLine("    .section        __TEXT,__text,regular,pure_instructions")
+            writeLine("    .globl _main")
             for (fragment in procs)
                 emitProc(codeGen, fragment)
         }

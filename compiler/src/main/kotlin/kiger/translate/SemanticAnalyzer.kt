@@ -42,7 +42,7 @@ class SemanticAnalyzer(target: TargetArch) {
 
     val diagnostics = Diagnostics()
 
-    private val mainLabel = Label("main")
+    private val mainLabel = Label("_main")
 
     private val translate = Translator(target.frameType)
     private val errorResult = TranslationResult(translate.errorExp, Type.Nil)

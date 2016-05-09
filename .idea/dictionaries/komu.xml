@@ -1,33 +1,45 @@
 <component name="ProjectDictionaryState">
   <dictionary name="komu">
     <words>
+      <w>addq</w>
       <w>appel</w>
       <w>asciiz</w>
+      <w>asciz</w>
+      <w>binop</w>
+      <w>callq</w>
       <w>cjump</w>
+      <w>cmpq</w>
       <w>decl</w>
       <w>eseq</w>
       <w>fundec</w>
       <w>funs</w>
       <w>getchar</w>
+      <w>globl</w>
       <w>insts</w>
       <w>joulette</w>
       <w>kiger</w>
+      <w>leaq</w>
       <w>linearization</w>
       <w>linearize</w>
       <w>linearizer</w>
       <w>linearizes</w>
       <w>movl</w>
       <w>movq</w>
+      <w>popq</w>
       <w>printi</w>
       <w>procs</w>
+      <w>pushq</w>
       <w>relop</w>
+      <w>retq</w>
       <w>stms</w>
+      <w>subq</w>
       <w>syscall</w>
       <w>tenv</w>
       <w>trexp</w>
       <w>untraced</w>
       <w>venv</w>
       <w>xori</w>
+      <w>xorq</w>
     </words>
   </dictionary>
 </component>
