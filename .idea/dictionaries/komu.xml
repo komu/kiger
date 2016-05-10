@@ -10,6 +10,7 @@
       <w>cjump</w>
       <w>cmpq</w>
       <w>decl</w>
+      <w>decq</w>
       <w>divq</w>
       <w>eseq</w>
       <w>fundec</w>

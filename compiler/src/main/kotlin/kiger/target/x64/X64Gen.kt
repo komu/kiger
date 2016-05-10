@@ -140,19 +140,37 @@ private class X64CodeGenerator(val frame: X64Frame) {
             is Mem -> munchLoad(exp.exp)
             is BinOp -> when (exp.binop) {
                 PLUS -> when {
-                    exp.lhs is Const    -> emitBinOp("addq", munchExp(exp.rhs), exp.lhs.value)
-                    exp.rhs is Const    ->
-                        if (exp.rhs.value == 1) {
-                            val r = munchExp(exp.lhs)
-                            emit("incq 's0", src=listOf(r), dst=r)
-                            r
-                        } else
-                            emitBinOp("addq", munchExp(exp.lhs), exp.rhs.value)
-                    else                -> emitBinOp("addq", munchExp(exp.lhs), munchExp(exp.rhs))
+                    exp.lhs is Const && exp.lhs.value == 1 -> {
+                        val r = munchExp(exp.rhs)
+                        emit("incq 's0", src=listOf(r), dst=r)
+                        r
+                    }
+                    exp.lhs is Const ->
+                        emitBinOp("addq", munchExp(exp.rhs), exp.lhs.value)
+                    exp.rhs is Const && exp.rhs.value == 1 -> {
+                        val e = munchExp(exp.lhs)
+                        withResult { r ->
+                            emitMove(e, r)
+                            emit("incq 's0", src = listOf(r), dst = r)
+                        }
+                    }
+                    exp.rhs is Const ->
+                        emitBinOp("addq", munchExp(exp.lhs), exp.rhs.value)
+                    else ->
+                        emitBinOp("addq", munchExp(exp.lhs), munchExp(exp.rhs))
                 }
                 MINUS -> when {
-                    exp.rhs is Const    -> emitBinOp("subq", munchExp(exp.lhs), exp.rhs.value)
-                    else                -> emitBinOp("subq", munchExp(exp.lhs), munchExp(exp.rhs))
+                    exp.rhs is Const && exp.rhs.value == 1 -> {
+                        val e = munchExp(exp.lhs)
+                        withResult { r ->
+                            emitMove(e, r)
+                            emit("decq 's0", src=listOf(r), dst=r)
+                        }
+                    }
+                    exp.rhs is Const ->
+                        emitBinOp("subq", munchExp(exp.lhs), exp.rhs.value)
+                    else ->
+                        emitBinOp("subq", munchExp(exp.lhs), munchExp(exp.rhs))
                 }
                 DIV -> {
                     val rhs = munchExp(exp.rhs)
@@ -174,110 +192,6 @@ private class X64CodeGenerator(val frame: X64Frame) {
             else ->
                 TODO("$exp")
         }
-
-        /*
-
-          (* and *)
-
-          | munchExp (T.BINOP (T.AND, e1, T.CONST n)) =
-            result(fn r => emit(A.OPER{
-                               assem="andi 'd0, 's0, " ^ int2str n,
-                               src=[munchExp e1],
-                               dst=[r],
-                               jump=NONE}))
-
-          | munchExp (T.BINOP (T.AND, T.CONST n, e1)) =
-            result(fn r => emit(A.OPER{
-                               assem="andi 'd0, 's0, " ^ int2str n,
-                               src=[munchExp e1],
-                               dst=[r],
-                               jump=NONE}))
-
-          | munchExp (T.BINOP (T.AND, e1, e2)) =
-            result(fn r => emit(A.OPER{
-                               assem="and 'd0, 's0, 's1",
-                               src=[munchExp e1],
-                               dst=[r],
-                               jump=NONE}))
-
-          (* or *)
-
-          | munchExp (T.BINOP (T.OR, e1, T.CONST n)) =
-            result(fn r => emit(A.OPER{
-                               assem="ori 'd0, 's0, " ^ int2str n,
-                               src=[munchExp e1],dst=[r],jump=NONE}))
-
-          | munchExp (T.BINOP (T.OR, T.CONST n, e1)) =
-            result(fn r => emit(A.OPER{
-                               assem="ori 'd0, 's0, " ^ int2str n,
-                               src=[munchExp e1],dst=[r],jump=NONE}))
-
-          | munchExp (T.BINOP (T.OR, e1, e2)) =
-            result(fn r => emit(A.OPER{
-                               assem="or 'd0, 's0, 's1",
-                               src=[munchExp e1],dst=[r],jump=NONE}))
-
-          (* shift *)
-
-          | munchExp (T.BINOP (T.LSHIFT, e, T.CONST n)) =
-            result (fn r => emit (A.OPER {
-                                  assem="sll 'd0, 's0, " ^ int2str n,
-                                  src=[munchExp e],
-                                  dst=[r],
-                                  jump=NONE}))
-
-          | munchExp (T.BINOP (T.LSHIFT, e1, e2)) =
-            result (fn r => emit (A.OPER {
-                                  assem="sllv 'd0, 's0, 's1",
-                                  src=[munchExp e1, munchExp e2],
-                                  dst=[r],
-                                  jump=NONE}))
-
-          | munchExp (T.BINOP (T.RSHIFT, e, T.CONST n)) =
-            result (fn r => emit (A.OPER {
-                                  assem="srl 'd0, 's0, " ^ int2str n,
-                                  src=[munchExp e],
-                                  dst=[r],
-                                  jump=NONE}))
-
-          | munchExp (T.BINOP (T.RSHIFT, e1, e2)) =
-            result (fn r => emit (A.OPER {
-                                  assem="srlv 'd0, 's0, 's1",
-                                  src=[munchExp e1, munchExp e2],
-                                  dst=[r],
-                                  jump=NONE}))
-
-          | munchExp (T.BINOP (T.ARSHIFT, e, T.CONST n)) =
-            result (fn r => emit (A.OPER {
-                                  assem="sra 'd0, 's0, " ^ int2str n,
-                                  src=[munchExp e],
-                                  dst=[r],
-                                  jump=NONE}))
-
-          | munchExp (T.BINOP (T.ARSHIFT, e1, e2)) =
-            result (fn r => emit (A.OPER {
-                                  assem="srav 'd0, 's0, 's1",
-                                  src=[munchExp e1, munchExp e2],
-                                  dst=[r],
-                                  jump=NONE}))
-
-        (* generate code to move all arguments to their correct positions.
-         * In SPIM MIPS, we use a0-a3 to store first four parameters, and
-         * others go to frame. The result of this function is a list of
-         * temporaries that are to be passed to the machine's CALL function. *)
-        and munchArgs (_, nil) = nil
-          | munchArgs (i, exp :: rest) =
-            let val len = List.length Frame.argregs in
-              if i < len then
-                let val dst = List.nth(Frame.argregs,i)
-                    val src = munchExp(exp) in
-                  munchStm(T.MOVE(T.TEMP dst,T.TEMP src));
-                  dst :: munchArgs(i+1,rest)
-                end
-              else raise TooManyArgs("too many arguments!") (* TODO: spilling *)
-            end
-
-         */
     }
 
     private fun munchMove(dst: TreeExp, src: TreeExp) = when {
@@ -310,7 +224,6 @@ private class X64CodeGenerator(val frame: X64Frame) {
     }
 
     private fun munchLoad(addr: TreeExp): Temp = when {
-    // constant binary operations
         addr is BinOp && addr.binop == PLUS && addr.rhs is Const ->
             withResult { r -> emit("movq ${addr.rhs.value}('s0), 'd0", src = listOf(munchExp(addr.lhs)), dst = r) }
         addr is BinOp && addr.binop == PLUS && addr.lhs is Const ->
@@ -329,38 +242,40 @@ private class X64CodeGenerator(val frame: X64Frame) {
     }
 
     private fun munchJump(target: TreeExp, labels: List<Label>) {
-        if (target is Name) {
+        if (target is Name)
             emit("jmp 'j0", jump = listOf(target.label))
-        } else {
+        else
             emit("jmp 's0", src = listOf(munchExp(target)), jump = labels)
-        }
     }
 
     private fun munchCJump(relop: RelOp, lhs: TreeExp, rhs: TreeExp, trueLabel: Label, falseLabel: Label) {
-        // TODO: add special cases for comparison to 0
-        var op = relop
-//        if (lhs is Const) {
-//            emit(Oper("cmpq \$${lhs.value}, 's0", src = listOf(munchExp(rhs))))
-//            op = relop.commute()
-//        } else if (rhs is Const) {
-//            emit(Oper("cmpq \$${rhs.value}, 's0", src = listOf(munchExp(lhs))))
-        if (rhs is Const) {
+        val op = munchCompare(lhs, relop, rhs)
+
+        emit("${op.not().toInstruction()} 'j1", jump = listOf(trueLabel, falseLabel))
+    }
+
+    private fun RelOp.toInstruction(): String = when (this) {
+        EQ -> "je"
+        NE -> "jne"
+        GE -> "jge"
+        GT -> "jg"
+        LE -> "jle"
+        LT -> "jl"
+        else -> error("unsupported relop $this")
+    }
+
+    private fun munchCompare(lhs: TreeExp, relop: RelOp, rhs: TreeExp): RelOp = when {
+        lhs is Const -> {
+            emit("cmpq \$${lhs.value}, 's0", src = listOf(munchExp(rhs)))
+            relop.commute()
+        }
+        rhs is Const -> {
             emit("cmpq \$${rhs.value}, 's0", src = listOf(munchExp(lhs)))
-        } else {
+            relop
+        }
+        else -> {
             emit("cmpq 's0, 's1", src = listOf(munchExp(rhs), munchExp(lhs)))
-//            op = relop.commute()
+            relop
         }
-
-        val inst = when (op) {
-            EQ -> "jne"
-            NE -> "je"
-            GE -> "jl"
-            GT -> "jle"
-            LE -> "jg"
-            LT -> "jge"
-            else    -> TODO("cjump $relop $lhs $rhs $trueLabel $falseLabel")
-        }
-
-        emit("$inst 'j1", jump = listOf(trueLabel, falseLabel))
     }
 }
