@@ -12,6 +12,7 @@
       <w>decl</w>
       <w>decq</w>
       <w>divq</w>
+      <w>endproc</w>
       <w>eseq</w>
       <w>fundec</w>
       <w>funs</w>
@@ -36,6 +37,7 @@
       <w>pushq</w>
       <w>relop</w>
       <w>retq</w>
+      <w>startproc</w>
       <w>stms</w>
       <w>subq</w>
       <w>syscall</w>

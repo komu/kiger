@@ -50,7 +50,10 @@ private class X64CodeGenerator(val frame: X64Frame) {
     }
 
     private fun emitMove(src: Temp, dst: Temp) {
-        emit(Instr.Move("movq 's0, 'd0", src = src, dst = dst))
+        if (src == frameType.FP)
+            emit("leaq ${frameExp(0)}, 'd0", src = listOf(frameType.SP), dst = dst)
+        else
+            emit(Instr.Move("movq 's0, 'd0", src = src, dst = dst))
     }
 
     private inline fun withResult(gen: (Temp) -> Unit): Temp {
@@ -208,7 +211,12 @@ private class X64CodeGenerator(val frame: X64Frame) {
             emit("movq \$$value, 'd0", dst = dst.temp)
     }
 
+    private fun frameExp(offset: Int) =
+        "$offset+${frame.name}_frameSize('s0)"
+
     private fun munchStore(addr: TreeExp, src: TreeExp) = when {
+        addr is BinOp && addr.binop == PLUS && addr.lhs is Temporary && addr.rhs is Const && addr.lhs.temp == frameType.FP ->
+            emit("movq 's1, ${frameExp(addr.rhs.value)}", src = listOf(frameType.SP, munchExp(src)))
         src is Const && addr is BinOp && addr.binop == PLUS && addr.rhs is Const ->
             emit("movq \$${src.value}, ${addr.rhs.value}('s0)", src = listOf(munchExp(addr.lhs)))
         src is Const && addr is BinOp && addr.binop == PLUS && addr.lhs is Const ->
@@ -224,6 +232,8 @@ private class X64CodeGenerator(val frame: X64Frame) {
     }
 
     private fun munchLoad(addr: TreeExp): Temp = when {
+        addr is BinOp && addr.binop == PLUS && addr.lhs is Temporary && addr.rhs is Const && addr.lhs.temp == frameType.FP ->
+            withResult { r -> emit("movq ${frameExp(addr.rhs.value)}, 'd0", src = listOf(frameType.SP), dst = r) }
         addr is BinOp && addr.binop == PLUS && addr.rhs is Const ->
             withResult { r -> emit("movq ${addr.rhs.value}('s0), 'd0", src = listOf(munchExp(addr.lhs)), dst = r) }
         addr is BinOp && addr.binop == PLUS && addr.lhs is Const ->
