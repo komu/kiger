@@ -17,6 +17,7 @@
       <w>getchar</w>
       <w>globl</w>
       <w>idivq</w>
+      <w>incq</w>
       <w>insts</w>
       <w>joulette</w>
       <w>kiger</w>

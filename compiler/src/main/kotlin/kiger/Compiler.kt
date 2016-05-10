@@ -13,16 +13,18 @@ import kiger.target.CodeGen
 import kiger.target.TargetArch
 import kiger.target.x64.X64Target
 import kiger.translate.SemanticAnalyzer
+import kiger.utils.dumpProfileTimes
+import kiger.utils.profile
 import java.io.File
 import java.io.OutputStreamWriter
 import java.io.Writer
 
 private fun compile(targetArch: TargetArch, code: String, filename: String): List<Fragment>? {
     try {
-        val exp = parseExpression(code, filename)
-        exp.analyzeEscapes()
+        val exp = profile("parsing") { parseExpression(code, filename) }
+        profile("escape analysis") { exp.analyzeEscapes() }
         val analyzer = SemanticAnalyzer(targetArch)
-        val result = analyzer.transProg(exp)
+        val result = profile("translation") { analyzer.transProg(exp) }
         return if (analyzer.diagnostics.errorCount == 0) result else null
     } catch (e: SyntaxErrorException) {
         System.err.println(e)
@@ -63,7 +65,8 @@ fun main(args: Array<String>) {
     val target = X64Target
     val input = File(args[0])
     val output = args.getOrNull(1)?.let { File(it) }
-    val fragments = compile(target, input.readText(), input.toString())
+    val source = input.readText()
+    val fragments = profile("compile") { compile(target, source, input.toString()) }
     if (fragments == null) {
         System.exit(1)
         return
@@ -75,6 +78,8 @@ fun main(args: Array<String>) {
             target.writeOutput(fragments, it)
         }
         println("compiled ${fragments.size} fragments")
+
+        dumpProfileTimes()
 
     } else {
         target.writeOutput(fragments, OutputStreamWriter(System.out))
