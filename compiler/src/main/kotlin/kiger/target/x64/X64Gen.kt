@@ -17,7 +17,6 @@ import kiger.tree.TreeStm.Branch.CJump
 import kiger.tree.TreeStm.Branch.Jump
 import kiger.tree.TreeStm.Move
 import kiger.utils.cons
-import kiger.utils.splitFirst
 
 object X64Gen : CodeGen {
     override val frameType = X64Frame
@@ -89,9 +88,9 @@ private class X64CodeGenerator(val frame: X64Frame) {
 
     private fun munchCall(exp: Call): Temp {
         if (exp.func is Name) {
-            emit(Oper("callq ${exp.func.label}", src = munchArgs(0, exp.args), dst = callDefs))
+            emit(Oper("callq ${exp.func.label}", src = munchArgs(exp.args), dst = callDefs))
         } else {
-            emit(Oper("callq 's0", src = cons(munchExp(exp.func), munchArgs(0, exp.args)), dst = callDefs))
+            emit(Oper("callq 's0", src = cons(munchExp(exp.func), munchArgs(exp.args)), dst = callDefs))
         }
 
         return frameType.RV
@@ -103,21 +102,23 @@ private class X64CodeGenerator(val frame: X64Frame) {
      * others go to frame. The result of this function is a list of
      * temporaries that are to be passed to the machine's CALL function.
      */
-    private fun munchArgs(i: Int, args: List<TreeExp>): List<Temp> {
-        if (args.isEmpty()) return emptyList()
-
-        val (exp, rest) = args.splitFirst()
-
+    private fun munchArgs(args: List<TreeExp>): List<Temp> {
         val argumentRegisters = frameType.argumentRegisters
-        if (i < argumentRegisters.size) {
-            val dst = argumentRegisters[i]
-            val src = munchExp(exp)
-            munchStm(Move(Temporary(dst), Temporary(src)))
 
-            return cons(dst, munchArgs(i + 1, rest))
-        } else {
-            throw TooManyArgsException("support only ${argumentRegisters.size} arguments, but got more")
+        if (args.size > argumentRegisters.size)
+            throw TooManyArgsException("support only ${argumentRegisters.size} arguments, but got ${args.size}")
+
+        // First evaluate all expression to temporaries
+        val temps = args.map { munchExp(it) }
+
+        // ... and then generate moves to final locations. It's important not to create
+        // the moves to soon, because otherwise registers could be trashed. The register
+        // allocator will try to get rid of the moves.
+        temps.mapIndexed { i, temp ->
+            munchStm(Move(Temporary(argumentRegisters[i]), Temporary(temp)));
         }
+
+        return argumentRegisters.take(args.size)
     }
 
     private fun munchExp(exp: TreeExp): Temp {
