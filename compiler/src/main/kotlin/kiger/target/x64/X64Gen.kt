@@ -41,7 +41,7 @@ private class X64CodeGenerator(val frame: X64Frame) {
         instructions += instr
     }
 
-    private fun emit(assem: String, dst: List<Temp> = emptyList(), src: List<Temp> = emptyList(), jump: List<Label> = emptyList()) {
+    private fun emit(assem: String, dst: List<Temp> = emptyList(), src: List<Temp> = emptyList(), jump: List<Label>? = null) {
         emit(Oper(assem, dst, src, jump))
     }
 
@@ -62,7 +62,7 @@ private class X64CodeGenerator(val frame: X64Frame) {
     // TODO: use lea where applicable [eax + edx*4 -4] -> -4(%eax, %edx, 4)
 
     fun munchStm(stm: TreeStm) {
-        emit("# $stm")
+        // emit("# $stm")
 
         when (stm) {
             is TreeStm.Seq -> {
@@ -73,21 +73,16 @@ private class X64CodeGenerator(val frame: X64Frame) {
             is TreeStm.Labeled ->
                 emit(Instr.Lbl("${stm.label.name}:", stm.label))
 
-            // data movement
             is Move ->
                 munchMove(stm.target, stm.source)
 
             is TreeStm.Branch -> when (stm) {
-                is Jump -> munchJump(stm.exp, stm.labels)
-                is CJump -> munchCJump(stm.relop, stm.lhs, stm.rhs, stm.trueLabel, stm.falseLabel)
+                is Jump     -> munchJump(stm.exp, stm.labels)
+                is CJump    -> munchCJump(stm.relop, stm.lhs, stm.rhs, stm.trueLabel, stm.falseLabel)
             }
 
             is TreeStm.Exp ->
-                if (stm.exp is Call) {
-                    munchCall(stm.exp)
-                } else {
-                    munchExp(stm.exp)
-                }
+                munchExp(stm.exp)
         }
     }
 
@@ -332,7 +327,6 @@ private class X64CodeGenerator(val frame: X64Frame) {
         else ->
             withResult { r -> emit("movq ('s0), 'd0", src = listOf(munchExp(addr)), dst = r) }
     }
-
 
     private fun munchJump(target: TreeExp, labels: List<Label>) {
         if (target is Name) {
