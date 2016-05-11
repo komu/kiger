@@ -18,6 +18,8 @@ import kiger.utils.tail
  *
  * 1. No SEQ's or ESEQ's
  * 2. The parent of every CALL is an EXP(..) or a MOVE(TEMP t,..)
+ *
+ * @see toQuads
  */
 fun TreeStm.linearize(): List<TreeStm> =
     doStm(this).linearizeTopLevel().toList()
