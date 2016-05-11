@@ -212,7 +212,7 @@ private class X64CodeGenerator(val frame: X64Frame) {
     }
 
     private fun frameExp(offset: Int) =
-        "$offset+${frame.name}_frameSize('s0)"
+        "${frame.name}_frameSize+$offset('s0)"
 
     private fun munchStore(addr: TreeExp, src: TreeExp) = when {
         addr is BinOp && addr.binop == PLUS && addr.lhs is Temporary && addr.rhs is Const && addr.lhs.temp == frameType.FP ->

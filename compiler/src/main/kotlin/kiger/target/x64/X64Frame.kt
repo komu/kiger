@@ -72,22 +72,23 @@ class X64Frame private constructor(name: Label, formalEscapes: List<Boolean>) : 
     override fun procEntryExit3(body: List<Instr>): Triple<String, List<Instr>, String> {
         // TODO: offset calculation is wrong since we still do "sw $a0, 4($fp)" at the start to save the link to frame
         val stackAlign = 16
-        val frameSize = align((0+locals) * wordSize, stackAlign)
+
+        // We need to add wordSize bytes on top of alignment
+        val frameSize = align(locals * wordSize, stackAlign) + wordSize
 
         // TODO: use virtual frame pointer
         val prologue = listOf(
                 "$name:",
                 "#define ${name}_frameSize $frameSize",
                 "    .cfi_startproc",
-//                "    pushq %rbp",      // save old fp
-//                "    movq %rsp, %rbp",  // make sp to be new fp
-                "    subq \$${name}_frameSize, %rsp")     // make new sp
+                "    subq \$${name}_frameSize, %rsp",
+                "${Label.gen()}:",
+                "    .cfi_def_cfa_offset ${frameSize+wordSize}")
                 .joinToString("\n", postfix = "\n")
 
         val epilogue = listOf(
-                "    addq \$${name}_frameSize, %rsp", // restore old sp
-//                "    popq %rbp", // restore old fp
-                "    retq",// jump to return address
+                "    addq \$${name}_frameSize, %rsp",
+                "    retq",
                 "    .cfi_endproc")
                 .joinToString("\n", postfix = "\n")
 
@@ -123,14 +124,14 @@ class X64Frame private constructor(name: Label, formalEscapes: List<Boolean>) : 
             is FrameAccess.InReg -> TreeExp.Temporary(access.reg)
         }
         override fun externalCall(name: String, args: List<TreeExp>): TreeExp =
-                TreeExp.Call(TreeExp.Name(Label("_" + name)), args) // TODO
+            TreeExp.Call(TreeExp.Name(Label("_" + name)), args)
 
         val specialRegisters = listOf(SP, RV)
         override val argumentRegisters = listOf(rdi, rsi, rdx, rcx, r8, r9)
-        override val calleeSaves = listOf(rbx, r12, r13, r14, r15) // omit fp
+        override val calleeSaves = listOf(rbx, r12, r13, r14, r15, rbp)
         override val callerSaves = listOf(r10, r11)
         //RBP, RBX, and R12–R15
-        private val firstLocalOffset = 0 // fp is stored at 0, locals/params start at fp + wordSize
+        private val firstLocalOffset = wordSize
 
         private val registerList = calleeSaves + callerSaves + argumentRegisters + specialRegisters
 
