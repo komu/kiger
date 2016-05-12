@@ -12,7 +12,7 @@ import kiger.tree.TreeStm
 import org.junit.Test
 import kotlin.test.assertEquals
 
-class ToQuadsTest {
+class TreeToQuadsTest {
 
     @Test
     fun translateToQuads() {
