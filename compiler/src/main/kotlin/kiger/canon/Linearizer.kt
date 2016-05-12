@@ -1,12 +1,12 @@
 package kiger.canon
 
+import kiger.ir.tree.TreeExp
+import kiger.ir.tree.TreeExp.*
+import kiger.ir.tree.TreeStm
+import kiger.ir.tree.TreeStm.*
+import kiger.ir.tree.TreeStm.Branch.CJump
+import kiger.ir.tree.TreeStm.Branch.Jump
 import kiger.temp.Temp
-import kiger.tree.TreeExp
-import kiger.tree.TreeExp.*
-import kiger.tree.TreeStm
-import kiger.tree.TreeStm.*
-import kiger.tree.TreeStm.Branch.CJump
-import kiger.tree.TreeStm.Branch.Jump
 import kiger.utils.cons
 import kiger.utils.splitFirst
 import kiger.utils.tail

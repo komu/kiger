@@ -2,9 +2,9 @@ package kiger.canon
 
 import kiger.ir.quad.QExp
 import kiger.ir.quad.Quad
-import kiger.tree.TreeExp
-import kiger.tree.TreeExp.Temporary
-import kiger.tree.TreeStm
+import kiger.ir.tree.TreeExp
+import kiger.ir.tree.TreeExp.Temporary
+import kiger.ir.tree.TreeStm
 
 /**
  * Converts quadruples to [TreeStm]s.

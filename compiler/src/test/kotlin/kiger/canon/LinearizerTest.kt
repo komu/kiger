@@ -2,6 +2,7 @@ package kiger.canon
 
 import kiger.absyn.Symbol
 import kiger.env.EnvEntry
+import kiger.ir.tree.TreeStm
 import kiger.parser.parseExpression
 import kiger.target.mips.MipsTarget
 import kiger.temp.Label
@@ -9,7 +10,6 @@ import kiger.temp.resetLabelSequence
 import kiger.temp.resetTempSequence
 import kiger.translate.Level
 import kiger.translate.SemanticAnalyzer
-import kiger.tree.TreeStm
 import kiger.types.Type
 import org.junit.Assert.assertEquals
 import org.junit.Test

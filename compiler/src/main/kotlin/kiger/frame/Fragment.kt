@@ -1,7 +1,7 @@
 package kiger.frame
 
+import kiger.ir.tree.TreeStm
 import kiger.temp.Label
-import kiger.tree.TreeStm
 
 sealed class Fragment {
 

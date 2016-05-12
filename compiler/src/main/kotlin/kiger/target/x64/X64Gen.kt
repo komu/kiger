@@ -3,19 +3,19 @@ package kiger.target.x64
 import kiger.assem.Instr
 import kiger.assem.Instr.Oper
 import kiger.frame.Frame
+import kiger.ir.BinaryOp.*
+import kiger.ir.RelOp
+import kiger.ir.RelOp.*
+import kiger.ir.tree.TreeExp
+import kiger.ir.tree.TreeExp.*
+import kiger.ir.tree.TreeStm
+import kiger.ir.tree.TreeStm.Branch.CJump
+import kiger.ir.tree.TreeStm.Branch.Jump
+import kiger.ir.tree.TreeStm.Move
 import kiger.target.CodeGen
 import kiger.target.mips.TooManyArgsException
 import kiger.temp.Label
 import kiger.temp.Temp
-import kiger.tree.BinaryOp.*
-import kiger.tree.RelOp
-import kiger.tree.RelOp.*
-import kiger.tree.TreeExp
-import kiger.tree.TreeExp.*
-import kiger.tree.TreeStm
-import kiger.tree.TreeStm.Branch.CJump
-import kiger.tree.TreeStm.Branch.Jump
-import kiger.tree.TreeStm.Move
 import kiger.utils.cons
 
 object X64Gen : CodeGen {

@@ -3,7 +3,7 @@ package kiger.target
 import kiger.assem.Instr
 import kiger.frame.Frame
 import kiger.frame.FrameType
-import kiger.tree.TreeStm
+import kiger.ir.tree.TreeStm
 
 interface CodeGen {
     val frameType: FrameType

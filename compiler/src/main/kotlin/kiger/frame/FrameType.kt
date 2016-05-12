@@ -1,8 +1,8 @@
 package kiger.frame
 
+import kiger.ir.tree.TreeExp
 import kiger.temp.Label
 import kiger.temp.Temp
-import kiger.tree.TreeExp
 
 interface FrameType {
     fun newFrame(name: Label, formalEscapes: List<Boolean>): Frame

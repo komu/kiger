@@ -1,14 +1,14 @@
 package kiger.canon
 
+import kiger.ir.BinaryOp.PLUS
+import kiger.ir.RelOp
 import kiger.ir.quad.QExp
 import kiger.ir.quad.Quad
+import kiger.ir.tree.TreeExp.*
+import kiger.ir.tree.TreeStm
 import kiger.temp.Label
 import kiger.temp.Temp
 import kiger.temp.resetTempSequence
-import kiger.tree.BinaryOp.PLUS
-import kiger.tree.RelOp
-import kiger.tree.TreeExp.*
-import kiger.tree.TreeStm
 import org.junit.Test
 import kotlin.test.assertEquals
 

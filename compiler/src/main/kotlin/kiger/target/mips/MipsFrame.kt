@@ -5,12 +5,12 @@ import kiger.frame.Frame
 import kiger.frame.FrameAccess
 import kiger.frame.FrameType
 import kiger.frame.Register
+import kiger.ir.BinaryOp
+import kiger.ir.tree.TreeExp
+import kiger.ir.tree.TreeStm
 import kiger.temp.Label
 import kiger.temp.Temp
 import kiger.translate.seq
-import kiger.tree.BinaryOp
-import kiger.tree.TreeExp
-import kiger.tree.TreeStm
 
 class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) : Frame(name) {
 

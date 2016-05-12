@@ -1,8 +1,8 @@
 package kiger.frame
 
 import kiger.assem.Instr
+import kiger.ir.tree.TreeStm
 import kiger.temp.Label
-import kiger.tree.TreeStm
 
 abstract class Frame(val name: Label) {
 

@@ -2,10 +2,10 @@ package kiger.regalloc
 
 import kiger.assem.Instr
 import kiger.frame.Frame
+import kiger.ir.tree.TreeExp.Temporary
+import kiger.ir.tree.TreeStm.Move
 import kiger.target.CodeGen
 import kiger.temp.Temp
-import kiger.tree.TreeExp.Temporary
-import kiger.tree.TreeStm.Move
 
 /**
  * Given a list of instructions and [frame], allocate registers. Returns

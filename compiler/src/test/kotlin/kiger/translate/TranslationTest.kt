@@ -1,12 +1,12 @@
 package kiger.translate
 
+import kiger.ir.tree.TreeExp
 import kiger.parser.parseExpression
 import kiger.target.mips.MipsFrame
 import kiger.target.mips.MipsTarget
 import kiger.temp.Label
 import kiger.temp.resetLabelSequence
 import kiger.temp.resetTempSequence
-import kiger.tree.TreeExp
 import kiger.types.Type
 import org.junit.Ignore
 import org.junit.Test

@@ -2,13 +2,13 @@ package kiger.translate
 
 import kiger.frame.Fragment
 import kiger.frame.FrameType
+import kiger.ir.BinaryOp
+import kiger.ir.RelOp
+import kiger.ir.tree.TreeExp
+import kiger.ir.tree.TreeStm
 import kiger.lexer.Token
 import kiger.temp.Label
 import kiger.temp.Temp
-import kiger.tree.BinaryOp
-import kiger.tree.RelOp
-import kiger.tree.TreeExp
-import kiger.tree.TreeStm
 import kiger.utils.cons
 import kiger.utils.splitLast
 import kiger.utils.tail

@@ -1,10 +1,10 @@
 package kiger.translate
 
+import kiger.ir.RelOp
+import kiger.ir.tree.TreeExp
+import kiger.ir.tree.TreeStm
 import kiger.temp.Label
 import kiger.temp.Temp
-import kiger.tree.RelOp
-import kiger.tree.TreeExp
-import kiger.tree.TreeStm
 
 sealed class TrExp {
 

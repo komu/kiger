@@ -1,9 +1,9 @@
 package kiger.ir.quad
 
+import kiger.ir.BinaryOp
+import kiger.ir.RelOp
 import kiger.temp.Label
 import kiger.temp.Temp
-import kiger.tree.BinaryOp
-import kiger.tree.RelOp
 import java.util.*
 
 sealed class Quad {

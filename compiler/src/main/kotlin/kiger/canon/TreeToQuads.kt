@@ -2,10 +2,10 @@ package kiger.canon
 
 import kiger.ir.quad.QExp
 import kiger.ir.quad.Quad
+import kiger.ir.tree.TreeExp
+import kiger.ir.tree.TreeExp.*
+import kiger.ir.tree.TreeStm
 import kiger.temp.Temp
-import kiger.tree.TreeExp
-import kiger.tree.TreeExp.*
-import kiger.tree.TreeStm
 
 /**
  * Linearizes arbitrary [TreeStm] into a list of quadruples.
@@ -100,5 +100,5 @@ private fun TreeExp.simpleExp(): TreeExp =
         this
     } else {
         val temp = Temporary(Temp.gen())
-        ESeq(TreeStm.Move(temp, this), temp)
+        ESeq(kiger.ir.tree.TreeStm.Move(temp, this), temp)
     }

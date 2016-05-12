@@ -1,5 +1,6 @@
-package kiger.tree
+package kiger.ir.tree
 
+import kiger.ir.BinaryOp
 import kiger.temp.Label
 import kiger.temp.Temp
 import java.util.*

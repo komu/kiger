@@ -1,5 +1,6 @@
-package kiger.tree
+package kiger.ir.tree
 
+import kiger.ir.RelOp
 import kiger.temp.Label
 import java.util.*
 
