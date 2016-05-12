@@ -33,13 +33,9 @@ private fun compile(targetArch: TargetArch, code: String, filename: String): Lis
 fun Writer.emitProc(codeGen: CodeGen, fragment: Fragment.Proc) {
     val frame = fragment.frame
 
-    // It's completely useless to convert our code to quads and then back to tree,
-    // but we do it just to exercise those code paths. (When we have some actual
-    // optimizations in place, we won't need this.)
-    val cfg = fragment.body.toQuads().toTree().createControlFlowGraph()
+    val traces = fragment.body.toQuads().createControlFlowGraph().traceSchedule()
 
-    val traces = cfg.traceSchedule()
-    val instructions = traces.delinearize().flatMap { codeGen.codeGen(frame, it) }
+    val instructions = traces.toTree().delinearize().flatMap { codeGen.codeGen(frame, it) }
     val instructions2 = frame.procEntryExit2(instructions)
 
     val (instructions3, alloc) = instructions2.allocateRegisters(codeGen, frame)

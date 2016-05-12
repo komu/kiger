@@ -1,12 +1,15 @@
 package kiger.canon
 
+import kiger.ir.quad.Quad
 import kiger.temp.Label
-import kiger.tree.TreeStm
 
-class BasicBlock(val label: Label, private val body: List<TreeStm>, val branch: TreeStm.Branch) {
-    val labelledBody: Sequence<TreeStm>
-        get() = sequenceOf(TreeStm.Labeled(label)) + body
-    val allStatements: Sequence<TreeStm>
+class BasicBlock(val label: Label, private val body: List<Quad>, val branch: Quad) {
+    init {
+        require(branch.isJump)
+    }
+    val labelledBody: Sequence<Quad>
+        get() = sequenceOf(Quad.Labeled(label)) + body
+    val allStatements: Sequence<Quad>
         get() = labelledBody + branch
 }
 
@@ -15,20 +18,7 @@ class BasicBlock(val label: Label, private val body: List<TreeStm>, val branch: 
  */
 data class ControlFlowGraph(val blocks: List<BasicBlock>, val exitLabel: Label)
 
-/**
- * From a list of canonical trees (provided by [linearize]], produce a list of basic blocks satisfying
- * the following properties:
- *
- * 1. No SEQ's or ESEQ's (guarantee from [linearize])
- * 2. The parent of every CALL is an EXP(..) or a MOVE(TEMP t,..) (guarantee from [linearize])
- * 3. Every block begins with a LABEL;
- * 4. A LABEL appears only at the beginning of a block;
- * 5. Any JUMP or CJUMP is the last stm in a block;
- * 6. Every block ends with a JUMP or CJUMP;
- *
- * Also produce the label to which control will be passed upon exit.
- */
-fun List<TreeStm>.createControlFlowGraph(): ControlFlowGraph {
+fun List<Quad>.createControlFlowGraph(): ControlFlowGraph {
     val builder = ControlFlowGraphBuilder()
 
     for (stm in this)
@@ -46,14 +36,14 @@ private class ControlFlowGraphBuilder {
     /**
      * Adds a new statement to the graph of basic blocks.
      */
-    fun process(stm: TreeStm) {
+    fun process(stm: Quad) {
 
         val block = currentBlock
 
         // Each block must start with a label. If we actually have a label in the stream,
         // we'll use that for our new block. Otherwise we'll invent a new label.
         if (block == null) {
-            if (stm is TreeStm.Labeled) {
+            if (stm is Quad.Labeled) {
                 currentBlock = BasicBlockBuilder(stm.label)
             } else {
                 currentBlock = BasicBlockBuilder(Label.gen("dummy"))
@@ -61,14 +51,14 @@ private class ControlFlowGraphBuilder {
             }
 
         } else {
-            if (stm is TreeStm.Labeled) {
+            if (stm is Quad.Labeled) {
                 // If we encounter a label, we'll split the block into two blocks, ending the
                 // previous block with a jump to the new label.
                 blocks += block.finishWithJump(stm.label)
                 currentBlock = BasicBlockBuilder(stm.label)
 
             } else {
-                if (stm is TreeStm.Branch) {
+                if (stm.isJump) {
                     // If we encounter a branch, we must end the block and start a new one on next instruction.
                     blocks += block.finish(stm)
                     currentBlock = null
@@ -95,13 +85,13 @@ private class ControlFlowGraphBuilder {
 
 private class BasicBlockBuilder(private val label: Label) {
 
-    private val stms = mutableListOf<TreeStm>()
+    private val stms = mutableListOf<Quad>()
 
-    operator fun plusAssign(stm: TreeStm) {
-        require(stm !is TreeStm.Branch) { "tried to add branch to middle of basic block: $stm"}
+    operator fun plusAssign(stm: Quad) {
+        require(!stm.isJump) { "tried to add a jump to middle of basic block: $stm"}
         stms += stm
     }
 
-    fun finish(branch: TreeStm.Branch) = BasicBlock(label, stms, branch)
-    fun finishWithJump(target: Label) = BasicBlock(label, stms, TreeStm.Branch.Jump(target))
+    fun finish(branch: Quad) = BasicBlock(label, stms, branch)
+    fun finishWithJump(target: Label) = BasicBlock(label, stms, Quad.Jump(target))
 }

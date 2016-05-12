@@ -11,6 +11,8 @@ sealed class Quad {
     abstract override fun equals(other: Any?): Boolean
     abstract override fun hashCode(): Int
     abstract override fun toString(): String
+    open val isJump: Boolean
+        get() = false
 
     class BinOp(val op: BinaryOp, val target: Temp, val lhs: QExp, val rhs: QExp) : Quad() {
         override fun equals(other: Any?) = other is BinOp && op == other.op && target == other.target && lhs == other.lhs && rhs == other.rhs
@@ -31,15 +33,20 @@ sealed class Quad {
     }
 
     class Jump(val target: QExp, val labels: List<Label>) : Quad() {
-        override fun equals(other: Any?) = other is Jump && target== other.target && labels == other.labels
+        constructor(label: Label): this(QExp.Name(label), listOf(label))
+        override fun equals(other: Any?) = other is Jump && target == other.target && labels == other.labels
         override fun hashCode() = Objects.hash(target, labels)
         override fun toString() = "jump $target ; labels"
+        override val isJump: Boolean
+            get() = true
     }
 
     class CJump(val op: RelOp, val lhs: QExp, val rhs: QExp, val trueLabel: Label, val falseLabel: Label) : Quad() {
         override fun equals(other: Any?) = other is CJump && op == other.op && lhs == other.lhs && rhs == other.rhs && trueLabel == other.trueLabel && falseLabel == other.falseLabel
         override fun hashCode() = Objects.hash(op, lhs, rhs, trueLabel, falseLabel)
         override fun toString() = "if ($lhs $op $rhs) jump $trueLabel else jump $falseLabel"
+        override val isJump: Boolean
+            get() = true
     }
 
     class Call(val func: QExp, val args: List<QExp>, val result: Temp?) : Quad() {
