@@ -1,8 +1,8 @@
 package kiger.target.mips
 
 import kiger.emitProc
-import kiger.frame.Fragment
 import kiger.target.CodeGen
+import kiger.target.Fragment
 import kiger.target.TargetArch
 import kiger.writeLine
 import java.io.Writer

@@ -1,6 +1,6 @@
 package kiger.translate
 
-import kiger.frame.Frame
+import kiger.target.Frame
 
 sealed class Level {
     abstract val parent: Level?

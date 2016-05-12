@@ -2,7 +2,7 @@ package kiger.regalloc
 
 import kiger.assem.Instr.Move
 import kiger.assem.Instr.Oper
-import kiger.frame.Register
+import kiger.target.Register
 import kiger.temp.Temp
 import org.junit.Test
 import kotlin.test.assertEquals

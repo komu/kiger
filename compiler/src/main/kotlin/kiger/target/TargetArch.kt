@@ -1,7 +1,5 @@
 package kiger.target
 
-import kiger.frame.Fragment
-import kiger.frame.FrameType
 import java.io.Writer
 
 interface TargetArch {

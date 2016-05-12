@@ -1,4 +1,4 @@
-package kiger.frame
+package kiger.target
 
 import kiger.temp.Temp
 

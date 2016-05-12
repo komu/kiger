@@ -2,7 +2,6 @@ package kiger.target.mips
 
 import kiger.assem.Instr
 import kiger.assem.Instr.Oper
-import kiger.frame.Frame
 import kiger.ir.BinaryOp.*
 import kiger.ir.RelOp
 import kiger.ir.RelOp.*
@@ -13,6 +12,7 @@ import kiger.ir.tree.TreeStm.Branch.CJump
 import kiger.ir.tree.TreeStm.Branch.Jump
 import kiger.ir.tree.TreeStm.Move
 import kiger.target.CodeGen
+import kiger.target.Frame
 import kiger.temp.Label
 import kiger.temp.Temp
 import kiger.utils.cons

@@ -1,10 +1,10 @@
 package kiger.regalloc
 
 import kiger.assem.Instr
-import kiger.frame.Frame
 import kiger.ir.tree.TreeExp.Temporary
 import kiger.ir.tree.TreeStm.Move
 import kiger.target.CodeGen
+import kiger.target.Frame
 import kiger.temp.Temp
 
 /**

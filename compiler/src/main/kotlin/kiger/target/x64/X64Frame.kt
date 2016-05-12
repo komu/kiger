@@ -1,13 +1,13 @@
 package kiger.target.x64
 
 import kiger.assem.Instr
-import kiger.frame.Frame
-import kiger.frame.FrameAccess
-import kiger.frame.FrameType
-import kiger.frame.Register
 import kiger.ir.BinaryOp
 import kiger.ir.tree.TreeExp
 import kiger.ir.tree.TreeStm
+import kiger.target.Frame
+import kiger.target.FrameAccess
+import kiger.target.FrameType
+import kiger.target.Register
 import kiger.temp.Label
 import kiger.temp.Temp
 import kiger.translate.seq

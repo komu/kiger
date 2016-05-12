@@ -4,8 +4,8 @@ import kiger.canon.createControlFlowGraph
 import kiger.canon.toQuads
 import kiger.canon.toTree
 import kiger.canon.traceSchedule
-import kiger.frame.Fragment
 import kiger.parser.parseExpression
+import kiger.target.Fragment
 import kiger.target.mips.MipsGen
 import kiger.target.mips.MipsTarget
 import kiger.translate.SemanticAnalyzer

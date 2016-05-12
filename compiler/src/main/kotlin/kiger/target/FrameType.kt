@@ -1,4 +1,4 @@
-package kiger.frame
+package kiger.target
 
 import kiger.ir.tree.TreeExp
 import kiger.temp.Label

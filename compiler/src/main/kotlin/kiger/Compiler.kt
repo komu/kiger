@@ -3,11 +3,11 @@ package kiger
 import kiger.assem.Instr
 import kiger.canon.*
 import kiger.escape.analyzeEscapes
-import kiger.frame.Fragment
 import kiger.lexer.SyntaxErrorException
 import kiger.parser.parseExpression
 import kiger.regalloc.allocateRegisters
 import kiger.target.CodeGen
+import kiger.target.Fragment
 import kiger.target.TargetArch
 import kiger.target.x64.X64Target
 import kiger.translate.SemanticAnalyzer

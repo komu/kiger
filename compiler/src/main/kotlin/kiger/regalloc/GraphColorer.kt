@@ -1,10 +1,10 @@
 package kiger.regalloc
 
 import kiger.assem.Instr
-import kiger.frame.FrameType
-import kiger.frame.Register
 import kiger.regalloc.InterferenceGraph.INode
 import kiger.regalloc.InterferenceGraph.Move
+import kiger.target.FrameType
+import kiger.target.Register
 import kiger.temp.Temp
 import kiger.utils.removeAny
 import java.util.*

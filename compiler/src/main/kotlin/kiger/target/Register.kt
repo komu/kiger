@@ -1,4 +1,4 @@
-package kiger.frame
+package kiger.target
 
 class Register(val name: String) {
     override fun toString() = name

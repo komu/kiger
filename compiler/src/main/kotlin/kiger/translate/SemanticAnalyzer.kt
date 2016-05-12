@@ -4,10 +4,10 @@ import kiger.absyn.*
 import kiger.diag.Diagnostics
 import kiger.env.EnvEntry
 import kiger.env.SymbolTable
-import kiger.frame.Fragment
 import kiger.lexer.SourceLocation
 import kiger.lexer.Token
 import kiger.lexer.Token.Operator
+import kiger.target.Fragment
 import kiger.target.TargetArch
 import kiger.temp.Label
 import kiger.types.Type

@@ -1,6 +1,6 @@
 package kiger.regalloc
 
-import kiger.frame.Register
+import kiger.target.Register
 import kiger.temp.Temp
 
 class Coloring {
