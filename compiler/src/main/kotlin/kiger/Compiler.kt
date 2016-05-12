@@ -1,9 +1,7 @@
 package kiger
 
 import kiger.assem.Instr
-import kiger.canon.createControlFlowGraph
-import kiger.canon.linearize
-import kiger.canon.traceSchedule
+import kiger.canon.*
 import kiger.escape.analyzeEscapes
 import kiger.frame.Fragment
 import kiger.lexer.SyntaxErrorException
@@ -34,8 +32,14 @@ private fun compile(targetArch: TargetArch, code: String, filename: String): Lis
 
 fun Writer.emitProc(codeGen: CodeGen, fragment: Fragment.Proc) {
     val frame = fragment.frame
-    val traces = fragment.body.linearize().createControlFlowGraph().traceSchedule()
-    val instructions = traces.flatMap { codeGen.codeGen(frame, it) }
+
+    // It's completely useless to convert our code to quads and then back to tree,
+    // but we do it just to exercise those code paths. (When we have some actual
+    // optimizations in place, we won't need this.)
+    val cfg = fragment.body.toQuads().toTree().createControlFlowGraph()
+
+    val traces = cfg.traceSchedule()
+    val instructions = traces.delinearize().flatMap { codeGen.codeGen(frame, it) }
     val instructions2 = frame.procEntryExit2(instructions)
 
     val (instructions3, alloc) = instructions2.allocateRegisters(codeGen, frame)

@@ -24,7 +24,96 @@ import kiger.utils.tail
 fun TreeStm.linearize(): List<TreeStm> =
     doStm(this).linearizeTopLevel().toList()
 
-val nop = Exp(Const(0))
+/**
+ * Performs selective delinearization of statements: inline all temporaries
+ * that are assigned and used only once.
+ */
+fun List<TreeStm>.delinearize(): List<TreeStm> {
+
+    // First pass: gather all temporaries along with their use first definition and definition counts
+    val definitionCounts = hashMapOf<Temp, Pair<TreeExp, Int>>()
+
+    for (stm in this) {
+        if (stm is TreeStm.Move) {
+            val temp = (stm.target as? Temporary)?.temp
+            if (temp != null) {
+                val def = definitionCounts[temp]
+                definitionCounts[temp] = if (def == null) Pair(stm.source, 1) else Pair(stm.source, def.second + 1)
+            }
+        }
+    }
+
+    // Second pass: gather use counts for temporaries
+    val useCounts = hashMapOf<Temp, Int>()
+    for (stm in this)
+        stm.countUses(useCounts)
+
+    // Third pass: create a map of temporaries to be inlined
+    val inlineableTemps = hashMapOf<Temp, TreeExp>()
+    for ((temp, p) in definitionCounts) {
+        val (def, defCount) = p
+
+        if (defCount == 1 && useCounts[temp] == 1)
+            inlineableTemps[temp] = def
+    }
+
+    // Now remove all the inlineable temps from the result
+    val exps = this.filterNot { it is Move && it.target is Temporary && it.target.temp in inlineableTemps }
+
+    return exps.map { it.inline(inlineableTemps) }
+}
+
+/**
+ * Returns the original tree rewritten so that all temps in [inlinedTemps] are replaced
+ * by their corresponding expressions.
+ *
+ * (When the temp is grafted to a new tree, this inlining will also be recursively performed
+ * on the newly inlined tree.)
+ */
+fun TreeStm.inline(inlinedTemps: Map<Temp, TreeExp>): TreeStm =
+    this.mapExps { it.inline(inlinedTemps) }
+
+fun TreeExp.inline(inlinedTemps: Map<Temp, TreeExp>): TreeExp = when (this) {
+    is TreeExp.Temporary    -> inlinedTemps[temp]?.let { it.inline(inlinedTemps) } ?: this
+    is TreeExp.BinOp        -> BinOp(binop, lhs.inline(inlinedTemps), rhs.inline(inlinedTemps))
+    is TreeExp.Mem          -> Mem(exp.inline(inlinedTemps))
+    is TreeExp.ESeq         -> ESeq(stm.inline(inlinedTemps), exp.inline(inlinedTemps))
+    is TreeExp.Call         -> Call(func.inline(inlinedTemps), args.map { it.inline(inlinedTemps) })
+    is TreeExp.Name         -> this
+    is TreeExp.Const        -> this
+}
+
+private fun TreeStm.countUses(uses: MutableMap<Temp, Int>): Unit = when (this) {
+    is TreeStm.Seq      -> { lhs.countUses(uses); rhs.countUses(uses) }
+    is TreeStm.Labeled  -> { }
+    is TreeStm.Branch   -> countUses(uses)
+    is TreeStm.Move     -> { target.countUsesInChildren(uses); source.countUses(uses) }
+    is TreeStm.Exp      -> exp.countUses(uses)
+}
+
+private fun TreeStm.Branch.countUses(uses: MutableMap<Temp, Int>): Unit = when (this) {
+    is TreeStm.Branch.Jump  -> exp.countUses(uses)
+    is TreeStm.Branch.CJump -> { lhs.countUses(uses); rhs.countUses(uses) }
+}
+
+fun TreeExp.countUses(uses: MutableMap<Temp, Int>) {
+    if (this is Temporary)
+        uses[temp] = 1 + (uses[temp] ?: 0)
+    else
+        countUsesInChildren(uses)
+}
+
+fun TreeExp.countUsesInChildren(uses: MutableMap<Temp, Int>): Unit = when (this) {
+    is TreeExp.BinOp        -> { lhs.countUses(uses); rhs.countUses(uses) }
+    is TreeExp.Mem          -> exp.countUses(uses)
+    is TreeExp.ESeq         -> { stm.countUses(uses); exp.countUses(uses) }
+    is TreeExp.Call         -> { func.countUses(uses); args.forEach { it.countUses(uses) }}
+    is TreeExp.Temporary    -> { }
+    is TreeExp.Name         -> { }
+    is TreeExp.Const        -> { }
+}
+
+private val nop = Exp(Const(0))
 
 private fun reorder(exps: List<TreeExp>): Pair<TreeStm, List<TreeExp>> = when {
     exps.isEmpty() ->
