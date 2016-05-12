@@ -53,7 +53,7 @@ fun List<TreeStm>.delinearize(): List<TreeStm> {
     for ((temp, p) in definitionCounts) {
         val (def, defCount) = p
 
-        if (defCount == 1 && useCounts[temp] == 1)
+        if (defCount == 1 && useCounts[temp] == 1 && def !is Call)
             inlineableTemps[temp] = def
     }
 
