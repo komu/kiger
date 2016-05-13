@@ -50,14 +50,14 @@ private fun TreeExp.toTemp(): Temp =
 
 private fun TreeExp.toQuad(): QExp = when (this) {
     is TreeExp.Temporary    -> QExp.Temporary(temp)
-    is TreeExp.Name         -> QExp.Name(label)
+    is TreeExp.Name         -> QExp.Name(name)
     is TreeExp.Const        -> QExp.Const(value)
     else                    -> error("unexpected expression in linearized tree. expected temp/name/const, but got $this")
 }
 
 private fun TreeStm.Branch.toQuad(): Quad = when (this) {
-    is TreeStm.Branch.Jump  -> Quad.Jump(exp.toQuad(), labels)
-    is TreeStm.Branch.CJump -> Quad.CJump(relop, lhs.toQuad(), rhs.toQuad(), trueLabel, falseLabel)
+    is TreeStm.Branch.Jump  -> Quad.Jump(target.toQuad(), labels)
+    is TreeStm.Branch.CJump -> Quad.CJump(op, lhs.toQuad(), rhs.toQuad(), trueLabel, falseLabel)
 }
 
 /**
@@ -73,8 +73,8 @@ private fun TreeStm.simplify(): TreeStm = when (this) {
 }
 
 private fun TreeStm.Branch.simplify(): TreeStm = when (this) {
-    is TreeStm.Branch.Jump  -> TreeStm.Branch.Jump(exp.simplify().simpleExp(), labels)
-    is TreeStm.Branch.CJump -> TreeStm.Branch.CJump(relop, lhs.simplify().simpleExp(), rhs.simplify().simpleExp(), trueLabel, falseLabel)
+    is TreeStm.Branch.Jump  -> TreeStm.Branch.Jump(target.simplify().simpleExp(), labels)
+    is TreeStm.Branch.CJump -> TreeStm.Branch.CJump(op, lhs.simplify().simpleExp(), rhs.simplify().simpleExp(), trueLabel, falseLabel)
 }
 
 private fun TreeExp.simplify(): TreeExp = when (this) {

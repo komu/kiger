@@ -1,8 +1,12 @@
 package kiger
 
 import kiger.assem.Instr
-import kiger.canon.*
+import kiger.canon.delinearize
+import kiger.canon.toQuads
+import kiger.canon.toTree
+import kiger.canon.traceSchedule
 import kiger.escape.analyzeEscapes
+import kiger.ir.quad.createControlFlowGraph
 import kiger.lexer.SyntaxErrorException
 import kiger.parser.parseExpression
 import kiger.regalloc.allocateRegisters
@@ -33,10 +37,12 @@ private fun compile(targetArch: TargetArch, code: String, filename: String): Lis
 fun Writer.emitProc(codeGen: CodeGen, fragment: Fragment.Proc) {
     val frame = fragment.frame
 
-    // TODO: convert first to trees, then delinearize, then schedule traces
-    val traces = fragment.body.toQuads().createControlFlowGraph().traceSchedule()
+    val cfg = fragment.body.toQuads().createControlFlowGraph()
 
-    val instructions = traces.toTree().delinearize().flatMap { codeGen.codeGen(frame, it) }
+    // TODO: perform delinearize on basic blocks before trace scheduling
+    val traces = cfg.toTree().traceSchedule().delinearize()
+
+    val instructions = traces.flatMap { codeGen.codeGen(frame, it) }
     val instructions2 = frame.procEntryExit2(instructions)
 
     val (instructions3, alloc) = instructions2.allocateRegisters(codeGen, frame)

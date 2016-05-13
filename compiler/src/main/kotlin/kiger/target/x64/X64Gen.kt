@@ -80,8 +80,8 @@ private class X64CodeGenerator(val frame: X64Frame) {
                 munchMove(stm.target, stm.source)
 
             is TreeStm.Branch -> when (stm) {
-                is Jump     -> munchJump(stm.exp, stm.labels)
-                is CJump    -> munchCJump(stm.relop, stm.lhs, stm.rhs, stm.trueLabel, stm.falseLabel)
+                is Jump     -> munchJump(stm.target, stm.labels)
+                is CJump    -> munchCJump(stm.op, stm.lhs, stm.rhs, stm.trueLabel, stm.falseLabel)
             }
 
             is TreeStm.Exp ->
@@ -91,7 +91,7 @@ private class X64CodeGenerator(val frame: X64Frame) {
 
     private fun munchCall(exp: Call): Temp {
         if (exp.func is Name)
-            emit("callq ${exp.func.label}", src = munchArgs(exp.args), dst = callDefs)
+            emit("callq ${exp.func.name}", src = munchArgs(exp.args), dst = callDefs)
         else
             emit("callq 's0", src = cons(munchExp(exp.func), munchArgs(exp.args)), dst = callDefs)
 
@@ -138,7 +138,7 @@ private class X64CodeGenerator(val frame: X64Frame) {
                     withResult { r -> emit("xorq 'd0, 'd0", dst = r) }
                 else
                     withResult { r -> emit("movq \$${exp.value}, 'd0", dst = r) }
-            is Name -> withResult { r -> emit("leaq ${exp.label}(%rip), 'd0", dst = r) }
+            is Name -> withResult { r -> emit("leaq ${exp.name}(%rip), 'd0", dst = r) }
             is Call -> munchCall(exp)
             is Mem -> munchLoad(exp.exp)
             is BinOp -> when (exp.binop) {
@@ -253,7 +253,7 @@ private class X64CodeGenerator(val frame: X64Frame) {
 
     private fun munchJump(target: TreeExp, labels: List<Label>) {
         if (target is Name)
-            emit("jmp 'j0", jump = listOf(target.label))
+            emit("jmp 'j0", jump = listOf(target.name))
         else
             emit("jmp 's0", src = listOf(munchExp(target)), jump = labels)
     }

@@ -1,9 +1,8 @@
-package kiger.canon
+package kiger.ir.quad
 
-import kiger.ir.quad.Quad
 import kiger.temp.Label
 
-class BasicBlock(val label: Label, private val body: List<Quad>, val branch: Quad) {
+class BasicBlock(val label: Label, val body: List<Quad>, val branch: Quad) {
     init {
         require(branch.isJump)
     }
@@ -18,6 +17,9 @@ class BasicBlock(val label: Label, private val body: List<Quad>, val branch: Qua
  */
 data class ControlFlowGraph(val blocks: List<BasicBlock>, val exitLabel: Label)
 
+/**
+ * Creates a control flow graph from quads.
+ */
 fun List<Quad>.createControlFlowGraph(): ControlFlowGraph {
     val builder = ControlFlowGraphBuilder()
 
@@ -46,7 +48,7 @@ private class ControlFlowGraphBuilder {
             if (stm is Quad.Labeled) {
                 currentBlock = BasicBlockBuilder(stm.label)
             } else {
-                currentBlock = BasicBlockBuilder(Label.gen("dummy"))
+                currentBlock = BasicBlockBuilder(Label.Companion.gen("dummy"))
                 process(stm) // now that we have fixed the block with our invented label, try again
             }
 

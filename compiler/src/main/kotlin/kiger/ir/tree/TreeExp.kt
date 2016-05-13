@@ -31,10 +31,10 @@ sealed class TreeExp {
         override fun toString() = "ESeq[$stm, $exp]"
     }
 
-    class Name(val label: Label) : TreeExp() {
-        override fun equals(other: Any?) = other is Name && label == other.label
-        override fun hashCode() = label.hashCode()
-        override fun toString() = "Name[$label]"
+    class Name(val name: Label) : TreeExp() {
+        override fun equals(other: Any?) = other is Name && name == other.name
+        override fun hashCode() = name.hashCode()
+        override fun toString() = "Name[$name]"
     }
 
     class Const(val value: Int) : TreeExp() {

@@ -1,10 +1,20 @@
 package kiger.canon
 
+import kiger.ir.quad.BasicBlock
+import kiger.ir.quad.ControlFlowGraph
 import kiger.ir.quad.QExp
 import kiger.ir.quad.Quad
+import kiger.ir.tree.TreeBasicBlock
+import kiger.ir.tree.TreeControlFlowGraph
 import kiger.ir.tree.TreeExp
 import kiger.ir.tree.TreeExp.Temporary
 import kiger.ir.tree.TreeStm
+
+fun ControlFlowGraph.toTree(): TreeControlFlowGraph =
+    TreeControlFlowGraph(blocks.map { it.toTree() }, exitLabel)
+
+fun BasicBlock.toTree(): TreeBasicBlock =
+    TreeBasicBlock(label, body.toTree(), branch.toTree() as TreeStm.Branch)
 
 /**
  * Converts quadruples to [TreeStm]s.

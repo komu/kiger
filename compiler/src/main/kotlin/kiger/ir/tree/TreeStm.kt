@@ -25,19 +25,19 @@ sealed class TreeStm {
     }
 
     sealed class Branch : TreeStm() {
-        class Jump(val exp: TreeExp, val labels: List<Label>) : Branch() {
+        class Jump(val target: TreeExp, val labels: List<Label>) : Branch() {
             constructor(label: Label): this(TreeExp.Name(label), listOf(label))
-            override fun mapExps(f: (TreeExp) -> TreeExp) = Jump(f(exp), labels)
-            override fun equals(other: Any?) = other is Jump && exp == other.exp && labels == other.labels
-            override fun hashCode() = Objects.hash(exp, labels)
-            override fun toString() = "    Jump[$exp, $labels]"
+            override fun mapExps(f: (TreeExp) -> TreeExp) = Jump(f(target), labels)
+            override fun equals(other: Any?) = other is Jump && target == other.target && labels == other.labels
+            override fun hashCode() = Objects.hash(target, labels)
+            override fun toString() = "    Jump[$target, $labels]"
         }
 
-        class CJump(val relop: RelOp, val lhs: TreeExp, val rhs: TreeExp, val trueLabel: Label, val falseLabel: Label) : Branch() {
-            override fun mapExps(f: (TreeExp) -> TreeExp) = CJump(relop, f(lhs), f(rhs), trueLabel, falseLabel)
-            override fun equals(other: Any?) = other is CJump && relop == other.relop && lhs == other.lhs && rhs == other.rhs && trueLabel == other.trueLabel && falseLabel == other.falseLabel
-            override fun hashCode() = Objects.hash(relop, lhs, rhs, trueLabel, falseLabel)
-            override fun toString() = "    CJump[$relop, $lhs, $rhs, $trueLabel, $falseLabel]"
+        class CJump(val op: RelOp, val lhs: TreeExp, val rhs: TreeExp, val trueLabel: Label, val falseLabel: Label) : Branch() {
+            override fun mapExps(f: (TreeExp) -> TreeExp) = CJump(op, f(lhs), f(rhs), trueLabel, falseLabel)
+            override fun equals(other: Any?) = other is CJump && op == other.op && lhs == other.lhs && rhs == other.rhs && trueLabel == other.trueLabel && falseLabel == other.falseLabel
+            override fun hashCode() = Objects.hash(op, lhs, rhs, trueLabel, falseLabel)
+            override fun toString() = "    CJump[$op, $lhs, $rhs, $trueLabel, $falseLabel]"
         }
     }
 

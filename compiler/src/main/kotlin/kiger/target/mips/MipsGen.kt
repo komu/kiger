@@ -69,8 +69,8 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
                 munchMove(stm.target, stm.source)
 
             is TreeStm.Branch -> when (stm) {
-                is Jump -> munchJump(stm.exp, stm.labels)
-                is CJump -> munchCJump(stm.relop, stm.lhs, stm.rhs, stm.trueLabel, stm.falseLabel)
+                is Jump -> munchJump(stm.target, stm.labels)
+                is CJump -> munchCJump(stm.op, stm.lhs, stm.rhs, stm.trueLabel, stm.falseLabel)
             }
 
             is TreeStm.Exp ->
@@ -84,7 +84,7 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
 
     private fun munchCall(exp: Call): Temp {
         if (exp.func is Name) {
-            emit(Oper("jal ${exp.func.label}", src = munchArgs(0, exp.args), dst = callDefs))
+            emit(Oper("jal ${exp.func.name}", src = munchArgs(0, exp.args), dst = callDefs))
         } else {
             emit(Oper("jalr 's0", src = cons(munchExp(exp.func), munchArgs(0, exp.args)), dst = callDefs))
         }
@@ -119,7 +119,7 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
         return when (exp) {
             is Temporary -> exp.temp
             is Const -> if (exp.value == 0) MipsFrame.ZERO else emitResult { r -> Oper("li 'd0, ${exp.value}", dst = listOf(r)) }
-            is Name -> emitResult { r -> Oper("la 'd0, ${exp.label}", dst = listOf(r)) }
+            is Name -> emitResult { r -> Oper("la 'd0, ${exp.name}", dst = listOf(r)) }
             is Call -> munchCall(exp)
             is Mem -> when {
                 // constant binary operations
@@ -344,7 +344,7 @@ private class MipsCodeGenerator(val frame: MipsFrame) {
 
     private fun munchJump(target: TreeExp, labels: List<Label>) {
         if (target is Name) {
-            emit(Oper("j 'j0", jump = listOf(target.label)))
+            emit(Oper("j 'j0", jump = listOf(target.name)))
         } else {
             emit(Oper("jr 's0", src = listOf(munchExp(target)), jump = labels))
         }

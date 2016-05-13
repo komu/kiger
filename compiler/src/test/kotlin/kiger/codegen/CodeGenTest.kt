@@ -1,9 +1,9 @@
 package kiger.codegen
 
-import kiger.canon.createControlFlowGraph
 import kiger.canon.toQuads
 import kiger.canon.toTree
 import kiger.canon.traceSchedule
+import kiger.ir.quad.createControlFlowGraph
 import kiger.parser.parseExpression
 import kiger.target.Fragment
 import kiger.target.mips.MipsGen
@@ -32,7 +32,7 @@ class CodeGenTest {
 
     private fun dumpProc(fragment: Fragment.Proc) {
 
-        val traces = fragment.body.toQuads().createControlFlowGraph().traceSchedule().toTree()
+        val traces = fragment.body.toQuads().createControlFlowGraph().toTree().traceSchedule()
 
         val instructions = traces.flatMap { MipsGen.codeGen(fragment.frame, it) }
         for (instr in instructions) {

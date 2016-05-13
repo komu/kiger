@@ -1,12 +1,16 @@
 package kiger.canon
 
-import kiger.ir.quad.QExp.Name
-import kiger.ir.quad.Quad
-import kiger.ir.quad.Quad.*
+import kiger.ir.tree.TreeBasicBlock
+import kiger.ir.tree.TreeControlFlowGraph
+import kiger.ir.tree.TreeExp.Name
+import kiger.ir.tree.TreeStm
+import kiger.ir.tree.TreeStm.Branch.CJump
+import kiger.ir.tree.TreeStm.Branch.Jump
+import kiger.ir.tree.TreeStm.Labeled
 import kiger.temp.Label
 
 /**
- * Builds a trace from [ControlFlowGraph].
+ * Builds a trace from [TreeControlFlowGraph].
  *
  * The trace satisfies the following conditions:
  *
@@ -19,24 +23,24 @@ import kiger.temp.Label
  * In addition to this, the scheduler also tries to eliminate `Jump(Name(lab))` statements by
  * trying to write the target immediately after the jump, so that the we can simply fall through.
  */
-fun ControlFlowGraph.traceSchedule(): List<Quad> {
+fun TreeControlFlowGraph.traceSchedule(): List<TreeStm> {
     val scheduler = TraceScheduler(blocks)
     scheduler.buildTrace(exitLabel)
     return scheduler.output
 }
 
-private class TraceScheduler(private val blocks: List<BasicBlock>) {
+private class TraceScheduler(private val blocks: List<TreeBasicBlock>) {
 
     /**
      * Mapping from labels to all untraced blocks. Initially will contain all blocks to schedule.
      */
-    private val untracedBlocks = mutableMapOf<Label, BasicBlock>().apply {
+    private val untracedBlocks = mutableMapOf<Label, TreeBasicBlock>().apply {
         for (b in blocks)
             this[b.label] = b
     }
 
     /** The result of the processing */
-    val output = mutableListOf<Quad>()
+    val output = mutableListOf<TreeStm>()
 
     /**
      * Processes all blocks from the work-queue to build a trace.
@@ -65,7 +69,7 @@ private class TraceScheduler(private val blocks: List<BasicBlock>) {
      * but also tries to trace the following blocks near this block unless they have
      * already been traced.
      */
-    private tailrec fun trace(block: BasicBlock) {
+    private tailrec fun trace(block: TreeBasicBlock) {
         val b = untracedBlocks.remove(block.label)
         check(b != null) { "attempted to re-trace a block: ${block.label}" }
 

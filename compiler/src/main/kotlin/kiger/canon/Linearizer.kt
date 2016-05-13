@@ -69,8 +69,8 @@ private fun reorder(exps: List<TreeExp>): Pair<TreeStm, List<TreeExp>> = when {
 
 private fun doStm(stm: TreeStm): TreeStm = when (stm) {
     is Seq     -> doStm(stm.lhs) + doStm(stm.rhs)
-    is Jump    -> reorderStm(stm.exp) { Jump(it, stm.labels) }
-    is CJump   -> reorderStm(stm.lhs, stm.rhs) { l, r -> CJump(stm.relop, l, r, stm.trueLabel, stm.falseLabel) }
+    is Jump    -> reorderStm(stm.target) { Jump(it, stm.labels) }
+    is CJump   -> reorderStm(stm.lhs, stm.rhs) { l, r -> CJump(stm.op, l, r, stm.trueLabel, stm.falseLabel) }
     is Labeled -> stm
     is Move    -> doMove(stm)
     is Exp ->
