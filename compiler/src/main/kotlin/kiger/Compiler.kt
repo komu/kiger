@@ -33,6 +33,7 @@ private fun compile(targetArch: TargetArch, code: String, filename: String): Lis
 fun Writer.emitProc(codeGen: CodeGen, fragment: Fragment.Proc) {
     val frame = fragment.frame
 
+    // TODO: convert first to trees, then delinearize, then schedule traces
     val traces = fragment.body.toQuads().createControlFlowGraph().traceSchedule()
 
     val instructions = traces.toTree().delinearize().flatMap { codeGen.codeGen(frame, it) }
