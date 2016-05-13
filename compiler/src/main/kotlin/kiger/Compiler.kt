@@ -39,10 +39,9 @@ fun Writer.emitProc(codeGen: CodeGen, fragment: Fragment.Proc) {
 
     val cfg = fragment.body.toQuads().createControlFlowGraph()
 
-    // TODO: perform delinearize on basic blocks before trace scheduling
-    val traces = cfg.toTree().traceSchedule().delinearize()
+    val stmts = cfg.toTree().delinearize().traceSchedule()
 
-    val instructions = traces.flatMap { codeGen.codeGen(frame, it) }
+    val instructions = stmts.flatMap { codeGen.codeGen(frame, it) }
     val instructions2 = frame.procEntryExit2(instructions)
 
     val (instructions3, alloc) = instructions2.allocateRegisters(codeGen, frame)

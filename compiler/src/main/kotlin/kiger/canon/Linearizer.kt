@@ -24,23 +24,6 @@ import kiger.utils.tail
 fun TreeStm.linearize(): List<TreeStm> =
     doStm(this).linearizeTopLevel().toList()
 
-/**
- * Performs selective delinearization of statements.
- */
-fun List<TreeStm>.delinearize(): List<TreeStm> {
-    // TODO: to delinearize, we need live-out information
-
-    // Sketch:
-    //
-    // - Count uses of all defs (live-out counts as use)
-    // - Consider inlining defs with single use
-    //   - Inlining is safe to next instruction
-    //   - Or as long as the def commutes with all instructions between it and target (optional improvement)
-
-    // This is certainly not optimal, but it's valid.
-    return this;
-}
-
 private val nop = Exp(Const(0))
 
 private fun reorder(exps: List<TreeExp>): Pair<TreeStm, List<TreeExp>> = when {
