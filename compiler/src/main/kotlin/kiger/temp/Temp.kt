@@ -9,7 +9,7 @@ class Temp constructor(val name: String) : Comparable<Temp> {
         /**
          * Generates a new unique temp.
          */
-        fun gen() = Temp("t" + ++tempIdSeq)
+        fun gen() = Temp("%" + ++tempIdSeq)
     }
 
     override fun toString() = name

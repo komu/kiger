@@ -20,11 +20,11 @@ class LinearizerTest {
     fun exampleLinearization() {
         assertLinearization("f(f(1, 2), f(f(3, 4), 5))",
                 """
-                MOVE t1, Call[Name[f], [1, 2]]
-                MOVE t4, t1
-                MOVE t3, Call[Name[f], [3, 4]]
-                MOVE t2, Call[Name[f], [t3, 5]]
-                Call[Name[f], [t4, t2]]
+                MOVE %1, Call[Name[f], [1, 2]]
+                MOVE %4, %1
+                MOVE %3, Call[Name[f], [3, 4]]
+                MOVE %2, Call[Name[f], [%3, 5]]
+                Call[Name[f], [%4, %2]]
                 """)
     }
 

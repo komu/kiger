@@ -2,8 +2,6 @@ package kiger.canon
 
 import kiger.ir.BinaryOp.PLUS
 import kiger.ir.RelOp
-import kiger.ir.quad.QExp
-import kiger.ir.quad.Quad
 import kiger.ir.tree.TreeExp
 import kiger.ir.tree.TreeExp.*
 import kiger.ir.tree.TreeStm
@@ -22,16 +20,12 @@ class TreeToQuadsTest {
         resetTempSequence()
         val quads = exp.toQuads()
 
-        resetTempSequence()
-        val temp1 = Temp.gen()
-        val temp2 = Temp.gen()
-        val temp3 = Temp.gen()
-
-        assertEquals(4, quads.size)
-        assertEquals(Quad.Load(temp1, QExp.Const(42)), quads[0])
-        assertEquals(Quad.BinOp(PLUS, temp2, QExp.Const(1), QExp.Temporary(temp1)), quads[1])
-        assertEquals(Quad.Call(QExp.Name(Label("foo")), listOf(QExp.Temporary(temp2)), temp3), quads[2])
-        assertEquals(Quad.Store(QExp.Const(400), QExp.Temporary(temp3)), quads[3])
+        assertEquals("""
+            %1 <- mem[42]
+            %2 <- 1 + %1
+            %3 <- foo(%2)
+            mem[400] = %3
+        """.trimIndent(), quads.joinToString("\n"))
     }
 
     @Test
@@ -41,12 +35,10 @@ class TreeToQuadsTest {
         resetTempSequence()
         val quads = exp.toQuads()
 
-        resetTempSequence()
-        val temp1 = Temp.gen()
-
-        assertEquals(2, quads.size)
-        assertEquals(Quad.BinOp(PLUS, temp1, QExp.Const(1), QExp.Const(2)), quads[0])
-        assertEquals(Quad.CJump(RelOp.EQ, QExp.Temporary(temp1), QExp.Const(3), Label("t"), Label("f")), quads[1])
+        assertEquals("""
+            %1 <- 1 + 2
+            if (%1 EQ 3) jump t else jump f
+        """.trimIndent(), quads.joinToString("\n"))
     }
 
     @Test
@@ -57,12 +49,12 @@ class TreeToQuadsTest {
         val quads = exp.toQuads()
 
         assertEquals("""
-            t1 <- fp + -8
-            t5 <- t1
-            t2 <- fp + -8
-            t3 <- mem[t2]
-            t4 <- t3 + 4
-            mem[t5] = t4
+            %1 <- fp + -8
+            %5 <- %1
+            %2 <- fp + -8
+            %3 <- mem[%2]
+            %4 <- %3 + 4
+            mem[%5] = %4
         """.trimIndent(), quads.joinToString("\n"))
     }
 
