@@ -23,11 +23,7 @@ fun FlowGraph.interferenceGraph(): InterferenceGraph {
     val allMoves = nodes.asSequence().filter { it.isMove }.map { Move(nodeByTemp[it.use.single()]!!, nodeByTemp[it.def.single()]!!) }.toList()
 
     for (m in allMoves) {
-        // TODO: why are the move-lists conditions in original code?
-        //            if (m.src !in precolored)
         m.src.moveList += m
-
-        //            if (m.dst !in precolored)
         m.dst.moveList += m
     }
 
