@@ -67,24 +67,30 @@ private fun TreeStm.Branch.toQuad(): Quad = when (this) {
 private fun TreeStm.simplify(): TreeStm = when (this) {
     is TreeStm.Seq      -> TreeStm.Seq(lhs.simplify(), rhs.simplify())
     is TreeStm.Labeled  -> this
-    is TreeStm.Branch   -> simplify()
-    is TreeStm.Move     -> TreeStm.Move(target.simplify(), source.simplify()) // What if both are complex?
-    is TreeStm.Exp      -> TreeStm.Exp(exp.simplify())
+    is TreeStm.Branch   -> simplifyBranch()
+    is TreeStm.Move     -> simplifyMove()
+    is TreeStm.Exp      -> TreeStm.Exp(exp.simplifyExp())
 }
 
-private fun TreeStm.Branch.simplify(): TreeStm = when (this) {
-    is TreeStm.Branch.Jump  -> TreeStm.Branch.Jump(target.simplify().simpleExp(), labels)
-    is TreeStm.Branch.CJump -> TreeStm.Branch.CJump(op, lhs.simplify().simpleExp(), rhs.simplify().simpleExp(), trueLabel, falseLabel)
+private fun TreeStm.Move.simplifyMove(): TreeStm.Move = when (target) {
+    is Mem       -> TreeStm.Move(Mem(target.exp.simpleExp()), source.simpleExp())
+    is Temporary -> TreeStm.Move(target, source.simplifyExp())
+    else         -> error("invalid target for move: $target")
 }
 
-private fun TreeExp.simplify(): TreeExp = when (this) {
-    is BinOp     -> BinOp(binop, lhs.simplify().simpleExp(), rhs.simplify().simpleExp())
-    is Mem       -> Mem(exp.simplify().simpleExp())
+private fun TreeStm.Branch.simplifyBranch(): TreeStm = when (this) {
+    is TreeStm.Branch.Jump  -> TreeStm.Branch.Jump(target.simpleExp(), labels)
+    is TreeStm.Branch.CJump -> TreeStm.Branch.CJump(op, lhs.simpleExp(), rhs.simpleExp(), trueLabel, falseLabel)
+}
+
+private fun TreeExp.simplifyExp(): TreeExp = when (this) {
+    is BinOp     -> BinOp(binop, lhs.simpleExp(), rhs.simpleExp())
+    is Mem       -> Mem(exp.simpleExp())
     is Temporary -> this
-    is ESeq      -> ESeq(stm.simplify(), exp.simplify().simpleExp())
+    is ESeq      -> ESeq(stm.simplify(), exp.simpleExp())
     is Name      -> this
     is Const     -> this
-    is Call      -> Call(func.simplify().simpleExp(), args.map { it.simplify().simpleExp() })
+    is Call      -> Call(func.simpleExp(), args.map { it.simpleExp() })
 }
 
 /**
@@ -95,10 +101,12 @@ private fun TreeExp.simplify(): TreeExp = when (this) {
  * the temporary as the value of the expression. The assignment will be lifted
  * from [ESeq] later by [linearize].
  */
-private fun TreeExp.simpleExp(): TreeExp =
-    if (this is Temporary || this is Name || this is Const) {
-        this
+private fun TreeExp.simpleExp(): TreeExp {
+    val simplified = simplifyExp()
+    return if (simplified is Temporary || simplified is Name || simplified is Const) {
+        simplified
     } else {
         val temp = Temporary(Temp.gen())
-        ESeq(kiger.ir.tree.TreeStm.Move(temp, this), temp)
+        ESeq(kiger.ir.tree.TreeStm.Move(temp, simplified), temp)
     }
+}
