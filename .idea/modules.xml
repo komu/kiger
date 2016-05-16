@@ -6,6 +6,9 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/compiler/compiler_main.iml" filepath="$PROJECT_DIR$/.idea/modules/compiler/compiler_main.iml" group="compiler" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/compiler/compiler_test.iml" filepath="$PROJECT_DIR$/.idea/modules/compiler/compiler_test.iml" group="compiler" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/kiger.iml" filepath="$PROJECT_DIR$/.idea/modules/kiger.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/runtime/runtime.iml" filepath="$PROJECT_DIR$/.idea/modules/runtime/runtime.iml" group="runtime" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/runtime/runtime_main.iml" filepath="$PROJECT_DIR$/.idea/modules/runtime/runtime_main.iml" group="runtime" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/runtime/runtime_test.iml" filepath="$PROJECT_DIR$/.idea/modules/runtime/runtime_test.iml" group="runtime" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/vm/vm.iml" filepath="$PROJECT_DIR$/.idea/modules/vm/vm.iml" group="vm" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/vm/vm_main.iml" filepath="$PROJECT_DIR$/.idea/modules/vm/vm_main.iml" group="vm" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/vm/vm_test.iml" filepath="$PROJECT_DIR$/.idea/modules/vm/vm_test.iml" group="vm" />

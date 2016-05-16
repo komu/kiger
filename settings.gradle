@@ -1,4 +1,5 @@
 rootProject.name = 'kiger'
 
 include ':compiler',
+        ':runtime',
         ':vm'

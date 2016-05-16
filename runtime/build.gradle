@@ -1,0 +1,16 @@
+apply plugin: 'c'
+
+model {
+    components {
+        runtime(NativeLibrarySpec) {
+            sources {
+                c {
+                    source {
+                        srcDir "src/source"
+                        include  "**/*.c"
+                    }
+                }
+            }
+        }
+    }
+}

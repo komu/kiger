@@ -8,7 +8,7 @@ if [ -z $1 ]; then
 fi
 
 ./gradlew :compiler:shadowJar
-java -jar compiler/build/libs/compiler-all.jar samples/$1.tig out/$1.s
-cc out/$1.s runtime/runtime.c -o out/$1
+time java -jar compiler/build/libs/compiler-all.jar samples/$1.tig out/$1.s
+cc out/$1.s runtime/build/binaries/runtimeStaticLibrary/libruntime.a -o out/$1
 out/$1
 
