@@ -1,0 +1,8 @@
+let
+  function isEven(x: int): int = if x = 0 then 1 else isOdd(x-1)
+  function isOdd(x: int): int = if x = 1 then 1 else isEven(x-1)
+in
+  print("isEven(42) = ");
+  printi(isEven(42));
+  print("\n")
+end

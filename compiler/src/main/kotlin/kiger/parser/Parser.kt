@@ -26,12 +26,6 @@ fun parseDeclaration(code: String): Declaration =
     parseComplete(Lexer(code)) { it.parseDeclaration() }
 
 /**
- * Parses a function definition.
- */
-fun parseDeclarations(code: String, file: String): List<Declaration> =
-    parseComplete(Lexer(code, file)) { it.parseDeclarations() }
-
-/**
  * Executes parser on code and verifies that it consumes all input.
  *
  * @throws SyntaxErrorException if the parser fails or if it did not consume all input
@@ -60,22 +54,27 @@ private class Parser(lexer: Lexer) {
     }
 
     fun parseDeclaration(): Declaration = when {
-        lexer.nextTokenIs(Function) -> parseFunctionDeclaration()
+        lexer.nextTokenIs(Function) -> parseFunctionDeclarations()
         lexer.nextTokenIs(Var) -> parseVarDeclaration()
-        lexer.nextTokenIs(Type) -> parseTypeDeclaration()
+        lexer.nextTokenIs(Type) -> parseTypeDeclarations()
         else -> fail(lexer.nextTokenLocation(), "expected function or var declaration")
     }
 
-    fun parseFunctionDeclaration(): Declaration.Functions {
-        val pos = lexer.expect(Function)
-        val name = parseName().first
-        val params = parseArgumentDefinitionList()
-        val returnType = parseOptionalType()
-        lexer.expect(Equal)
-        val body = parseExpression0()
+    fun parseFunctionDeclarations(): Declaration.Functions {
+        val funcs = mutableListOf<FunctionDeclaration>()
 
-        val func = FunctionDeclaration(name, params, returnType, body, pos)
-        return Declaration.Functions(listOf(func))
+        while (lexer.nextTokenIs(Function)) {
+            val pos = lexer.expect(Function)
+            val name = parseName().first
+            val params = parseArgumentDefinitionList()
+            val returnType = parseOptionalType()
+            lexer.expect(Equal)
+            val body = parseExpression0()
+
+            funcs += FunctionDeclaration(name, params, returnType, body, pos)
+        }
+
+        return Declaration.Functions(funcs)
     }
 
     fun parseVarDeclaration(): Declaration.Var {
@@ -88,13 +87,19 @@ private class Parser(lexer: Lexer) {
         return Declaration.Var(name, type, init, pos)
     }
 
-    private fun parseTypeDeclaration(): Declaration.Types {
-        val pos = lexer.expect(Type)
-        val name = parseName().first
-        lexer.expect(Equal)
-        val type = parseType()
+    private fun parseTypeDeclarations(): Declaration.Types {
+        val types = mutableListOf<TypeDeclaration>()
 
-        return Declaration.Types(listOf(TypeDeclaration(name, type, pos)))
+        while (lexer.nextTokenIs(Type)) {
+            val pos = lexer.expect(Type)
+            val name = parseName().first
+            lexer.expect(Equal)
+            val type = parseType()
+
+            types += TypeDeclaration(name, type, pos)
+        }
+
+        return Declaration.Types(types)
     }
 
     private fun parseOptionalType() = if (lexer.readNextIf(Colon)) parseName() else null
