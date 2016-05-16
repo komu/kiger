@@ -3,6 +3,7 @@ package kiger.regalloc
 import kiger.regalloc.InterferenceGraph.INode
 import kiger.regalloc.InterferenceGraph.Move
 import kiger.temp.Temp
+import kiger.utils.profile
 import java.util.*
 
 /**
@@ -43,7 +44,7 @@ fun FlowGraph.interferenceGraph(): InterferenceGraph {
  * Computers the liveout sets for all nodes in the graph.
  */
 fun FlowGraph.initializeLiveOuts() {
-    val liveoutMap = buildLiveOutMap()
+    val liveoutMap = profile("buildLiveOutMap") { buildLiveOutMap() }
 
     for (node in nodes)
         node.liveOut = liveoutMap[node.id]
