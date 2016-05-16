@@ -10,6 +10,7 @@ Implementation in ML.
 
 ## TODO
 
+  - add mechanism for executing integration tests
   - clean up and freeze the simple version
   - SSA
   - stack-maps
