@@ -14,37 +14,33 @@ import kiger.temp.Temp
  * to registers.
  */
 fun InstrControlFlowGraph.allocateRegisters(codeGen: CodeGen, frame: Frame): Pair<List<Instr>, Coloring> {
-    return toInstrs().allocateRegisters(codeGen, frame)
-}
-
-private tailrec fun List<Instr>.allocateRegisters(codeGen: CodeGen, frame: Frame): Pair<List<Instr>, Coloring> {
     val (colors, spills) = color(this, frame.type)
 
     fun Instr.isRedundant() =
         this is Instr.Move && colors[dst] == colors[src]
 
     return if (spills.isEmpty())
-        Pair(filterNot { it.isRedundant() }, colors)
+        Pair(toInstrs().filterNot { it.isRedundant() }, colors)
     else
-        rewrite(codeGen, this, frame, spills).allocateRegisters(codeGen, frame)
+        rewrite(codeGen, frame, spills).allocateRegisters(codeGen, frame)
 }
 
 /**
  * Rewrite instructions to spill of temporaries defined in [spills].
  */
-private fun rewrite(codeGen: CodeGen, instrs: List<Instr>, frame: Frame, spills: Collection<Temp>): List<Instr> =
-    spills.fold(instrs) { i, t -> rewrite1(codeGen, i, frame, t) }
+private fun InstrControlFlowGraph.rewrite(codeGen: CodeGen, frame: Frame, spills: Collection<Temp>): InstrControlFlowGraph =
+    spills.fold(this) { i, t -> i.rewrite1(codeGen, frame, t) }
 
 /**
  * Rewrite instructions to spill [spill].
  */
-private fun rewrite1(codeGen: CodeGen, instrs: List<Instr>, frame: Frame, spill: Temp): List<Instr> {
+private fun InstrControlFlowGraph.rewrite1(codeGen: CodeGen, frame: Frame, spill: Temp): InstrControlFlowGraph {
     val varInFrame = frame.type.exp(frame.allocLocal(true), Temporary(frame.type.FP))
 
     /**
      * Generate instruction for load/store between frame and given temp.
      */
-    fun genInstrs(store: Boolean, t: Temp) =
+    fun generateSpillInstructions(store: Boolean, t: Temp) =
         codeGen.codeGen(frame, if (store) Move(varInFrame, Temporary(t)) else Move(Temporary(t), varInFrame))
 
     /**
@@ -55,7 +51,7 @@ private fun rewrite1(codeGen: CodeGen, instrs: List<Instr>, frame: Frame, spill:
     fun allocDu(store: Boolean, dus: List<Temp>): Pair<List<Instr>, List<Temp>> =
         if (spill in dus) {
             val nt = Temp.gen()
-            Pair(genInstrs(store, nt), dus.map { if (spill == it) nt else it })
+            Pair(generateSpillInstructions(store, nt), dus.map { if (spill == it) nt else it })
         } else {
             Pair(emptyList(), dus)
         }
@@ -63,7 +59,7 @@ private fun rewrite1(codeGen: CodeGen, instrs: List<Instr>, frame: Frame, spill:
     /**
      * Transform instruction if it contains the spilled temporary.
      */
-    fun transInstr(instr: Instr): List<Instr> {
+    fun transformInstruction(instr: Instr): List<Instr> {
         // If the instruction doesn't define or use t, it does not need to be transformed
         if (!instr.references(spill)) return listOf(instr)
 
@@ -85,5 +81,5 @@ private fun rewrite1(codeGen: CodeGen, instrs: List<Instr>, frame: Frame, spill:
         }
     }
 
-    return instrs.flatMap { transInstr(it) }
+    return rewriteInstructions { transformInstruction(it) }
 }

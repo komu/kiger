@@ -1,8 +1,13 @@
 package kiger.regalloc
 
 import kiger.assem.Instr
+import kiger.assem.InstrControlFlowGraph
 import kiger.temp.Label
 import kiger.temp.Temp
+
+fun InstrControlFlowGraph.createFlowGraph(): FlowGraph {
+    return toInstrs().createFlowGraph()
+}
 
 /**
  * Create a data flow graph from list of instructions.

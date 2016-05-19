@@ -1,6 +1,6 @@
 package kiger.regalloc
 
-import kiger.assem.Instr
+import kiger.assem.InstrControlFlowGraph
 import kiger.regalloc.InterferenceGraph.INode
 import kiger.regalloc.InterferenceGraph.Move
 import kiger.target.FrameType
@@ -9,10 +9,8 @@ import kiger.temp.Temp
 import kiger.utils.removeAny
 import java.util.*
 
-fun color(instrs: List<Instr>, frameType: FrameType): Pair<Coloring, List<Temp>> {
-
-    return GraphColorer(instrs.createFlowGraph(), frameType.tempMap, frameType.assignableRegisters).color()
-}
+fun color(cfg: InstrControlFlowGraph, frameType: FrameType): Pair<Coloring, List<Temp>> =
+    GraphColorer(cfg.createFlowGraph(), frameType.tempMap, frameType.assignableRegisters).color()
 
 /**
  * Graph coloring as described in pages 241-249 of Modern Compiler Implementation in ML.
