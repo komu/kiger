@@ -1,6 +1,7 @@
 package kiger.regalloc
 
 import kiger.assem.Instr
+import kiger.assem.InstrControlFlowGraph
 import kiger.ir.tree.TreeExp.Temporary
 import kiger.ir.tree.TreeStm.Move
 import kiger.target.CodeGen
@@ -12,7 +13,11 @@ import kiger.temp.Temp
  * rewritten list of instructions and a coloring that maps [Temp]-values
  * to registers.
  */
-tailrec fun List<Instr>.allocateRegisters(codeGen: CodeGen, frame: Frame): Pair<List<Instr>, Coloring> {
+fun InstrControlFlowGraph.allocateRegisters(codeGen: CodeGen, frame: Frame): Pair<List<Instr>, Coloring> {
+    return toInstrs().allocateRegisters(codeGen, frame)
+}
+
+private tailrec fun List<Instr>.allocateRegisters(codeGen: CodeGen, frame: Frame): Pair<List<Instr>, Coloring> {
     val (colors, spills) = color(this, frame.type)
 
     fun Instr.isRedundant() =

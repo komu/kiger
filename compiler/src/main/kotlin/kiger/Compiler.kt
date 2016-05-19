@@ -1,17 +1,21 @@
 package kiger
 
 import kiger.assem.Instr
+import kiger.assem.InstrBasicBlock
+import kiger.assem.InstrControlFlowGraph
 import kiger.canon.delinearize
 import kiger.canon.toQuads
 import kiger.canon.toTree
 import kiger.canon.traceSchedule
 import kiger.escape.analyzeEscapes
 import kiger.ir.quad.createControlFlowGraph
+import kiger.ir.tree.TreeControlFlowGraph
 import kiger.lexer.SyntaxErrorException
 import kiger.parser.parseExpression
 import kiger.regalloc.allocateRegisters
 import kiger.target.CodeGen
 import kiger.target.Fragment
+import kiger.target.Frame
 import kiger.target.TargetArch
 import kiger.target.x64.X64Target
 import kiger.translate.SemanticAnalyzer
@@ -39,9 +43,9 @@ fun Writer.emitProc(codeGen: CodeGen, fragment: Fragment.Proc) {
 
     val cfg = fragment.body.toQuads().createControlFlowGraph()
 
-    val stmts = cfg.toTree().delinearize().traceSchedule().toStatementList()
+    val scheduledBlocks = cfg.toTree().delinearize().traceSchedule()
 
-    val instructions = stmts.flatMap { codeGen.codeGen(frame, it) }
+    val instructions = scheduledBlocks.translate(codeGen, frame)
     val instructions2 = frame.procEntryExit2(instructions)
 
     val (instructions3, alloc) = instructions2.allocateRegisters(codeGen, frame)
@@ -50,11 +54,13 @@ fun Writer.emitProc(codeGen: CodeGen, fragment: Fragment.Proc) {
     write(prologue)
     for (instr in instructions4)
         if (instr !is Instr.Oper || instr.assem != "") {
-//            writeLine(instr.format { alloc.name((it))}.padEnd(50) + " # " + instr.format { it.name })
             writeLine(instr.format { alloc.name(it) })
         }
     write(epilogue)
 }
+
+private fun TreeControlFlowGraph.translate(codeGen: CodeGen, frame: Frame): InstrControlFlowGraph =
+    InstrControlFlowGraph(blocks.map { InstrBasicBlock(it.label, it.allStatements.flatMap { codeGen.codeGen(frame, it) }) }, exitLabel)
 
 fun Writer.writeLine(line: String) {
     write(line)

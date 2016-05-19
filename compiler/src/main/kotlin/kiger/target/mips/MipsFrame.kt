@@ -1,6 +1,8 @@
 package kiger.target.mips
 
 import kiger.assem.Instr
+import kiger.assem.InstrBasicBlock
+import kiger.assem.InstrControlFlowGraph
 import kiger.ir.BinaryOp
 import kiger.ir.tree.TreeExp
 import kiger.ir.tree.TreeStm
@@ -11,6 +13,7 @@ import kiger.target.Register
 import kiger.temp.Label
 import kiger.temp.Temp
 import kiger.translate.seq
+import kiger.utils.splitLast
 
 class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) : Frame(name) {
 
@@ -48,17 +51,16 @@ class MipsFrame private constructor(name: Label, formalEscapes: List<Boolean>) :
         return seq(shiftInstructions + saves + body + restores)
     }
 
-    override fun procEntryExit2(body: List<Instr>): List<Instr> {
-        // TODO book does not have enter
-//        val enter = Instr.Oper("", dst = listOf(ZERO, RA, SP, FP) + calleeSaves + argumentRegisters)
-        val enter = Instr.Oper("", dst = listOf(ZERO, RA, SP, FP) + calleeSaves + argumentRegisters)
-
+    override fun procEntryExit2(body: InstrControlFlowGraph): InstrControlFlowGraph {
         // Dummy instruction that simply tells register allocator what registers are live at the end
 //        val sink = Instr.Oper("", src = listOf(ZERO, RA, SP, FP, RV) + calleeSaves, jump = emptyList())
         // TODO: book does not keep RV live
         val sink = Instr.Oper("", src = listOf(ZERO, RA, SP, FP) + calleeSaves, jump = emptyList())
 
-        return listOf(enter) + body + sink
+        val (init, last) = body.blocks.splitLast()
+        val newLast = InstrBasicBlock(last.label, last.body + sink)
+
+        return InstrControlFlowGraph(init + newLast, body.exitLabel)
     }
 
     override fun procEntryExit3(body: List<Instr>): Triple<String, List<Instr>, String> {
