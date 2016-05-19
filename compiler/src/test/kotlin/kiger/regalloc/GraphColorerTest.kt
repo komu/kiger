@@ -2,7 +2,10 @@ package kiger.regalloc
 
 import kiger.assem.Instr.Move
 import kiger.assem.Instr.Oper
+import kiger.assem.InstrBasicBlock
+import kiger.assem.InstrControlFlowGraph
 import kiger.target.Register
+import kiger.temp.Label
 import kiger.temp.Temp
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -42,9 +45,9 @@ class GraphColorerTest {
 
         val preallocated = listOf("R1", "R2", "R3", "R4").map { Pair(Temp(it), Register(it)) }.toMap()
 
-        val flowGraph = inst.createFlowGraph()
-        val igraph = flowGraph.interferenceGraph()
-        val colorer = GraphColorer(flowGraph, preallocated, preallocated.values.toList())
+        val cfg = InstrControlFlowGraph(listOf(InstrBasicBlock(Label.gen(), inst)), Label.gen())
+        val igraph = cfg.interferenceGraph()
+        val colorer = GraphColorer(cfg, preallocated, preallocated.values.toList())
 
         val (coloring, spills) = colorer.color()
 
