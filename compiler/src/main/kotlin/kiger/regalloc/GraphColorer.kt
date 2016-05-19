@@ -10,13 +10,13 @@ import kiger.utils.removeAny
 import java.util.*
 
 fun color(cfg: InstrControlFlowGraph, frameType: FrameType): Pair<Coloring, List<Temp>> =
-    GraphColorer(cfg.createFlowGraph(), frameType.tempMap, frameType.assignableRegisters).color()
+    GraphColorer(cfg, frameType.tempMap, frameType.assignableRegisters).color()
 
 /**
  * Graph coloring as described in pages 241-249 of Modern Compiler Implementation in ML.
  */
 class GraphColorer(
-        val flowGraph: FlowGraph,
+        val flowGraph: InstrControlFlowGraph,
 
         /** Mapping from temps to preallocated registers */
         val preallocatedColors: Map<Temp, Register>,
@@ -408,9 +408,11 @@ class GraphColorer(
             check(n.degree >= K) { "spillWorklist has node with invalid degree: ${n.degree} < $K" }
     }
 
+    // TODO: calculate spill costs in advance
+    // TODO: calculate higher cost for uses inside loops
     private fun spillCost(temp: Temp): Double {
-        val defs = flowGraph.nodes.count { temp in it.def }
-        val uses = flowGraph.nodes.count { temp in it.use }
+        val defs = flowGraph.count { temp in it.defs }
+        val uses = flowGraph.count { temp in it.uses }
         val interferes = interferenceGraph.nodeForTemp(temp).adjList.size
 
         return (defs + uses).toDouble() / interferes.toDouble()

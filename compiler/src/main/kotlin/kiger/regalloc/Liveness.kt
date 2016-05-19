@@ -1,10 +1,15 @@
 package kiger.regalloc
 
+import kiger.assem.InstrControlFlowGraph
 import kiger.regalloc.InterferenceGraph.INode
 import kiger.regalloc.InterferenceGraph.Move
 import kiger.temp.Temp
 import kiger.utils.profile
 import java.util.*
+
+// TODO: construct interference graph from original Cfg
+fun InstrControlFlowGraph.interferenceGraph(): InterferenceGraph =
+    toInstrs().createFlowGraph().interferenceGraph()
 
 /**
  * Constructs an interference graph from [FlowGraph].

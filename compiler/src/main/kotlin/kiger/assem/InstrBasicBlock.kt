@@ -8,6 +8,9 @@ data class InstrControlFlowGraph(val blocks: List<InstrBasicBlock>, val exitLabe
 
     fun rewriteInstructions(f: (Instr) -> List<Instr>): InstrControlFlowGraph =
         InstrControlFlowGraph(blocks.map { it.rewriteInstructions(f) }, exitLabel)
+
+    fun count(predicate: (Instr) -> Boolean): Int =
+        blocks.sumBy { it.count(predicate) }
 }
 
 class InstrBasicBlock(val label: Label, val body: List<Instr>) {
@@ -15,4 +18,7 @@ class InstrBasicBlock(val label: Label, val body: List<Instr>) {
 
     fun rewriteInstructions(f: (Instr) -> List<Instr>): InstrBasicBlock =
         InstrBasicBlock(label, body.flatMap { f(it) })
+
+    fun count(predicate: (Instr) -> Boolean): Int =
+        body.count(predicate)
 }

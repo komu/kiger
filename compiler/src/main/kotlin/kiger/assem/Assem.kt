@@ -10,6 +10,11 @@ sealed class Instr(val comment: String?) {
     open val isJump: Boolean
         get() = false
 
+    abstract val uses: Set<Temp>
+    abstract val defs: Set<Temp>
+
+    fun references(t: Temp) = t in uses || t in defs
+
     override fun toString() = format { it.name }
 
     fun format(func: (Temp) -> String): String {
@@ -22,14 +27,14 @@ sealed class Instr(val comment: String?) {
 
     protected abstract fun format1(func: (Temp) -> String): String
 
-    abstract fun references(t: Temp): Boolean
-
     class Lbl(val assem: String, val label: Label, comment: String? = null) : Instr(comment) {
         init {
             require(assem.any())
         }
 
-        override fun references(t: Temp) = false
+        override val uses = emptySet<Temp>()
+        override val defs = emptySet<Temp>()
+
         override fun format1(func: (Temp) -> String) = assem
     }
 
@@ -39,7 +44,9 @@ sealed class Instr(val comment: String?) {
 
         fun rewriteRegisters(newDst: List<Temp>, newSrc: List<Temp>) = Oper(assem, newDst, newSrc, jump, comment)
 
-        override fun references(t: Temp) = t in dst || t in src
+        override val uses = src.toSet()
+        override val defs = dst.toSet()
+
         override fun format1(func: (Temp) -> String): String {
             val op = assem.replacePlaceholders(func, dst, src, jump)
             return "    $op"
@@ -51,8 +58,10 @@ sealed class Instr(val comment: String?) {
             require(assem.any())
         }
 
+        override val uses = setOf(src)
+        override val defs = setOf(dst)
+
         fun rewriteRegisters(newDst: Temp, newSrc: Temp) = Move(assem, newDst, newSrc, comment)
-        override fun references(t: Temp) = t == dst || t == src
 
         override fun format1(func: (Temp) -> String): String {
             val op = assem.replacePlaceholders(func, listOf(dst), listOf(src), null)

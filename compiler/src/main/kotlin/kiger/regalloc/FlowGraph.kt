@@ -1,13 +1,8 @@
 package kiger.regalloc
 
 import kiger.assem.Instr
-import kiger.assem.InstrControlFlowGraph
 import kiger.temp.Label
 import kiger.temp.Temp
-
-fun InstrControlFlowGraph.createFlowGraph(): FlowGraph {
-    return toInstrs().createFlowGraph()
-}
 
 /**
  * Create a data flow graph from list of instructions.
@@ -25,10 +20,13 @@ class FlowGraph(val nodes: List<Node>) {
     val size: Int
         get() = nodes.size
 
-    class Node(val id: Int, val def: Set<Temp>, val use: Set<Temp>, val isMove: Boolean, val instr: Instr) {
+    class Node(val id: Int, val instr: Instr) {
+        val isMove = instr is Instr.Move
         val succ = mutableListOf<Node>()
         val prev = mutableListOf<Node>()
         var liveOut = emptySet<Temp>()
+        val use = instr.uses
+        val def = instr.defs
 
         override fun toString() = format { it.toString() }
 
@@ -49,7 +47,7 @@ private class FlowGraphBuilder(private val instructions: List<Instr>) {
      *
      * Each node in this list has same index as corresponding instruction in [instructions].
      */
-    private val nodes = instructions.mapIndexed { i, inst -> makeNode(inst, i)}
+    private val nodes = instructions.mapIndexed { i, inst -> FlowGraph.Node(i, inst) }
 
     /**
      * Create edges between instructions.
@@ -83,12 +81,6 @@ private class FlowGraphBuilder(private val instructions: List<Instr>) {
             from.succ += to
             to.prev += from
         }
-    }
-
-    private fun makeNode(inst: Instr, id: Int): FlowGraph.Node = when (inst) {
-        is Instr.Oper   -> FlowGraph.Node(id, inst.dst.toSet(), inst.src.toSet(), false, inst)
-        is Instr.Lbl    -> FlowGraph.Node(id, emptySet(), emptySet(), false, inst)
-        is Instr.Move   -> FlowGraph.Node(id, setOf(inst.dst), setOf(inst.src), true, inst)
     }
 
     private fun createLabelMap(): Map<Label, FlowGraph.Node> {
