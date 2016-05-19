@@ -32,7 +32,7 @@ class CodeGenTest {
 
     private fun dumpProc(fragment: Fragment.Proc) {
 
-        val traces = fragment.body.toQuads().createControlFlowGraph().toTree().traceSchedule()
+        val traces = fragment.body.toQuads().createControlFlowGraph().toTree().traceSchedule().toStatementList()
 
         val instructions = traces.flatMap { MipsGen.codeGen(fragment.frame, it) }
         for (instr in instructions) {

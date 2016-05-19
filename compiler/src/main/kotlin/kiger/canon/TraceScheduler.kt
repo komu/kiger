@@ -3,10 +3,8 @@ package kiger.canon
 import kiger.ir.tree.TreeBasicBlock
 import kiger.ir.tree.TreeControlFlowGraph
 import kiger.ir.tree.TreeExp.Name
-import kiger.ir.tree.TreeStm
 import kiger.ir.tree.TreeStm.Branch.CJump
 import kiger.ir.tree.TreeStm.Branch.Jump
-import kiger.ir.tree.TreeStm.Labeled
 import kiger.temp.Label
 
 /**
@@ -20,13 +18,14 @@ import kiger.temp.Label
  *
  * Basic blocks are reordered as necessary to satisfy property 3.
  *
- * In addition to this, the scheduler also tries to eliminate `Jump(Name(lab))` statements by
- * trying to write the target immediately after the jump, so that the we can simply fall through.
+ * In addition to this, the scheduler also tries to arrange possibilities for eliminating
+ * `Jump(Name(lab))` statements by trying to write the target immediately after the jump,
+ * so that the peephole optimizer may later eliminate the jump in favor of simply falling through.
  */
-fun TreeControlFlowGraph.traceSchedule(): List<TreeStm> {
+fun TreeControlFlowGraph.traceSchedule(): TreeControlFlowGraph {
     val scheduler = TraceScheduler(blocks)
-    scheduler.buildTrace(exitLabel)
-    return scheduler.output
+    scheduler.schedule()
+    return TreeControlFlowGraph(scheduler.output, exitLabel)
 }
 
 private class TraceScheduler(private val blocks: List<TreeBasicBlock>) {
@@ -40,28 +39,19 @@ private class TraceScheduler(private val blocks: List<TreeBasicBlock>) {
     }
 
     /** The result of the processing */
-    val output = mutableListOf<TreeStm>()
+    val output = mutableListOf<TreeBasicBlock>()
 
     /**
      * Processes all blocks from the work-queue to build a trace.
      *
-     * Most we'll go through the block in order, but [buildTrace] will attempt to trace the
+     * Most we'll go through the block in order, but [schedule] will attempt to trace the
      * branches immediately after blocks, which means that when we process a block, we'll
      * have to check if it actually has already been processed and skip it if if has been.
      */
-    fun buildTrace(exitLabel: Label) {
+    fun schedule() {
         for (block in blocks)
             if (block.label in untracedBlocks)
                 trace(block)
-
-        // If the last statement is a jump to exit label, remove it.
-        // Otherwise add the exit label after all other statements.
-        val finalJumpLabel = (output.lastOrNull() as? Jump)?.target as? Name
-        if (finalJumpLabel != null && finalJumpLabel.name == exitLabel) {
-            output.removeAt(output.lastIndex)
-        } else {
-            output += Labeled(exitLabel)
-        }
     }
 
     /**
@@ -76,20 +66,16 @@ private class TraceScheduler(private val blocks: List<TreeBasicBlock>) {
         val br = block.branch
         when (br) {
             is Jump  -> {
+                output += block
                 if (br.target is Name) {
                     // If we see an unconditional jump at the end of block, try to write
-                    // the target immediately after this block and eliminate the jump.
-                    // If the target has already been traced, then proceed normally.
-                    val targetBlock = untracedBlocks[br.target.name]
-                    if (targetBlock != null) {
-                        output += block.labelledBody
-                        trace(targetBlock)
-                    } else {
-                        output += block.allStatements
-                    }
+                    // the target immediately after this block so that later peephole
+                    // optimization can eliminate the jump.
 
-                } else {
-                    output += block.allStatements
+                    // TODO: if the label is not used elsewhere, merge the blocks (is this even possible?)
+                    val targetBlock = untracedBlocks[br.target.name]
+                    if (targetBlock != null)
+                        trace(targetBlock)
                 }
             }
             is CJump -> {
@@ -102,20 +88,17 @@ private class TraceScheduler(private val blocks: List<TreeBasicBlock>) {
                 // immediately after condition that just jumps to the real false-block.
                 when {
                     falseTarget != null -> {
-                        output += block.allStatements
+                        output += block
                         trace(falseTarget)
                     }
                     trueTarget != null -> {
-                        output += block.labelledBody
-                        output += CJump(br.op.not(), br.lhs, br.rhs, br.falseLabel, br.trueLabel)
+                        output += TreeBasicBlock(block.label, block.body, CJump(br.op.not(), br.lhs, br.rhs, br.falseLabel, br.trueLabel))
                         trace(trueTarget)
                     }
                     else -> {
                         val f = Label.gen("false")
-                        output += block.labelledBody
-                        output += CJump(br.op, br.lhs, br.rhs, br.trueLabel, f)
-                        output += Labeled(f)
-                        output += Jump(br.falseLabel)
+                        output += TreeBasicBlock(block.label, block.body, CJump(br.op, br.lhs, br.rhs, br.trueLabel, f))
+                        output += TreeBasicBlock(f, emptyList(), Jump(br.falseLabel))
                     }
                 }
             }

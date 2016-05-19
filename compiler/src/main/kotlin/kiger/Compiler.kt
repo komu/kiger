@@ -39,7 +39,7 @@ fun Writer.emitProc(codeGen: CodeGen, fragment: Fragment.Proc) {
 
     val cfg = fragment.body.toQuads().createControlFlowGraph()
 
-    val stmts = cfg.toTree().delinearize().traceSchedule()
+    val stmts = cfg.toTree().delinearize().traceSchedule().toStatementList()
 
     val instructions = stmts.flatMap { codeGen.codeGen(frame, it) }
     val instructions2 = frame.procEntryExit2(instructions)

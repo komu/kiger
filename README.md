@@ -10,6 +10,7 @@ Implementation in ML.
 
 ## TODO
 
+  - peephole optimization for eliminating jumps to next instruction
   - add mechanism for executing integration tests
   - clean up and freeze the simple version
   - SSA
