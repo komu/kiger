@@ -2,8 +2,19 @@ package kiger.assem
 
 import kiger.temp.Label
 import kiger.temp.Temp
+import java.util.*
 
 data class InstrControlFlowGraph(val blocks: List<InstrBasicBlock>, val exitLabel: Label) {
+
+    private val successors = run {
+        val map = IdentityHashMap<InstrBasicBlock, List<InstrBasicBlock>>()
+        for (block in blocks) {
+            val labels = block.body.filterIsInstance<Instr.Oper>().mapNotNull { it.jump }.flatten().toSet()
+            map[block] = labels.mapNotNull { label -> blocks.find { it.label == label } }
+        }
+        map
+    }
+
     fun toInstrs(): List<Instr> =
         blocks.flatMap { it.toInstrs() } + Instr.Lbl("$exitLabel:", exitLabel)
 
@@ -24,6 +35,8 @@ data class InstrControlFlowGraph(val blocks: List<InstrBasicBlock>, val exitLabe
 
         return result
     }
+
+    fun successors(block: InstrBasicBlock): Collection<InstrBasicBlock> = successors[block]!!
 }
 
 class InstrBasicBlock(val label: Label, val body: List<Instr>) {
