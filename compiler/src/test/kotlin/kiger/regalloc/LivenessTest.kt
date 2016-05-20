@@ -25,14 +25,15 @@ class LivenessTest {
                 Instr.Oper("return c", src=listOf(c)))
 
         val graph = instrs.createFlowGraph()
-        graph.initializeLiveOuts()
+        val liveoutMap = graph.buildLiveOuts()
+        val liveout = graph.nodes.map { liveoutMap[it]!! }
 
-        assertEquals(setOf(a, c), graph.nodes[0].liveOut)
-        assertEquals(setOf(a, c), graph.nodes[1].liveOut)
-        assertEquals(setOf(b, c), graph.nodes[2].liveOut)
-        assertEquals(setOf(b, c), graph.nodes[3].liveOut)
-        assertEquals(setOf(a, c), graph.nodes[4].liveOut)
-        assertEquals(setOf(a, c), graph.nodes[5].liveOut)
-        assertEquals(setOf(), graph.nodes[6].liveOut)
+        assertEquals(setOf(a, c), liveout[0])
+        assertEquals(setOf(a, c), liveout[1])
+        assertEquals(setOf(b, c), liveout[2])
+        assertEquals(setOf(b, c), liveout[3])
+        assertEquals(setOf(a, c), liveout[4])
+        assertEquals(setOf(a, c), liveout[5])
+        assertEquals(setOf(), liveout[6])
     }
 }

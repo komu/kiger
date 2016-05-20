@@ -24,14 +24,13 @@ class FlowGraph(val nodes: List<Node>) {
         val isMove = instr is Instr.Move
         val succ = mutableListOf<Node>()
         val prev = mutableListOf<Node>()
-        var liveOut = emptySet<Temp>()
         val use = instr.uses
         val def = instr.defs
 
         override fun toString() = format { it.toString() }
 
         fun format(tempFormat: (Temp) -> String): String =
-            "${id.toString().padStart(4)}: ${instr.format(tempFormat).padEnd(30)} ; liveout: $liveOut; def=${def.map(tempFormat)}, use=${use.map(tempFormat)}, succ: ${succ.joinToString(", ") { it.id.toString() }}, prev: ${prev.joinToString(", ") { it.id.toString() }}"
+            "${id.toString().padStart(4)}: ${instr.format(tempFormat).padEnd(30)} ; def=${def.map(tempFormat)}, use=${use.map(tempFormat)}, succ: ${succ.joinToString(", ") { it.id.toString() }}, prev: ${prev.joinToString(", ") { it.id.toString() }}"
     }
 
     fun format(tempFormat: (Temp) -> String): String =

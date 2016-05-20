@@ -15,7 +15,7 @@ fun InstrControlFlowGraph.interferenceGraph(): InterferenceGraph =
  * Constructs an interference graph from [FlowGraph].
  */
 fun FlowGraph.interferenceGraph(): InterferenceGraph {
-    initializeLiveOuts()
+    val liveout = buildLiveOuts()
 
     val nodeByTemp = mutableMapOf<Temp, INode>()
 
@@ -35,7 +35,7 @@ fun FlowGraph.interferenceGraph(): InterferenceGraph {
     val gr = InterferenceGraph(nodeByTemp.values.toList(), allMoves)
     for (i in nodes)
         for (d in i.def)
-            for (l in i.liveOut)
+            for (l in liveout[i]!!)
                 gr.addEdge(gr.nodeForTemp(l), gr.nodeForTemp(d))
 
     return gr
@@ -44,11 +44,13 @@ fun FlowGraph.interferenceGraph(): InterferenceGraph {
 /**
  * Computers the liveout sets for all nodes in the graph.
  */
-fun FlowGraph.initializeLiveOuts() {
+fun FlowGraph.buildLiveOuts(): Map<FlowGraph.Node, Set<Temp>> {
     val liveoutMap = profile("buildLiveOutMap") { buildLiveOutMap() }
 
+    val result = IdentityHashMap<FlowGraph.Node, Set<Temp>>()
     for (node in nodes)
-        node.liveOut = liveoutMap[node.id]
+        result[node] = liveoutMap[node.id]
+    return result
 }
 
 /**
