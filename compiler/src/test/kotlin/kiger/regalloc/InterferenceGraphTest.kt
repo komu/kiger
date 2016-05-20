@@ -2,6 +2,9 @@ package kiger.regalloc
 
 import kiger.assem.Instr.Move
 import kiger.assem.Instr.Oper
+import kiger.assem.InstrBasicBlock
+import kiger.assem.InstrControlFlowGraph
+import kiger.temp.Label
 import kiger.temp.Temp
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -24,21 +27,22 @@ class InterferenceGraphTest {
         val k = Temp("k")
         val m = Temp("m")
 
-        val inst = listOf(
-                Oper("", dst=listOf(k, j)),
-                Oper("g := mem[j+12]", dst=listOf(g), src=listOf(j)),
-                Oper("h := k - 1", dst=listOf(h), src=listOf(k)),
-                Oper("f := g * h", dst=listOf(f), src=listOf(g, h)),
-                Oper("e := mem[j+8]", dst=listOf(e), src=listOf(j)),
-                Oper("m := mem[j+16]", dst=listOf(m), src=listOf(j)),
-                Oper("b := mem[f]", dst=listOf(b), src=listOf(f)),
-                Oper("c := e + 8", dst=listOf(c), src=listOf(e)),
-                Move("d := c", dst=d, src=c),
-                Oper("k := m + 4", dst=listOf(k), src=listOf(m)),
-                Move("j := b", dst=j, src=b),
-                Oper("", src=listOf(d, k, j)))
+        val block = InstrBasicBlock(Label.gen(), listOf(
+                Oper("", dst = listOf(k, j)),
+                Oper("g := mem[j+12]", dst = listOf(g), src = listOf(j)),
+                Oper("h := k - 1", dst = listOf(h), src = listOf(k)),
+                Oper("f := g * h", dst = listOf(f), src = listOf(g, h)),
+                Oper("e := mem[j+8]", dst = listOf(e), src = listOf(j)),
+                Oper("m := mem[j+16]", dst = listOf(m), src = listOf(j)),
+                Oper("b := mem[f]", dst = listOf(b), src = listOf(f)),
+                Oper("c := e + 8", dst = listOf(c), src = listOf(e)),
+                Move("d := c", dst = d, src = c),
+                Oper("k := m + 4", dst = listOf(k), src = listOf(m)),
+                Move("j := b", dst = j, src = b),
+                Oper("", src = listOf(d, k, j))))
 
-        val igraph = inst.createFlowGraph().interferenceGraph()
+        val cfg = InstrControlFlowGraph(listOf(block), Label.gen())
+        val igraph = cfg.interferenceGraph()
 
         assertEquals(10, igraph.nodes.size)
         assertEquals(2, igraph.moves.size)

@@ -1,6 +1,7 @@
 package kiger.assem
 
 import kiger.temp.Label
+import kiger.temp.Temp
 
 data class InstrControlFlowGraph(val blocks: List<InstrBasicBlock>, val exitLabel: Label) {
     fun toInstrs(): List<Instr> =
@@ -11,10 +12,32 @@ data class InstrControlFlowGraph(val blocks: List<InstrBasicBlock>, val exitLabe
 
     fun count(predicate: (Instr) -> Boolean): Int =
         blocks.sumBy { it.count(predicate) }
+
+    fun allTemporaries(): Set<Temp> {
+        val result = mutableSetOf<Temp>()
+
+        for (i in nonLabelInstructions()) {
+            result += i.defs
+            result += i.uses
+        }
+
+        return result
+    }
+
+    fun moves(): Sequence<Instr.Move> =
+        nonLabelInstructions().filterIsInstance<Instr.Move>()
+
+    fun nonLabelInstructions(): Sequence<Instr> =
+        blocks.asSequence().flatMap { it.body.asSequence() }
 }
 
 class InstrBasicBlock(val label: Label, val body: List<Instr>) {
-    fun toInstrs(): List<Instr> = listOf(Instr.Lbl("$label:", label)) + body
+
+    // Identity of instructions is important because they are used as keys for liveout maps etc.
+    // Therefore we must use same instruction for label.
+    private val labelInst = Instr.Lbl("$label:", label)
+
+    fun toInstrs(): List<Instr> = listOf(labelInst) + body
 
     fun rewriteInstructions(f: (Instr) -> List<Instr>): InstrBasicBlock =
         InstrBasicBlock(label, body.flatMap { f(it) })

@@ -1,5 +1,6 @@
 package kiger.regalloc
 
+import kiger.assem.Instr
 import kiger.assem.InstrControlFlowGraph
 import kiger.regalloc.InterferenceGraph.INode
 import kiger.regalloc.InterferenceGraph.Move
@@ -7,34 +8,24 @@ import kiger.temp.Temp
 import kiger.utils.profile
 import java.util.*
 
-// TODO: construct interference graph from original Cfg
-fun InstrControlFlowGraph.interferenceGraph(): InterferenceGraph =
-    toInstrs().createFlowGraph().interferenceGraph()
-
 /**
  * Constructs an interference graph from [FlowGraph].
  */
-fun FlowGraph.interferenceGraph(): InterferenceGraph {
+fun InstrControlFlowGraph.interferenceGraph(): InterferenceGraph {
     val liveout = buildLiveOuts()
 
-    val nodeByTemp = mutableMapOf<Temp, INode>()
+    val nodesByTemp = allTemporaries().map { Pair(it, INode(it)) }.toMap()
 
-    val allDefs = nodes.asSequence().flatMap { it.def.asSequence() + it.use.asSequence() }
+    val moves = moves().map { Move(nodesByTemp[it.src]!!, nodesByTemp[it.dst]!!) }.toList()
 
-    for (t in allDefs)
-        if (t !in nodeByTemp)
-            nodeByTemp[t] = INode(t)
-
-    val allMoves = nodes.asSequence().filter { it.isMove }.map { Move(nodeByTemp[it.use.single()]!!, nodeByTemp[it.def.single()]!!) }.toList()
-
-    for (m in allMoves) {
+    for (m in moves) {
         m.src.moveList += m
         m.dst.moveList += m
     }
 
-    val gr = InterferenceGraph(nodeByTemp.values.toList(), allMoves)
-    for (i in nodes)
-        for (d in i.def)
+    val gr = InterferenceGraph(nodesByTemp.values.toList(), moves)
+    for (i in toInstrs())
+        for (d in i.defs)
             for (l in liveout[i]!!)
                 gr.addEdge(gr.nodeForTemp(l), gr.nodeForTemp(d))
 
@@ -44,12 +35,14 @@ fun FlowGraph.interferenceGraph(): InterferenceGraph {
 /**
  * Computers the liveout sets for all nodes in the graph.
  */
-fun FlowGraph.buildLiveOuts(): Map<FlowGraph.Node, Set<Temp>> {
-    val liveoutMap = profile("buildLiveOutMap") { buildLiveOutMap() }
+fun InstrControlFlowGraph.buildLiveOuts(): Map<Instr, Set<Temp>> {
+    // TODO: don't flatten the original CFG, but leverage it for calculation
+    val flowGraph = toInstrs().createFlowGraph()
+    val liveoutMap = profile("buildLiveOutMap") { flowGraph.buildLiveOutMap() }
 
-    val result = IdentityHashMap<FlowGraph.Node, Set<Temp>>()
-    for (node in nodes)
-        result[node] = liveoutMap[node.id]
+    val result = IdentityHashMap<Instr, Set<Temp>>()
+    for (node in flowGraph.nodes)
+        result[node.instr] = liveoutMap[node.id]
     return result
 }
 
