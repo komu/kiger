@@ -6,10 +6,6 @@ class BasicBlock(val label: Label, val body: List<Quad>, val branch: Quad) {
     init {
         require(branch.isJump)
     }
-    val labelledBody: Sequence<Quad>
-        get() = sequenceOf(Quad.Labeled(label)) + body
-    val allStatements: Sequence<Quad>
-        get() = labelledBody + branch
 }
 
 /**
