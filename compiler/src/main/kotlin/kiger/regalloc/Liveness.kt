@@ -14,6 +14,34 @@ import java.util.*
 fun InstrControlFlowGraph.interferenceGraph(): InterferenceGraph {
     val liveout = buildLiveOuts()
 
+    /*
+        for (b in flowGraph.blocks) {
+            val live = mutableSetOf<Temp>() // TODO b.liveOut
+            for (i in b.body.asReversed()) {
+                if (i is Instr.Move) {
+                    live -= i.src
+
+                    val src = interferenceGraph[i.src]
+                    val dst = interferenceGraph[i.dst]
+                    val move = Move(src, dst)
+
+                    src.moveList += move
+                    dst.moveList += move
+
+                    worklistMoves += move
+                }
+
+                val defs = i.defs
+                live += defs
+                for (d in defs)
+                    for (l in live)
+                        interferenceGraph.addEdge(l, d)
+                live -= i.defs
+                live += i.uses
+            }
+        }
+*/
+
     val nodesByTemp = allTemporaries().map { Pair(it, INode(it)) }.toMap()
 
     val moves = moves().map { Move(nodesByTemp[it.src]!!, nodesByTemp[it.dst]!!) }.toList()
@@ -27,7 +55,7 @@ fun InstrControlFlowGraph.interferenceGraph(): InterferenceGraph {
     for (i in toInstrs())
         for (d in i.defs)
             for (l in liveout[i]!!)
-                gr.addEdge(gr.nodeForTemp(l), gr.nodeForTemp(d))
+                gr.addEdge(l, d)
 
     return gr
 }

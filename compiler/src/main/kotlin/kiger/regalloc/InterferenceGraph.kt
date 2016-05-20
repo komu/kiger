@@ -5,7 +5,11 @@ import java.util.Objects.hash
 
 data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
 
-    private val adjSet = mutableSetOf<Pair<INode,INode>>() // TODO: use bitset
+    private val adjSet = mutableSetOf<Pair<INode, INode>>() // TODO: use bitset
+
+    fun addEdge(u: Temp, v: Temp) {
+        addEdge(this[u], this[v])
+    }
 
     fun addEdge(u: INode, v: INode) {
         if (!contains(u, v) && u != v) {
@@ -24,12 +28,9 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
         }
     }
 
-
     fun contains(u: INode, v: INode) = Pair(u, v) in adjSet
 
-    operator fun get(t: Temp): INode = nodeForTemp(t)
-
-    fun nodeForTemp(t: Temp): INode =
+    operator fun get(t: Temp): INode =
         nodes.find { it.temp == t } ?: error("could not find node for $t")
 
     @Suppress("unused")
@@ -38,7 +39,6 @@ data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
         check(precolored.all { it.adjList.isEmpty() }) { "precolored nodes with adj-lists" }
         check(precolored.all { v -> precolored.all { u -> v == u || contains(u, v) }}) { "no edges for precolored" }
         check(nodes.all { v -> v.adjList.all { u -> contains(v,u) && contains(u, v) }}) { "no set for adjList item" }
-        check(adjSet.all { (it.second in precolored || it.first in it.second.adjList) && (it.first in precolored || it.second in it.first.adjList) })
 
         check(nodes.all { it !in it.adjList}) { "node is in its own adjacency set"}
         check(nodes.all { !contains(it, it) }) { "self-edge on adjacency set" }

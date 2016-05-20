@@ -413,7 +413,7 @@ class GraphColorer(
     private fun spillCost(temp: Temp): Double {
         val defs = flowGraph.count { temp in it.defs }
         val uses = flowGraph.count { temp in it.uses }
-        val interferes = interferenceGraph.nodeForTemp(temp).adjList.size
+        val interferes = interferenceGraph[temp].adjList.size
 
         return (defs + uses).toDouble() / interferes.toDouble()
     }
