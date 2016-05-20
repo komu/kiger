@@ -28,7 +28,7 @@ fun InstrControlFlowGraph.interferenceGraph(): InterferenceGraph {
             }
 
             live += defs
-            
+
             for (d in defs)
                 for (l in live)
                     graph.addEdge(l, d)
@@ -47,11 +47,11 @@ fun InstrControlFlowGraph.interferenceGraph(): InterferenceGraph {
 fun InstrControlFlowGraph.buildLiveOutsForBasicBlocks(): Map<InstrBasicBlock, Set<Temp>> {
     // TODO: don't flatten the original CFG, but leverage it for calculation
     val flowGraph = toInstrs().createFlowGraph()
-    val liveoutMap = profile("buildLiveOutMap") { flowGraph.buildLiveOutMap() }
+    val liveoutMap = profile("buildLiveOutMap") { FlowGraphLiveOutCalculator.buildLiveOutMap(flowGraph.nodes) }
 
     val instrOuts = IdentityHashMap<Instr, Set<Temp>>()
     for (node in flowGraph.nodes)
-        instrOuts[node.instr] = liveoutMap[node.id]
+        instrOuts[node.instr] = liveoutMap[node]
 
     val result = IdentityHashMap<InstrBasicBlock, Set<Temp>>()
     for (block in blocks)
@@ -61,38 +61,60 @@ fun InstrControlFlowGraph.buildLiveOutsForBasicBlocks(): Map<InstrBasicBlock, Se
 }
 
 /**
- * Creates an array which contain the liveout set for every node in the graph.
+ * Computes live-out information for nodes of type T when given
+ * [uses], [defs] and [successors].
  */
-private fun FlowGraph.buildLiveOutMap(): Array<Set<Temp>> {
-    val liveIn = Array<Set<Temp>>(size) { emptySet() }
-    val liveOut = Array<Set<Temp>>(size) { emptySet() }
+private abstract class LiveOutCalculator<T> {
 
-    do {
-        var changed = false
+    /**
+     * Creates an array which contain the liveout set for every node in the graph.
+     */
+    fun buildLiveOutMap(nodes: List<T>): Map<T, Set<Temp>> {
+        val liveIn = IdentityHashMap<T, Set<Temp>>()
+        val liveOut = IdentityHashMap<T, Set<Temp>>()
 
-        for (n in nodes.asReversed()) {
-            val oldIn = liveIn[n.id]
-            val oldOut = liveOut[n.id]
-            val newIn = n.use + (oldOut - n.def)
-            val newOut = n.computeOut(liveIn)
-
-            if (newIn != oldIn || newOut != oldOut) {
-                changed = true
-                liveIn[n.id] = newIn
-                liveOut[n.id] = newOut
-            }
+        for (n in nodes) {
+            liveIn[n] = emptySet()
+            liveOut[n] = emptySet()
         }
-    } while (changed)
 
-    return liveOut
+        do {
+            var changed = false
+
+            for (n in nodes.asReversed()) {
+                val oldIn = liveIn[n]!!
+                val oldOut = liveOut[n]!!
+                val newIn = uses(n) + (oldOut - defs(n))
+                val newOut = n.computeOut(liveIn)
+
+                if (newIn != oldIn || newOut != oldOut) {
+                    changed = true
+                    liveIn[n] = newIn
+                    liveOut[n] = newOut
+                }
+            }
+        } while (changed)
+
+        return liveOut
+    }
+
+    /**
+     * Compute liveout set for a node, given a livein map.
+     */
+    private fun T.computeOut(liveinMap: Map<T, Set<Temp>>): Set<Temp> {
+        val set = TreeSet<Temp>()
+        for (s in successors(this))
+            set += liveinMap[s]!!
+        return set
+    }
+
+    protected abstract fun uses(node: T): Set<Temp>
+    protected abstract fun defs(node: T): Set<Temp>
+    protected abstract fun successors(node: T): Collection<T>
 }
 
-/**
- * Compute liveout set for a node, given a livein map.
-  */
-private fun FlowGraph.Node.computeOut(liveinMap: Array<Set<Temp>>): Set<Temp> {
-    val set = TreeSet<Temp>()
-    for (s in succ)
-        set += liveinMap[s.id]
-    return set
+private object FlowGraphLiveOutCalculator : LiveOutCalculator<FlowGraph.Node>() {
+    override fun uses(node: FlowGraph.Node) = node.use
+    override fun defs(node: FlowGraph.Node) = node.def
+    override fun successors(node: FlowGraph.Node) = node.succ
 }
