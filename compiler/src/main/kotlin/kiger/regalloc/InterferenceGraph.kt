@@ -1,14 +1,16 @@
 package kiger.regalloc
 
+import kiger.regalloc.InterferenceGraph.INode
 import kiger.temp.Temp
+import java.util.*
 import java.util.Objects.hash
 
 class InterferenceGraph(temps: Set<Temp>) {
 
-    val nodes = temps.map { INode(it) }
+    val nodes = temps.mapIndexed { i, temp -> INode(i, temp) }
     val moves = mutableListOf<Move>()
 
-    private val adjSet = mutableSetOf<Pair<INode, INode>>() // TODO: use bitset
+    private val adjSet = AdjacencySet(nodes.size)
 
     fun addMove(s: Temp, d: Temp) {
         val src = this[s]
@@ -27,8 +29,8 @@ class InterferenceGraph(temps: Set<Temp>) {
 
     fun addEdge(u: INode, v: INode) {
         if (!contains(u, v) && u != v) {
-            adjSet += Pair(v, u)
-            adjSet += Pair(u, v)
+            adjSet.addEdge(v, u)
+            adjSet.addEdge(u, v)
 
             if (!u.precolored) {
                 u.adjList += v
@@ -42,7 +44,7 @@ class InterferenceGraph(temps: Set<Temp>) {
         }
     }
 
-    fun contains(u: INode, v: INode) = Pair(u, v) in adjSet
+    fun contains(u: INode, v: INode) = adjSet.contains(u, v)
 
     operator fun get(t: Temp): INode =
         nodes.find { it.temp == t } ?: error("could not find node for $t")
@@ -75,7 +77,7 @@ class InterferenceGraph(temps: Set<Temp>) {
         return sb.toString()
     }
 
-    class INode(val temp: Temp) {
+    class INode(val id: Int, val temp: Temp) {
 
         val adjList = mutableSetOf<INode>()
         var degree = 0
@@ -101,4 +103,17 @@ class InterferenceGraph(temps: Set<Temp>) {
         override fun equals(other: Any?) = other is Move && src == other.src && dst == other.dst
         override fun hashCode() = hash(src, dst)
     }
+}
+
+private class AdjacencySet(private val size: Int) {
+    private val bitset = BitSet(size * size)
+
+    fun addEdge(u: INode, v: INode) {
+        bitset.set(bit(u, v))
+    }
+
+    fun contains(u: INode, v: INode) =
+        bitset.get(bit(u, v))
+
+    private fun bit(u: INode, v: INode) = u.id * size + v.id
 }

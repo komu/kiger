@@ -7,6 +7,7 @@
       <w>asciz</w>
       <w>backends</w>
       <w>binop</w>
+      <w>bitset</w>
       <w>callq</w>
       <w>cjump</w>
       <w>cmpq</w>
