@@ -14,6 +14,8 @@ sealed class Quad {
     open val isJump: Boolean
         get() = false
 
+    open val jumpLabels: Collection<Label>? = null
+
     class BinOp(val op: BinaryOp, val target: Temp, val lhs: QExp, val rhs: QExp) : Quad() {
         override fun equals(other: Any?) = other is BinOp && op == other.op && target == other.target && lhs == other.lhs && rhs == other.rhs
         override fun hashCode() = Objects.hash(op, target, lhs, rhs)
@@ -39,6 +41,8 @@ sealed class Quad {
         override fun toString() = "jump $target ; labels"
         override val isJump: Boolean
             get() = true
+        override val jumpLabels: Collection<Label>
+            get() = labels
     }
 
     class CJump(val op: RelOp, val lhs: QExp, val rhs: QExp, val trueLabel: Label, val falseLabel: Label) : Quad() {
@@ -47,6 +51,8 @@ sealed class Quad {
         override fun toString() = "if ($lhs $op $rhs) jump $trueLabel else jump $falseLabel"
         override val isJump: Boolean
             get() = true
+        override val jumpLabels: Collection<Label>
+            get() = setOf(trueLabel, falseLabel)
     }
 
     class Call(val func: QExp, val args: List<QExp>, val result: Temp?) : Quad() {

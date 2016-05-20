@@ -3,6 +3,10 @@ package kiger.ir.quad
 import kiger.temp.Label
 
 class BasicBlock(val label: Label, val body: List<Quad>, val branch: Quad) {
+
+    val successors = mutableListOf<BasicBlock>()
+    val predecessors = mutableListOf<BasicBlock>()
+
     init {
         require(branch.isJump)
     }
@@ -76,6 +80,18 @@ private class ControlFlowGraphBuilder {
         if (block != null)
             // If we have a current block, it will not have a branch at the end. Add jump to exit.
             blocks += block.finishWithJump(exitLabel)
+
+        // Now that all blocks have been created, initialize their successors and predecessors.
+        val blocksByLabel = blocks.map { Pair(it.label, it) }.toMap()
+
+        for (b in blocks) {
+            val labels = b.branch.jumpLabels ?: continue
+            for (label in labels) {
+                val successor = blocksByLabel[b.label] ?: continue
+                b.successors += successor
+                successor.predecessors += b
+            }
+        }
 
         return ControlFlowGraph(blocks, exitLabel)
     }
