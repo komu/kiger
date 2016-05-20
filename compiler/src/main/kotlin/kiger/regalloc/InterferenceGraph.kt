@@ -3,9 +3,23 @@ package kiger.regalloc
 import kiger.temp.Temp
 import java.util.Objects.hash
 
-data class InterferenceGraph(val nodes: List<INode>, val moves: List<Move>) {
+class InterferenceGraph(temps: Set<Temp>) {
+
+    val nodes = temps.map { INode(it) }
+    val moves = mutableListOf<Move>()
 
     private val adjSet = mutableSetOf<Pair<INode, INode>>() // TODO: use bitset
+
+    fun addMove(s: Temp, d: Temp) {
+        val src = this[s]
+        val dst = this[d]
+        val move = Move(src, dst)
+
+        src.moveList += move
+        dst.moveList += move
+
+        moves += move
+    }
 
     fun addEdge(u: Temp, v: Temp) {
         addEdge(this[u], this[v])

@@ -1,9 +1,8 @@
 package kiger.regalloc
 
 import kiger.assem.Instr
+import kiger.assem.InstrBasicBlock
 import kiger.assem.InstrControlFlowGraph
-import kiger.regalloc.InterferenceGraph.INode
-import kiger.regalloc.InterferenceGraph.Move
 import kiger.temp.Temp
 import kiger.utils.profile
 import java.util.*
@@ -12,65 +11,52 @@ import java.util.*
  * Constructs an interference graph from [FlowGraph].
  */
 fun InstrControlFlowGraph.interferenceGraph(): InterferenceGraph {
-    val liveout = buildLiveOuts()
+    val liveout = buildLiveOutsForBasicBlocks()
 
-    /*
-        for (b in flowGraph.blocks) {
-            val live = mutableSetOf<Temp>() // TODO b.liveOut
-            for (i in b.body.asReversed()) {
-                if (i is Instr.Move) {
-                    live -= i.src
+    val graph = InterferenceGraph(allTemporaries())
 
-                    val src = interferenceGraph[i.src]
-                    val dst = interferenceGraph[i.dst]
-                    val move = Move(src, dst)
+    for (b in blocks) {
+        val live = liveout[b]!!.toMutableSet()
+        for (i in b.body.asReversed()) {
+            val defs = i.defs
+            val uses = i.uses
 
-                    src.moveList += move
-                    dst.moveList += move
+            if (i is Instr.Move) {
+                live -= uses
 
-                    worklistMoves += move
-                }
-
-                val defs = i.defs
-                live += defs
-                for (d in defs)
-                    for (l in live)
-                        interferenceGraph.addEdge(l, d)
-                live -= i.defs
-                live += i.uses
+                graph.addMove(i.src, i.dst)
             }
+
+            live += defs
+            
+            for (d in defs)
+                for (l in live)
+                    graph.addEdge(l, d)
+
+            live -= defs
+            live += uses
         }
-*/
-
-    val nodesByTemp = allTemporaries().map { Pair(it, INode(it)) }.toMap()
-
-    val moves = moves().map { Move(nodesByTemp[it.src]!!, nodesByTemp[it.dst]!!) }.toList()
-
-    for (m in moves) {
-        m.src.moveList += m
-        m.dst.moveList += m
     }
 
-    val gr = InterferenceGraph(nodesByTemp.values.toList(), moves)
-    for (i in toInstrs())
-        for (d in i.defs)
-            for (l in liveout[i]!!)
-                gr.addEdge(l, d)
-
-    return gr
+    return graph
 }
 
 /**
  * Computers the liveout sets for all nodes in the graph.
  */
-fun InstrControlFlowGraph.buildLiveOuts(): Map<Instr, Set<Temp>> {
+fun InstrControlFlowGraph.buildLiveOutsForBasicBlocks(): Map<InstrBasicBlock, Set<Temp>> {
     // TODO: don't flatten the original CFG, but leverage it for calculation
     val flowGraph = toInstrs().createFlowGraph()
     val liveoutMap = profile("buildLiveOutMap") { flowGraph.buildLiveOutMap() }
 
-    val result = IdentityHashMap<Instr, Set<Temp>>()
+    val instrOuts = IdentityHashMap<Instr, Set<Temp>>()
     for (node in flowGraph.nodes)
-        result[node.instr] = liveoutMap[node.id]
+        instrOuts[node.instr] = liveoutMap[node.id]
+
+    val result = IdentityHashMap<InstrBasicBlock, Set<Temp>>()
+    for (block in blocks)
+        result[block] = instrOuts[block.toInstrs().last()]!!
+
     return result
 }
 
