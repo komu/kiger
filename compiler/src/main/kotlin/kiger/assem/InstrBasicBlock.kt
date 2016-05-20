@@ -16,19 +16,14 @@ data class InstrControlFlowGraph(val blocks: List<InstrBasicBlock>, val exitLabe
     fun allTemporaries(): Set<Temp> {
         val result = mutableSetOf<Temp>()
 
-        for (i in nonLabelInstructions()) {
-            result += i.defs
-            result += i.uses
-        }
+        for (b in blocks)
+            for (i in b.body) {
+                result += i.defs
+                result += i.uses
+            }
 
         return result
     }
-
-    fun moves(): Sequence<Instr.Move> =
-        nonLabelInstructions().filterIsInstance<Instr.Move>()
-
-    fun nonLabelInstructions(): Sequence<Instr> =
-        blocks.asSequence().flatMap { it.body.asSequence() }
 }
 
 class InstrBasicBlock(val label: Label, val body: List<Instr>) {
