@@ -38,7 +38,8 @@ private fun compile(targetArch: TargetArch, code: String, filename: String): Lis
     }
 }
 
-fun Writer.emitProc(codeGen: CodeGen, fragment: Fragment.Proc) {
+fun Writer.emitProc(arch: TargetArch, fragment: Fragment.Proc) {
+    val codeGen = arch.codeGen
     val frame = fragment.frame
 
     val cfg = fragment.body.toQuads().createControlFlowGraph()
@@ -52,10 +53,11 @@ fun Writer.emitProc(codeGen: CodeGen, fragment: Fragment.Proc) {
     val (prologue, instructions4, epilogue) = frame.procEntryExit3(instructions3)
 
     write(prologue)
-    for (instr in instructions4)
-        if (instr !is Instr.Oper || instr.assem != "") {
+
+    for (instr in arch.peepholeOptimize(instructions4, alloc))
+        if (instr !is Instr.Oper || instr.assem != "")
             writeLine(instr.format { alloc.name(it) })
-        }
+
     write(epilogue)
 }
 

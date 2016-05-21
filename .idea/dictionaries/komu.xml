@@ -11,6 +11,7 @@
       <w>callq</w>
       <w>cjump</w>
       <w>cmpq</w>
+      <w>cstring</w>
       <w>decl</w>
       <w>decq</w>
       <w>divq</w>
