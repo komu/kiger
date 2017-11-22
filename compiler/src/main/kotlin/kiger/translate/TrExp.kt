@@ -19,8 +19,8 @@ sealed class TrExp {
         override fun asEx() = exp
         override fun asNx() = TreeStm.Exp(exp)
         override fun asCx(): (Label, Label) -> TreeStm = when {
-            exp is TreeExp.Const && exp.value == 0 -> { t, f -> TreeStm.Branch.Jump(TreeExp.Name(f), listOf(f)) }
-            exp is TreeExp.Const && exp.value == 1 -> { t, f -> TreeStm.Branch.Jump(TreeExp.Name(t), listOf(t)) }
+            exp is TreeExp.Const && exp.value == 0 -> { _, f -> TreeStm.Branch.Jump(TreeExp.Name(f), listOf(f)) }
+            exp is TreeExp.Const && exp.value == 1 -> { t, _ -> TreeStm.Branch.Jump(TreeExp.Name(t), listOf(t)) }
             else -> { t, f -> TreeStm.Branch.CJump(RelOp.EQ, exp, TreeExp.Const(0), f, t) }
         }
     }

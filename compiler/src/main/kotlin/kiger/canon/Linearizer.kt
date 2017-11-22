@@ -61,8 +61,6 @@ private fun doStm(stm: TreeStm): TreeStm = when (stm) {
             reorderStm(stm.exp.func, stm.exp.args) { h, t -> Exp(Call(h, t)) }
         else
             reorderStm(stm.exp) { Exp(it) }
-    else ->
-        error("invalid stm $stm")
 }
 
 private fun doMove(stm: Move): TreeStm = when (stm.target) {
